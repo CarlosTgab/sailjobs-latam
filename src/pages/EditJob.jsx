@@ -1,0 +1,563 @@
+import { useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+
+import {
+    COUNTRIES,
+    JOB_CATEGORIES,
+    OPPORTUNITY_TYPES,
+    OPPORTUNITY_TYPE_LABELS,
+    COMPENSATION_TYPES,
+    COMPENSATION_TYPE_LABELS,
+    ELIGIBLE_PROFILE_TYPES,
+    ELIGIBLE_PROFILE_LABELS
+} from "../config/appConfig";
+
+import staticJobs from "../data/jobs";
+
+import {
+    getAllJobs,
+    updateStoredJob,
+    isStoredJob
+} from "../utils/jobsStorage";
+
+import staticClubs from "../data/clubs";
+import { getAllClubs } from "../utils/clubsStorage";
+
+import staticEvents from "../data/events";
+import { getAllEvents } from "../utils/eventsStorage";
+
+import { getCurrentUser } from "../utils/authStorage";
+import { canManageClub } from "../utils/permissions";
+
+function EditJob() {
+    const { id } = useParams();
+    const navigate = useNavigate();
+
+    const currentUser = getCurrentUser();
+
+    const jobs = getAllJobs(staticJobs);
+    const clubs = getAllClubs(staticClubs);
+    const allEvents = getAllEvents(staticEvents);
+
+    const job = jobs.find(
+        item => Number(item.id) === Number(id)
+    );
+
+    const club = job
+        ? clubs.find(item => Number(item.id) === Number(job.clubId))
+        : null;
+
+    const canManageThisJob =
+        currentUser &&
+        job &&
+        canManageClub(currentUser, job.clubId);
+
+    const jobWasCreatedInApp =
+        job &&
+        isStoredJob(job.id);
+
+    const clubEvents = job
+        ? allEvents.filter(
+            event => Number(event.clubId) === Number(job.clubId)
+        )
+        : [];
+
+    const [title, setTitle] = useState(job?.title || "");
+    const [category, setCategory] = useState(job?.category || "Coach");
+
+    const [opportunityType, setOpportunityType] = useState(
+        job?.opportunityType || OPPORTUNITY_TYPES.EMPLOYMENT
+    );
+
+    const [compensationType, setCompensationType] = useState(
+        job?.compensationType || COMPENSATION_TYPES.TO_CONFIRM
+    );
+
+    const [compensationDetails, setCompensationDetails] = useState(
+        job?.compensationDetails || job?.salary || ""
+    );
+
+    const [duration, setDuration] = useState(job?.duration || "");
+    const [openings, setOpenings] = useState(job?.openings || 1);
+
+    const [applicationDeadline, setApplicationDeadline] = useState(
+        job?.applicationDeadline || ""
+    );
+
+    const [eventId, setEventId] = useState(job?.eventId || "");
+
+    const [eligibleProfiles, setEligibleProfiles] = useState(
+        Array.isArray(job?.eligibleProfiles)
+            ? job.eligibleProfiles
+            : [ELIGIBLE_PROFILE_TYPES.PROFESSIONAL]
+    );
+
+    const [country, setCountry] = useState(job?.country || club?.country || "");
+    const [city, setCity] = useState(job?.city || club?.city || "");
+    const [description, setDescription] = useState(job?.description || "");
+
+    const [requirementsText, setRequirementsText] = useState(
+        Array.isArray(job?.requirements)
+            ? job.requirements.join("\n")
+            : ""
+    );
+
+    const [formMessage, setFormMessage] = useState("");
+
+    if (!job) {
+        return (
+            <div className="dashboard-page">
+                <h1>Oportunidad no encontrada</h1>
+
+                <button
+                    className="back-button"
+                    onClick={() => navigate("/jobs")}
+                >
+                    ← Volver a oportunidades
+                </button>
+            </div>
+        );
+    }
+
+    if (!canManageThisJob) {
+        return (
+            <div className="dashboard-page">
+                <h1>Acceso denegado</h1>
+
+                <p>
+                    Solo la organización responsable puede editar esta oportunidad.
+                </p>
+
+                <button
+                    className="back-button"
+                    onClick={() => navigate("/jobs")}
+                >
+                    ← Volver a oportunidades
+                </button>
+            </div>
+        );
+    }
+
+    if (!jobWasCreatedInApp) {
+        return (
+            <div className="dashboard-page">
+                <h1>Esta oportunidad no se puede editar</h1>
+
+                <p>
+                    Esta oportunidad pertenece a los datos base del sitio.
+                    Solo se pueden editar las oportunidades creadas desde el panel.
+                </p>
+
+                <button
+                    className="back-button"
+                    onClick={() => navigate(`/jobs/${job.id}`)}
+                >
+                    ← Volver a la oportunidad
+                </button>
+            </div>
+        );
+    }
+
+    function handleOpportunityTypeChange(newType) {
+        setOpportunityType(newType);
+
+        if (newType === OPPORTUNITY_TYPES.VOLUNTEER) {
+            setCategory("Voluntario");
+            setCompensationType(COMPENSATION_TYPES.VOLUNTEER);
+            setEligibleProfiles([
+                ELIGIBLE_PROFILE_TYPES.USER,
+                ELIGIBLE_PROFILE_TYPES.PROFESSIONAL
+            ]);
+            return;
+        }
+
+        if (newType === OPPORTUNITY_TYPES.EVENT_ROLE) {
+            setCompensationType(COMPENSATION_TYPES.EXPENSES);
+            setEligibleProfiles([
+                ELIGIBLE_PROFILE_TYPES.PROFESSIONAL
+            ]);
+            return;
+        }
+
+        setEligibleProfiles([
+            ELIGIBLE_PROFILE_TYPES.PROFESSIONAL
+        ]);
+    }
+
+    function handleEventChange(selectedEventId) {
+        setEventId(selectedEventId);
+
+        if (!selectedEventId) {
+            return;
+        }
+
+        const selectedEvent = allEvents.find(
+            event => Number(event.id) === Number(selectedEventId)
+        );
+
+        if (!selectedEvent) {
+            return;
+        }
+
+        if (selectedEvent.country) {
+            setCountry(selectedEvent.country);
+        }
+
+        if (selectedEvent.city) {
+            setCity(selectedEvent.city);
+        }
+    }
+
+    function toggleEligibleProfile(profile) {
+        const isSelected = eligibleProfiles.includes(profile);
+
+        if (isSelected) {
+            const updatedProfiles = eligibleProfiles.filter(
+                item => item !== profile
+            );
+
+            if (updatedProfiles.length === 0) {
+                return;
+            }
+
+            setEligibleProfiles(updatedProfiles);
+            return;
+        }
+
+        setEligibleProfiles([
+            ...eligibleProfiles,
+            profile
+        ]);
+    }
+
+    function parseRequirements() {
+        return requirementsText
+            .split("\n")
+            .map(item => item.trim())
+            .filter(Boolean);
+    }
+
+    function validateForm() {
+        if (
+            !title.trim() ||
+            !category ||
+            !opportunityType ||
+            !compensationType ||
+            !country ||
+            !city ||
+            !description.trim()
+        ) {
+            setFormMessage("Completá todos los campos obligatorios.");
+            return false;
+        }
+
+        if (Number(openings) <= 0 || Number.isNaN(Number(openings))) {
+            setFormMessage("La cantidad de vacantes debe ser mayor a cero.");
+            return false;
+        }
+
+        if (
+            (
+                opportunityType === OPPORTUNITY_TYPES.EVENT_ROLE ||
+                opportunityType === OPPORTUNITY_TYPES.VOLUNTEER
+            ) &&
+            !eventId
+        ) {
+            setFormMessage(
+                "Para cargos técnicos o voluntariados, vinculá la oportunidad a un evento."
+            );
+
+            return false;
+        }
+
+        return true;
+    }
+
+    function handleSubmit(event) {
+        event.preventDefault();
+
+        setFormMessage("");
+
+        if (!validateForm()) {
+            return;
+        }
+
+        updateStoredJob(job.id, {
+            title: title.trim(),
+            category,
+            opportunityType,
+            compensationType,
+            compensationDetails: compensationDetails.trim(),
+            salary:
+                compensationDetails.trim() ||
+                COMPENSATION_TYPE_LABELS[compensationType] ||
+                "A confirmar",
+            duration: duration.trim() || "A confirmar",
+            openings: Number(openings),
+            applicationDeadline,
+            eventId,
+            eligibleProfiles,
+            country,
+            city: city.trim(),
+            description: description.trim(),
+            requirements: parseRequirements()
+        });
+
+        alert("Oportunidad actualizada correctamente.");
+
+        navigate(`/jobs/${job.id}`);
+    }
+
+    return (
+        <div className="dashboard-page">
+            <button
+                className="back-button"
+                onClick={() => navigate(`/jobs/${job.id}`)}
+            >
+                ← Volver a la oportunidad
+            </button>
+
+            <div className="dashboard-hero">
+                <div>
+                    <h1>Editar oportunidad</h1>
+
+                    <p>
+                        Actualizá los datos de la oportunidad publicada por{" "}
+                        {club ? club.name : "tu organización"}.
+                    </p>
+                </div>
+            </div>
+
+            <div className="detail-card">
+                <form onSubmit={handleSubmit}>
+                    <h2>Información principal</h2>
+
+                    <label>Tipo de oportunidad *</label>
+
+                    <select
+                        value={opportunityType}
+                        onChange={(event) =>
+                            handleOpportunityTypeChange(event.target.value)
+                        }
+                    >
+                        {Object.entries(OPPORTUNITY_TYPE_LABELS).map(
+                            ([value, label]) => (
+                                <option key={value} value={value}>
+                                    {label}
+                                </option>
+                            )
+                        )}
+                    </select>
+
+                    <label>Título *</label>
+
+                    <input
+                        type="text"
+                        value={title}
+                        onChange={(event) => setTitle(event.target.value)}
+                    />
+
+                    <label>Puesto / categoría *</label>
+
+                    <select
+                        value={category}
+                        onChange={(event) => setCategory(event.target.value)}
+                    >
+                        {JOB_CATEGORIES.map(item => (
+                            <option key={item} value={item}>
+                                {item}
+                            </option>
+                        ))}
+                    </select>
+
+                    <label>Evento vinculado</label>
+
+                    <select
+                        value={eventId}
+                        onChange={(event) => handleEventChange(event.target.value)}
+                    >
+                        <option value="">
+                            Sin evento vinculado
+                        </option>
+
+                        {clubEvents.map(event => (
+                            <option key={event.id} value={event.id}>
+                                {event.title} · {event.className}
+                            </option>
+                        ))}
+                    </select>
+
+                    <hr />
+
+                    <h2>Ubicación y fechas</h2>
+
+                    <label>País *</label>
+
+                    <select
+                        value={country}
+                        onChange={(event) => setCountry(event.target.value)}
+                    >
+                        <option value="">
+                            Seleccionar país
+                        </option>
+
+                        {COUNTRIES.map(countryOption => (
+                            <option key={countryOption} value={countryOption}>
+                                {countryOption}
+                            </option>
+                        ))}
+                    </select>
+
+                    <label>Ciudad *</label>
+
+                    <input
+                        type="text"
+                        value={city}
+                        onChange={(event) => setCity(event.target.value)}
+                    />
+
+                    <label>Duración</label>
+
+                    <input
+                        type="text"
+                        value={duration}
+                        onChange={(event) => setDuration(event.target.value)}
+                    />
+
+                    <label>Fecha límite de postulación</label>
+
+                    <input
+                        type="date"
+                        value={applicationDeadline}
+                        onChange={(event) => setApplicationDeadline(event.target.value)}
+                    />
+
+                    <label>Vacantes *</label>
+
+                    <input
+                        type="number"
+                        min="1"
+                        value={openings}
+                        onChange={(event) => setOpenings(event.target.value)}
+                    />
+
+                    <hr />
+
+                    <h2>Compensación</h2>
+
+                    <label>Tipo de compensación *</label>
+
+                    <select
+                        value={compensationType}
+                        onChange={(event) => setCompensationType(event.target.value)}
+                    >
+                        {Object.entries(COMPENSATION_TYPE_LABELS).map(
+                            ([value, label]) => (
+                                <option key={value} value={value}>
+                                    {label}
+                                </option>
+                            )
+                        )}
+                    </select>
+
+                    <label>Detalle de compensación</label>
+
+                    <input
+                        type="text"
+                        value={compensationDetails}
+                        onChange={(event) => setCompensationDetails(event.target.value)}
+                    />
+
+                    <hr />
+
+                    <h2>Quiénes pueden postularse</h2>
+
+                    <label className="checkbox-row">
+                        <input
+                            type="checkbox"
+                            checked={eligibleProfiles.includes(
+                                ELIGIBLE_PROFILE_TYPES.PROFESSIONAL
+                            )}
+                            onChange={() =>
+                                toggleEligibleProfile(
+                                    ELIGIBLE_PROFILE_TYPES.PROFESSIONAL
+                                )
+                            }
+                        />
+
+                        {
+                            ELIGIBLE_PROFILE_LABELS[
+                                ELIGIBLE_PROFILE_TYPES.PROFESSIONAL
+                            ]
+                        }
+                    </label>
+
+                    <label className="checkbox-row">
+                        <input
+                            type="checkbox"
+                            checked={eligibleProfiles.includes(
+                                ELIGIBLE_PROFILE_TYPES.USER
+                            )}
+                            onChange={() =>
+                                toggleEligibleProfile(
+                                    ELIGIBLE_PROFILE_TYPES.USER
+                                )
+                            }
+                        />
+
+                        {
+                            ELIGIBLE_PROFILE_LABELS[
+                                ELIGIBLE_PROFILE_TYPES.USER
+                            ]
+                        }
+                    </label>
+
+                    <hr />
+
+                    <h2>Descripción y requisitos</h2>
+
+                    <label>Descripción *</label>
+
+                    <textarea
+                        rows="7"
+                        value={description}
+                        onChange={(event) => setDescription(event.target.value)}
+                    />
+
+                    <label>Requisitos</label>
+
+                    <textarea
+                        rows="6"
+                        value={requirementsText}
+                        onChange={(event) => setRequirementsText(event.target.value)}
+                    />
+
+                    {formMessage && (
+                        <p style={{ color: "#b42318" }}>
+                            {formMessage}
+                        </p>
+                    )}
+
+                    <div className="dashboard-actions">
+                        <button
+                            type="button"
+                            className="reject-button"
+                            onClick={() => navigate(`/jobs/${job.id}`)}
+                        >
+                            Cancelar
+                        </button>
+
+                        <button
+                            type="submit"
+                            className="accept-button"
+                        >
+                            Guardar cambios
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+export default EditJob;
