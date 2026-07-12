@@ -2121,3 +2121,86 @@ body {
 .auth-card .accept-button:hover {
     background: #e87500;
 }
+
+.detail-card form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.detail-card form h2 {
+    margin: 8px 0 12px;
+    color: #0b2f57;
+}
+
+.detail-card form label {
+    display: block;
+    margin-top: 10px;
+    font-weight: 700;
+    color: #1f2937;
+}
+
+.detail-card form input:not([type="checkbox"]),
+.detail-card form select,
+.detail-card form textarea {
+    width: 100%;
+    border: 1px solid rgba(15, 23, 42, 0.18);
+    border-radius: 12px;
+    padding: 13px 14px;
+    font-size: 1rem;
+    background: #ffffff;
+    color: #111827;
+}
+
+.detail-card form input[type="file"] {
+    padding: 11px;
+    background: #ffffff;
+}
+
+.detail-card form textarea {
+    resize: vertical;
+    min-height: 110px;
+}
+
+.detail-card form input:focus,
+.detail-card form select:focus,
+.detail-card form textarea:focus {
+    outline: none;
+    border-color: #ff8400;
+    box-shadow: 0 0 0 3px rgba(255, 132, 0, 0.16);
+}
+
+.detail-card form .dashboard-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.detail-card form .dashboard-actions button {
+    min-width: 150px;
+}
+
+.detail-card form .password-help {
+    margin: 4px 0 10px;
+    color: #667085;
+    font-size: 0.92rem;
+}
+
+.detail-card form hr {
+    width: 100%;
+    border: none;
+    border-top: 1px solid rgba(15, 23, 42, 0.12);
+    margin: 22px 0 12px;
+}
+
+.checkbox-row {
+    display: flex !important;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+}
+
+.checkbox-row input {
+    width: auto !important;
+}
