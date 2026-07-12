@@ -1967,3 +1967,42 @@ body {
         font-size: 0.82rem;
     }
 }
+
+.home-role-card {
+    background:
+        linear-gradient(
+            135deg,
+            rgba(11, 47, 87, 0.96),
+            rgba(6, 32, 64, 0.92)
+        ) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.22);
+}
+
+.home-role-card h3 {
+    color: #ffffff !important;
+    margin-top: 12px;
+}
+
+.home-role-card p {
+    color: rgba(255, 255, 255, 0.88) !important;
+    line-height: 1.5;
+}
+
+.home-role-card .sidebar-tag {
+    background: rgba(255, 255, 255, 0.14);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.home-role-card .small-action-button {
+    background: #ff8400;
+    color: #ffffff;
+    border: none;
+    margin-top: 10px;
+}
+
+.home-role-card .small-action-button:hover {
+    background: #e87500;
+}
