@@ -5,6 +5,8 @@ import {
   Navigate
 } from "react-router-dom";
 
+import BetaBanner from "./components/BetaBanner";
+
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import PageBackground from "./components/PageBackground";
@@ -67,6 +69,8 @@ function App() {
       <PageBackground />
 
       <Navbar />
+
+      <BetaBanner />
 
       <Routes>
 
