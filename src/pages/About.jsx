@@ -1,158 +1,192 @@
 import { useNavigate } from "react-router-dom";
 
 function About() {
-
     const navigate = useNavigate();
 
     return (
+        <div className="dashboard-page">
 
-        <div className="page about-page">
+            <div className="dashboard-hero">
 
-            <section className="about-hero">
+                <div>
+                    <span className="sidebar-tag">
+                        Sobre SailJobs LATAM
+                    </span>
 
-                <h1>Sobre SailJobs LATAM</h1>
-
-                <p>
-                    Una plataforma creada para conectar clubes, coaches, navegantes y organizaciones
-                    de vela deportiva en Latinoamérica.
-                </p>
-
-            </section>
-
-            <section className="about-section">
-
-                <h2>Qué es SailJobs LATAM</h2>
-
-                <p>
-                    SailJobs LATAM es una plataforma digital pensada para ordenar y profesionalizar
-                    el ecosistema de la vela en la región. Reúne oportunidades laborales, clubes,
-                    regatas, clasificados, rankings y postulaciones en un solo lugar.
-                </p>
-
-                <p>
-                    La idea nace de una necesidad real: hoy mucha información importante de la vela
-                    circula de manera dispersa por grupos de WhatsApp, Instagram, PDFs, planillas,
-                    contactos personales o publicaciones aisladas. SailJobs LATAM busca centralizar
-                    esa información y hacerla más accesible.
-                </p>
-
-            </section>
-
-            <section className="about-grid">
-
-                <div className="about-card">
-                    <h3>Para clubes</h3>
+                    <h1>
+                        La plataforma náutica para conectar clubes,
+                        profesionales, voluntarios y eventos.
+                    </h1>
 
                     <p>
-                        Los clubes pueden publicar empleos, recibir postulaciones, proponer eventos,
-                        mostrar su actividad y conectar con coaches o navegantes interesados.
+                        SailJobs LATAM nace para ordenar y acercar oportunidades
+                        dentro del mundo de la vela: trabajos profesionales,
+                        cargos técnicos de campeonato, voluntariados,
+                        clasificados, clubes y calendarios deportivos.
                     </p>
                 </div>
-
-                <div className="about-card">
-                    <h3>Para coaches</h3>
-
-                    <p>
-                        Los entrenadores pueden encontrar oportunidades laborales, postularse,
-                        cargar su información y seguir el estado de sus postulaciones.
-                    </p>
-                </div>
-
-                <div className="about-card">
-                    <h3>Para navegantes</h3>
-
-                    <p>
-                        Los navegantes pueden consultar calendarios, rankings, clubes y clasificados
-                        relacionados con el mundo de la vela deportiva.
-                    </p>
-                </div>
-
-                <div className="about-card">
-                    <h3>Para la comunidad</h3>
-
-                    <p>
-                        La plataforma también funciona como punto de encuentro para comprar y vender
-                        equipamiento náutico, difundir eventos y fortalecer la red regional de la vela.
-                    </p>
-                </div>
-
-            </section>
-
-            <section className="about-section">
-
-                <h2>Nuestra visión</h2>
-
-                <p>
-                    Queremos que SailJobs LATAM sea una herramienta útil para clubes, entrenadores,
-                    navegantes y organizadores. Un espacio donde la información esté ordenada,
-                    sea fácil de encontrar y ayude a generar más oportunidades dentro de la vela.
-                </p>
-
-                <p>
-                    El objetivo no es reemplazar a los clubes ni a las organizaciones existentes,
-                    sino darles una herramienta moderna para amplificar su alcance y mejorar la conexión
-                    entre las personas que forman parte del deporte.
-                </p>
-
-            </section>
-
-            <section className="about-section">
-
-                <h2>Qué podés hacer en la plataforma</h2>
-
-                <div className="about-list">
-
-                    <p>✅ Buscar empleos náuticos y oportunidades para coaches.</p>
-                    <p>✅ Publicar empleos desde el panel de un club.</p>
-                    <p>✅ Postularte a trabajos como entrenador.</p>
-                    <p>✅ Consultar eventos y regatas aprobadas.</p>
-                    <p>✅ Proponer eventos desde un club.</p>
-                    <p>✅ Ver rankings reales cargados desde planillas oficiales.</p>
-                    <p>✅ Publicar clasificados con fotos y datos de contacto.</p>
-                    <p>✅ Contactar vendedores por email o WhatsApp.</p>
-
-                </div>
-
-            </section>
-
-            <section className="about-cta">
-
-                <h2>Construido desde la vela, para la vela</h2>
-
-                <p>
-                    SailJobs LATAM está pensado desde la experiencia real de quienes entrenan,
-                    compiten, organizan regatas y participan activamente en clubes náuticos.
-                </p>
 
                 <div className="dashboard-actions">
-
                     <button
                         className="apply-button"
                         onClick={() => navigate("/jobs")}
                     >
-                        Ver empleos
+                        Ver oportunidades
                     </button>
 
                     <button
                         className="apply-button"
-                        onClick={() => navigate("/calendar")}
+                        onClick={() => navigate("/clubs")}
                     >
-                        Ver calendario
+                        Ver organizaciones
                     </button>
+                </div>
 
-                    <button
-                        className="apply-button"
-                        onClick={() => navigate("/classifieds")}
-                    >
-                        Ver clasificados
-                    </button>
+            </div>
+
+            <div className="dashboard-stats">
+
+                <div className="dashboard-stat-card">
+                    <h2>🌎</h2>
+                    <p>Comunidad regional</p>
+                </div>
+
+                <div className="dashboard-stat-card">
+                    <h2>⛵</h2>
+                    <p>Vela deportiva</p>
+                </div>
+
+                <div className="dashboard-stat-card">
+                    <h2>🤝</h2>
+                    <p>Clubes y profesionales</p>
+                </div>
+
+                <div className="dashboard-stat-card">
+                    <h2>🏁</h2>
+                    <p>Eventos y campeonatos</p>
+                </div>
+
+            </div>
+
+            <div className="detail-card">
+
+                <div className="section-header">
+                    <h2>Qué es SailJobs LATAM</h2>
+                </div>
+
+                <p>
+                    SailJobs LATAM es una plataforma pensada para la comunidad
+                    náutica latinoamericana. El objetivo es que clubes,
+                    asociaciones, clases, entrenadores, oficiales de regata,
+                    jurados, medidores, voluntarios y navegantes puedan
+                    encontrarse en un mismo lugar.
+                </p>
+
+                <p>
+                    La plataforma permite publicar oportunidades profesionales,
+                    convocatorias para campeonatos, voluntariados, eventos,
+                    clasificados y perfiles profesionales vinculados a la vela.
+                </p>
+
+            </div>
+
+            <div className="detail-card">
+
+                <div className="section-header">
+                    <h2>Qué problema busca resolver</h2>
+                </div>
+
+                <p>
+                    En la vela, muchas oportunidades circulan por grupos de
+                    WhatsApp, contactos personales o publicaciones aisladas.
+                    Eso hace que sea difícil encontrar entrenadores, oficiales,
+                    voluntarios o roles técnicos para campeonatos.
+                </p>
+
+                <p>
+                    SailJobs LATAM busca ordenar esa información y hacerla más
+                    accesible, especialmente para clubes y personas que quieren
+                    participar profesionalmente o colaborar en eventos náuticos.
+                </p>
+
+            </div>
+
+            <div className="detail-card">
+
+                <div className="section-header">
+                    <h2>Para quién es</h2>
+                </div>
+
+                <div className="dashboard-grid">
+
+                    <div className="dashboard-card">
+                        <h3>Clubes y organizaciones</h3>
+
+                        <p>
+                            Para publicar oportunidades, convocatorias, eventos
+                            y revisar postulaciones.
+                        </p>
+                    </div>
+
+                    <div className="dashboard-card">
+                        <h3>Profesionales náuticos</h3>
+
+                        <p>
+                            Para mostrar experiencia, certificaciones,
+                            especialidades, CV y postularse a oportunidades.
+                        </p>
+                    </div>
+
+                    <div className="dashboard-card">
+                        <h3>Voluntarios</h3>
+
+                        <p>
+                            Para participar en campeonatos, eventos y tareas de
+                            apoyo dentro de la comunidad náutica.
+                        </p>
+                    </div>
+
+                    <div className="dashboard-card">
+                        <h3>Navegantes y comunidad</h3>
+
+                        <p>
+                            Para consultar eventos, clubes, clasificados y
+                            oportunidades dentro de la región.
+                        </p>
+                    </div>
 
                 </div>
 
-            </section>
+            </div>
+
+            <div className="detail-card">
+
+                <div className="section-header">
+                    <h2>Estado actual</h2>
+                </div>
+
+                <p>
+                    Esta versión es una beta visual en desarrollo. Todavía no
+                    usa base de datos real: los datos cargados se guardan
+                    localmente en cada navegador.
+                </p>
+
+                <p>
+                    La próxima etapa es conectar la plataforma con base de datos,
+                    autenticación real, almacenamiento de imágenes y CVs, y un
+                    sistema de administración más sólido.
+                </p>
+
+                <button
+                    className="apply-button"
+                    onClick={() => navigate("/contact")}
+                >
+                    Enviar feedback
+                </button>
+
+            </div>
 
         </div>
-
     );
 }
 
