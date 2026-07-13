@@ -10,9 +10,7 @@ import {
 
 import {
     getCurrentUser,
-    logout,
-    hasProfessionalProfile,
-    hasProfile
+    logout
 } from "../utils/authStorage";
 
 import {
@@ -23,66 +21,26 @@ function Navbar() {
 
     const navigate = useNavigate();
 
-    const [
-        currentUser,
-        setCurrentUser
-    ] = useState(
-        getCurrentUser()
-    );
+    const [currentUser, setCurrentUser] = useState(getCurrentUser());
+    const [menuOpen, setMenuOpen] = useState(false);
 
-    const [
-        menuOpen,
-        setMenuOpen
-    ] = useState(false);
+    const normalizedRole = normalizeUserRole(currentUser);
 
-    const normalizedRole =
-        normalizeUserRole(
-            currentUser
-        );
-
-    const hasPersonalProfile =
-        hasProfile(
-            currentUser,
-            "user"
-        );
-
-    const professionalProfileIsActive =
-        hasProfessionalProfile(
-            currentUser
-        );
+    const isClub = normalizedRole === "club";
+    const isOrganizationAdmin = normalizedRole === "organization_admin";
 
     useEffect(() => {
-
         function syncUser() {
-            setCurrentUser(
-                getCurrentUser()
-            );
+            setCurrentUser(getCurrentUser());
         }
 
-        window.addEventListener(
-            "authChanged",
-            syncUser
-        );
-
-        window.addEventListener(
-            "storage",
-            syncUser
-        );
+        window.addEventListener("authChanged", syncUser);
+        window.addEventListener("storage", syncUser);
 
         return () => {
-
-            window.removeEventListener(
-                "authChanged",
-                syncUser
-            );
-
-            window.removeEventListener(
-                "storage",
-                syncUser
-            );
-
+            window.removeEventListener("authChanged", syncUser);
+            window.removeEventListener("storage", syncUser);
         };
-
     }, []);
 
     function closeMenu() {
@@ -91,522 +49,137 @@ function Navbar() {
 
     function handleLogout() {
         logout();
-
         closeMenu();
-
         navigate("/");
     }
 
     return (
-
         <nav className="navbar">
 
             <h2
                 onClick={() => {
-
                     closeMenu();
-
                     navigate("/");
-
                 }}
-                style={{
-                    cursor: "pointer"
-                }}
+                style={{ cursor: "pointer" }}
             >
                 SailJobs LATAM
             </h2>
 
             <button
                 className="menu-toggle"
-                onClick={() =>
-                    setMenuOpen(
-                        !menuOpen
-                    )
-                }
-                aria-label={
-                    "Abrir o cerrar menú"
-                }
+                onClick={() => setMenuOpen(!menuOpen)}
+                aria-label="Abrir o cerrar menú"
             >
                 ☰
             </button>
 
-            <div
-                className={
-                    `nav-links ${
-                        menuOpen
-                            ? "open"
-                            : ""
-                    }`
-                }
-            >
+            <div className={`nav-links ${menuOpen ? "open" : ""}`}>
+
+                <Link to="/" onClick={closeMenu}>
+                    Inicio
+                </Link>
+
+                <Link to="/calendar" onClick={closeMenu}>
+                    Calendario
+                </Link>
+
+                <Link to="/jobs" onClick={closeMenu}>
+                    Oportunidades
+                </Link>
+
+                <Link to="/classifieds" onClick={closeMenu}>
+                    Clasificados
+                </Link>
+
+                <Link to="/clubs" onClick={closeMenu}>
+                    Clubes
+                </Link>
+
+                <Link to="/ranking" onClick={closeMenu}>
+                    Ranking
+                </Link>
+
+                <Link to="/about" onClick={closeMenu}>
+                    Sobre nosotros
+                </Link>
+
+                <Link to="/contact" onClick={closeMenu}>
+                    Contacto
+                </Link>
 
                 {!currentUser && (
-
                     <>
-
-                        <Link
-                            to="/"
-                            onClick={closeMenu}
-                        >
-                            Inicio
-                        </Link>
-
-                        <Link
-                            to="/calendar"
-                            onClick={closeMenu}
-                        >
-                            Calendario
-                        </Link>
-
-                        <Link
-                            to="/jobs"
-                            onClick={closeMenu}
-                        >
-                            Oportunidades
-                        </Link>
-
-                        <Link
-                            to="/classifieds"
-                            onClick={closeMenu}
-                        >
-                            Clasificados
-                        </Link>
-
-                        <Link
-                            to="/clubs"
-                            onClick={closeMenu}
-                        >
-                            Clubes
-                        </Link>
-
-                        <Link
-                            to="/ranking"
-                            onClick={closeMenu}
-                        >
-                            Ranking
-                        </Link>
-
-                        <Link
-                            to="/about"
-                            onClick={closeMenu}
-                        >
-                            Sobre nosotros
-                        </Link>
-
-                        <Link
-                            to="/contact"
-                            onClick={closeMenu}
-                        >
-                            Contacto
-                        </Link>
-
-                        <Link
-                            to="/login"
-                            onClick={closeMenu}
-                        >
+                        <Link to="/login" onClick={closeMenu}>
                             Ingresar
                         </Link>
 
-                        <Link
-                            to="/signup"
-                            onClick={closeMenu}
-                        >
+                        <Link to="/signup" onClick={closeMenu}>
                             Crear cuenta
                         </Link>
-
                     </>
-
                 )}
 
-                {currentUser &&
-                    normalizedRole ===
-                    "superadmin" && (
-
-                    <>
-
-                        <Link
-                            to="/"
-                            onClick={closeMenu}
-                        >
-                            Inicio
-                        </Link>
-
-                        <Link
-                            to="/superadmin"
-                            onClick={closeMenu}
-                        >
-                            Superadmin
-                        </Link>
-
-                        <Link
-                            to="/calendar"
-                            onClick={closeMenu}
-                        >
-                            Calendario
-                        </Link>
-
-                        <Link
-                            to="/jobs"
-                            onClick={closeMenu}
-                        >
-                            Oportunidades
-                        </Link>
-
-                        <Link
-                            to="/classifieds"
-                            onClick={closeMenu}
-                        >
-                            Clasificados
-                        </Link>
-
-                        <Link
-                            to="/clubs"
-                            onClick={closeMenu}
-                        >
-                            Clubes
-                        </Link>
-
-                        <Link
-                            to="/ranking"
-                            onClick={closeMenu}
-                        >
-                            Ranking
-                        </Link>
-
-                        <Link
-                            to="/about"
-                            onClick={closeMenu}
-                        >
-                            Sobre nosotros
-                        </Link>
-
-                        <Link
-                            to="/contact"
-                            onClick={closeMenu}
-                        >
-                            Contacto
-                        </Link>
-
-                    </>
-
+                {currentUser && isClub && (
+                    <Link
+                        to={`/club-dashboard/${currentUser.clubId}`}
+                        onClick={closeMenu}
+                    >
+                        Mi organización
+                    </Link>
                 )}
 
-                {currentUser &&
-                    normalizedRole ===
-                    "organization_admin" && (
-
-                    <>
-
-                        <Link
-                            to="/"
-                            onClick={closeMenu}
-                        >
-                            Inicio
-                        </Link>
-
-                        <Link
-                            to="/organization-admin"
-                            onClick={closeMenu}
-                        >
-                            Mi organización
-                        </Link>
-
-                        <Link
-                            to="/calendar"
-                            onClick={closeMenu}
-                        >
-                            Calendario
-                        </Link>
-
-                        <Link
-                            to="/jobs"
-                            onClick={closeMenu}
-                        >
-                            Oportunidades
-                        </Link>
-
-                        <Link
-                            to="/ranking"
-                            onClick={closeMenu}
-                        >
-                            Ranking
-                        </Link>
-
-                        <Link
-                            to="/clubs"
-                            onClick={closeMenu}
-                        >
-                            Clubes
-                        </Link>
-
-                        <Link
-                            to="/about"
-                            onClick={closeMenu}
-                        >
-                            Sobre nosotros
-                        </Link>
-
-                        <Link
-                            to="/contact"
-                            onClick={closeMenu}
-                        >
-                            Contacto
-                        </Link>
-
-                    </>
-
+                {currentUser && isOrganizationAdmin && (
+                    <Link
+                        to="/organization-admin"
+                        onClick={closeMenu}
+                    >
+                        Mi organización
+                    </Link>
                 )}
 
-                {currentUser &&
-                    normalizedRole ===
-                    "club" && (
-
-                    <>
-
-                        <Link
-                            to="/"
-                            onClick={closeMenu}
-                        >
-                            Inicio
-                        </Link>
-
-                        <Link
-                            to="/calendar"
-                            onClick={closeMenu}
-                        >
-                            Calendario
-                        </Link>
-
-                        <Link
-                            to="/jobs"
-                            onClick={closeMenu}
-                        >
-                            Oportunidades
-                        </Link>
-
-                        <Link
-                            to="/classifieds"
-                            onClick={closeMenu}
-                        >
-                            Clasificados
-                        </Link>
-
-                        <Link
-                            to="/clubs"
-                            onClick={closeMenu}
-                        >
-                            Clubes
-                        </Link>
-
-                        <Link
-                            to={
-                                `/club-dashboard/${
-                                    currentUser.clubId
-                                }`
-                            }
-                            onClick={closeMenu}
-                        >
-                            Mi organización
-                        </Link>
-
-                        <Link
-                            to="/about"
-                            onClick={closeMenu}
-                        >
-                            Sobre nosotros
-                        </Link>
-
-                        <Link
-                            to="/contact"
-                            onClick={closeMenu}
-                        >
-                            Contacto
-                        </Link>
-
-                    </>
-
-                )}
-
-                {currentUser &&
-                    hasPersonalProfile &&
-                    professionalProfileIsActive && (
-
-                    <>
-
-                        <Link
-                            to="/"
-                            onClick={closeMenu}
-                        >
-                            Inicio
-                        </Link>
-
-                        <Link
-                            to="/calendar"
-                            onClick={closeMenu}
-                        >
-                            Calendario
-                        </Link>
-
-                        <Link
-                            to="/jobs"
-                            onClick={closeMenu}
-                        >
-                            Oportunidades
-                        </Link>
-
-                        <Link
-                            to="/classifieds"
-                            onClick={closeMenu}
-                        >
-                            Clasificados
-                        </Link>
-
-                        <Link
-                            to="/clubs"
-                            onClick={closeMenu}
-                        >
-                            Clubes
-                        </Link>
-
-                        <Link
-                            to="/ranking"
-                            onClick={closeMenu}
-                        >
-                            Ranking
-                        </Link>
-
-                        <Link
-                            to="/coach-dashboard"
-                            onClick={closeMenu}
-                        >
-                            Perfil profesional
-                        </Link>
-
-                        <Link
-                            to="/user-dashboard"
-                            onClick={closeMenu}
-                        >
-                            Perfil personal
-                        </Link>
-
-                        <Link
-                            to="/about"
-                            onClick={closeMenu}
-                        >
-                            Sobre nosotros
-                        </Link>
-
-                        <Link
-                            to="/contact"
-                            onClick={closeMenu}
-                        >
-                            Contacto
-                        </Link>
-
-                    </>
-
-                )}
-
-                {currentUser &&
-                    hasPersonalProfile &&
-                    !professionalProfileIsActive && (
-
-                    <>
-
-                        <Link
-                            to="/"
-                            onClick={closeMenu}
-                        >
-                            Inicio
-                        </Link>
-
-                        <Link
-                            to="/calendar"
-                            onClick={closeMenu}
-                        >
-                            Calendario
-                        </Link>
-
-                        <Link
-                            to="/jobs"
-                            onClick={closeMenu}
-                        >
-                            Oportunidades
-                        </Link>
-
-                        <Link
-                            to="/classifieds"
-                            onClick={closeMenu}
-                        >
-                            Clasificados
-                        </Link>
-
-                        <Link
-                            to="/clubs"
-                            onClick={closeMenu}
-                        >
-                            Clubes
-                        </Link>
-
-                        <Link
-                            to="/ranking"
-                            onClick={closeMenu}
-                        >
-                            Ranking
-                        </Link>
-
-                        <Link
-                            to="/user-dashboard"
-                            onClick={closeMenu}
-                        >
-                            Mi perfil
-                        </Link>
-
-                        <Link
-                            to="/about"
-                            onClick={closeMenu}
-                        >
-                            Sobre nosotros
-                        </Link>
-
-                        <Link
-                            to="/contact"
-                            onClick={closeMenu}
-                        >
-                            Contacto
-                        </Link>
-
-                    </>
-
+                {currentUser && !isClub && !isOrganizationAdmin && (
+                    <Link to="/profile" onClick={closeMenu}>
+                        Mi perfil
+                    </Link>
                 )}
 
                 {currentUser && (
-
                     <>
+                        <span
+                            className="navbar-user"
+                            onClick={() => {
+                                closeMenu();
 
-                        <span className="navbar-user">
-                            {
-                                currentUser.name
-                            }
+                                if (isClub && currentUser.clubId) {
+                                    navigate(`/club-dashboard/${currentUser.clubId}`);
+                                    return;
+                                }
+
+                                if (isOrganizationAdmin) {
+                                    navigate("/organization-admin");
+                                    return;
+                                }
+
+                                navigate("/profile");
+                            }}
+                            style={{ cursor: "pointer" }}
+                        >
+                            {currentUser.name}
                         </span>
 
                         <button
                             className="nav-button"
-                            onClick={
-                                handleLogout
-                            }
+                            onClick={handleLogout}
                         >
                             Salir
                         </button>
-
                     </>
-
                 )}
 
             </div>
 
         </nav>
-
     );
 }
 

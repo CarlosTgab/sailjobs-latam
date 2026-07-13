@@ -6,6 +6,7 @@ import {
 } from "react-router-dom";
 
 import BetaBanner from "./components/BetaBanner";
+import Profile from "./pages/Profile";
 
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
@@ -73,6 +74,15 @@ function App() {
       <BetaBanner />
 
       <Routes>
+
+        <Route
+          path="/profile"
+          element={
+            <RequireAuth>
+              <Profile />
+            </RequireAuth>
+          }
+        />
 
         <Route
           path="/"
@@ -222,28 +232,12 @@ function App() {
 
         <Route
           path="/user-dashboard"
-          element={
-
-            <RequireAuth>
-
-              <UserDashboard />
-
-            </RequireAuth>
-
-          }
+          element={<Navigate to="/profile" replace />}
         />
 
         <Route
           path="/coach-dashboard"
-          element={
-
-            <RequireProfile profile="professional">
-
-              <CoachDashboard />
-
-            </RequireProfile>
-
-          }
+          element={<Navigate to="/profile" replace />}
         />
 
         <Route
