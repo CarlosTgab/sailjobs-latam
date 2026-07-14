@@ -1,4 +1,5 @@
 import { createStoredClub } from "./clubsStorage";
+import { sameId } from "./idUtils";
 
 const DEFAULT_PROFESSIONAL_PROFILE = {
     active: false,
@@ -238,13 +239,9 @@ export function hasProfessionalProfile(user) {
 }
 
 export function getUserById(userId) {
-    const users = getUsers();
-
     return (
-        users.find(
-            user =>
-                Number(user.id) ===
-                Number(userId)
+        getUsers().find(user =>
+            sameId(user.id, userId)
         ) || null
     );
 }
@@ -410,7 +407,7 @@ export function login(email, password) {
             user.email
                 .trim()
                 .toLowerCase() ===
-                normalizedEmail &&
+            normalizedEmail &&
             user.password === password
     );
 

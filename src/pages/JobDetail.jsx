@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { sameId } from "../utils/idUtils";
 import {
     useParams,
     useNavigate
@@ -58,15 +59,13 @@ function JobDetail() {
 
     const job = jobs.find(
         item =>
-            Number(item.id) ===
-            Number(id)
+            sameId(item.id, id)
     );
 
     const club = job
         ? clubs.find(
             item =>
-                Number(item.id) ===
-                Number(job.clubId)
+                sameId(item.id, job.clubId)
         )
         : null;
 
@@ -162,16 +161,14 @@ function JobDetail() {
         currentUser &&
         applications.some(
             application =>
-                Number(
-                    application.userId
-                ) ===
-                    Number(
-                        currentUser.id
-                    ) &&
-                Number(
-                    application.jobId
-                ) ===
-                    Number(job.id)
+                sameId(
+                    application.userId,
+                    currentUser.id
+                ) &&
+                sameId(
+                    application.jobId,
+                    job.id
+                )
         );
 
     const canApply =
@@ -286,7 +283,7 @@ function JobDetail() {
             cv
                 ? cv.name
                 : currentProfile.cvFileName ||
-                    "";
+                "";
 
         saveApplication({
 
@@ -566,44 +563,44 @@ function JobDetail() {
 
                 {job.requirements &&
                     job.requirements.length >
-                        0 && (
+                    0 && (
 
-                    <>
+                        <>
 
-                        <p>
-                            <strong>
-                                Requisitos:
-                            </strong>
-                        </p>
+                            <p>
+                                <strong>
+                                    Requisitos:
+                                </strong>
+                            </p>
 
-                        <ul>
+                            <ul>
 
-                            {
-                                job.requirements.map(
-                                    (
-                                        requirement,
-                                        index
-                                    ) => (
+                                {
+                                    job.requirements.map(
+                                        (
+                                            requirement,
+                                            index
+                                        ) => (
 
-                                        <li
-                                            key={
-                                                `${requirement}-${index}`
-                                            }
-                                        >
-                                            {
-                                                requirement
-                                            }
-                                        </li>
+                                            <li
+                                                key={
+                                                    `${requirement}-${index}`
+                                                }
+                                            >
+                                                {
+                                                    requirement
+                                                }
+                                            </li>
 
+                                        )
                                     )
-                                )
-                            }
+                                }
 
-                        </ul>
+                            </ul>
 
-                    </>
+                        </>
 
-                )}
+                    )}
 
                 {job.updatedAt && (
 
@@ -645,38 +642,38 @@ function JobDetail() {
                     {currentUser &&
                         canApply && (
 
-                        <button
-                            className="apply-button"
-                            onClick={
-                                handleOpenApply
-                            }
-                            disabled={
-                                alreadyApplied
-                            }
-                        >
-                            {
-                                alreadyApplied
-                                    ? "Ya te postulaste"
-                                    : "Postularme"
-                            }
-                        </button>
+                            <button
+                                className="apply-button"
+                                onClick={
+                                    handleOpenApply
+                                }
+                                disabled={
+                                    alreadyApplied
+                                }
+                            >
+                                {
+                                    alreadyApplied
+                                        ? "Ya te postulaste"
+                                        : "Postularme"
+                                }
+                            </button>
 
-                    )}
+                        )}
 
                     {currentUser &&
                         !canApply &&
                         !canManageThisJob && (
 
-                        <button
-                            className="apply-button"
-                            onClick={
-                                handleOpenApply
-                            }
-                        >
-                            Activar perfil profesional
-                        </button>
+                            <button
+                                className="apply-button"
+                                onClick={
+                                    handleOpenApply
+                                }
+                            >
+                                Activar perfil profesional
+                            </button>
 
-                    )}
+                        )}
 
                     {canEditOrDelete && (
 
@@ -712,37 +709,37 @@ function JobDetail() {
                     !canApply &&
                     !canManageThisJob && (
 
-                    <p
-                        style={{
-                            marginTop: "15px",
-                            color: "#666"
-                        }}
-                    >
-                        Podés activar un perfil
-                        profesional desde esta misma
-                        cuenta sin perder tus datos,
-                        publicaciones ni historial.
-                    </p>
+                        <p
+                            style={{
+                                marginTop: "15px",
+                                color: "#666"
+                            }}
+                        >
+                            Podés activar un perfil
+                            profesional desde esta misma
+                            cuenta sin perder tus datos,
+                            publicaciones ni historial.
+                        </p>
 
-                )}
+                    )}
 
                 {canManageThisJob &&
                     !jobWasCreatedInApp && (
 
-                    <p
-                        style={{
-                            marginTop: "15px",
-                            color: "#666"
-                        }}
-                    >
-                        Esta oportunidad pertenece a
-                        los datos base del sitio. Solo
-                        las oportunidades creadas desde
-                        el panel se pueden editar o
-                        eliminar.
-                    </p>
+                        <p
+                            style={{
+                                marginTop: "15px",
+                                color: "#666"
+                            }}
+                        >
+                            Esta oportunidad pertenece a
+                            los datos base del sitio. Solo
+                            las oportunidades creadas desde
+                            el panel se pueden editar o
+                            eliminar.
+                        </p>
 
-                )}
+                    )}
 
             </div>
 
@@ -883,30 +880,30 @@ function JobDetail() {
                             {!cv &&
                                 professionalProfile.cvFileName && (
 
-                                <p>
-                                    Se usará el CV de tu
-                                    perfil:{" "}
+                                    <p>
+                                        Se usará el CV de tu
+                                        perfil:{" "}
 
-                                    <strong>
-                                        {
-                                            professionalProfile.cvFileName
-                                        }
-                                    </strong>
-                                </p>
+                                        <strong>
+                                            {
+                                                professionalProfile.cvFileName
+                                            }
+                                        </strong>
+                                    </p>
 
-                            )}
+                                )}
 
                             {!cv &&
                                 !professionalProfile.cvFileName && (
 
-                                <p className="password-help">
-                                    No tenés un archivo de CV
-                                    cargado en tu perfil. Podés
-                                    enviar la postulación igual,
-                                    pero es recomendable agregarlo.
-                                </p>
+                                    <p className="password-help">
+                                        No tenés un archivo de CV
+                                        cargado en tu perfil. Podés
+                                        enviar la postulación igual,
+                                        pero es recomendable agregarlo.
+                                    </p>
 
-                            )}
+                                )}
 
                             {professionalProfile.cvUrl && (
 

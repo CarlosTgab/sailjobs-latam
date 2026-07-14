@@ -2,6 +2,7 @@ import {
     useParams,
     useNavigate
 } from "react-router-dom";
+import { sameId } from "../utils/idUtils";
 
 import {
     getApplications
@@ -13,6 +14,7 @@ import {
 } from "../utils/authStorage";
 
 import staticJobs from "../data/jobs";
+
 
 import {
     getAllJobs
@@ -43,8 +45,7 @@ function ApplicantDetail() {
     const application =
         applications.find(
             item =>
-                Number(item.id) ===
-                Number(id)
+                sameId(item.id, id)
         );
 
     if (!application) {
@@ -78,8 +79,8 @@ function ApplicantDetail() {
     const job =
         jobs.find(
             item =>
-                Number(item.id) ===
-                Number(
+                sameId(
+                    item.id,
                     application.jobId
                 )
         );
@@ -91,8 +92,10 @@ function ApplicantDetail() {
 
     const isOwnApplication =
         currentUser &&
-        Number(currentUser.id) ===
-            Number(application.userId);
+        sameId(
+            currentUser.id,
+            application.userId
+        );
 
     const canManageApplication =
         currentUser &&

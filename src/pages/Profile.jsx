@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { sameId } from "../utils/idUtils";
 
 import {
     COUNTRIES,
@@ -129,16 +130,14 @@ function Profile() {
     const applications = currentUser
         ? getApplications()
             .filter(application =>
-                Number(application.userId) === Number(currentUser.id)
-            )
+                sameId(application.userId, currentUser.id))
             .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
         : [];
 
     const classifieds = currentUser
         ? getAllClassifieds()
             .filter(item =>
-                Number(item.userId) === Number(currentUser.id)
-            )
+                sameId(item.userId, currentUser.id))
         : [];
 
     const pendingApplications = applications.filter(
@@ -199,13 +198,13 @@ function Profile() {
 
     function getJob(jobId) {
         return jobs.find(
-            job => Number(job.id) === Number(jobId)
+            job => sameId(job.id, jobId)
         );
     }
 
     function getClub(clubId) {
         return clubs.find(
-            club => Number(club.id) === Number(clubId)
+            club => sameId(club.id, clubId)
         );
     }
 

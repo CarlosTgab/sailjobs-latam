@@ -2204,3 +2204,10 @@ body {
 .checkbox-row input {
     width: auto !important;
 }
+
+.about-page,
+.contact-page,
+.page-container {
+    position: relative;
+    z-index: 1;
+}

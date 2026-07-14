@@ -1,27 +1,48 @@
+import { sameId } from "./idUtils";
+
 export function normalizeUserRole(userOrRole) {
     const role =
         typeof userOrRole === "string"
             ? userOrRole
             : userOrRole?.role;
 
-    // Compatibilidad temporal con el rol anterior.
     if (role === "admin") {
         return "superadmin";
     }
 
-    return role;
+    return role || "user";
 }
 
 export function isSuperadmin(user) {
-    return normalizeUserRole(user) === "superadmin";
+    if (!user) {
+        return false;
+    }
+
+    const normalizedRole =
+        normalizeUserRole(user);
+
+    return (
+        normalizedRole === "superadmin" ||
+        user.permissions?.includes("superadmin")
+    );
 }
 
 export function isOrganizationAdmin(user) {
-    return normalizeUserRole(user) === "organization_admin";
+    if (!user) {
+        return false;
+    }
+
+    const normalizedRole =
+        normalizeUserRole(user);
+
+    return (
+        normalizedRole === "organization_admin" ||
+        user.permissions?.includes("organization_admin")
+    );
 }
 
 export function canManageClub(user, clubId) {
-    if (!user) {
+    if (!user || !clubId) {
         return false;
     }
 
@@ -29,14 +50,28 @@ export function canManageClub(user, clubId) {
         return true;
     }
 
-    return (
-        normalizeUserRole(user) === "club" &&
-        Number(user.clubId) === Number(clubId)
-    );
+    if (
+        user.role === "club" &&
+        sameId(user.clubId, clubId)
+    ) {
+        return true;
+    }
+
+    if (
+        Array.isArray(user.organizationMemberships) &&
+        user.organizationMemberships.some(membership =>
+            sameId(membership.clubId, clubId) ||
+            sameId(membership.organizationId, clubId)
+        )
+    ) {
+        return true;
+    }
+
+    return false;
 }
 
 export function canManageOrganization(user, organizationId) {
-    if (!user) {
+    if (!user || !organizationId) {
         return false;
     }
 
@@ -44,36 +79,21 @@ export function canManageOrganization(user, organizationId) {
         return true;
     }
 
-    return (
+    if (
         isOrganizationAdmin(user) &&
-        Number(user.organizationId) === Number(organizationId)
-    );
-}
-
-export function canManageSailingClass(user, className) {
-    if (!user || !className) {
-        return false;
-    }
-
-    if (isSuperadmin(user)) {
+        sameId(user.organizationId, organizationId)
+    ) {
         return true;
     }
 
-    return (
-        isOrganizationAdmin(user) &&
-        Array.isArray(user.managedClasses) &&
-        user.managedClasses.includes(className)
-    );
-}
-
-export function canReviewEvent(user, event) {
-    if (!user || !event) {
-        return false;
-    }
-
-    if (isSuperadmin(user)) {
+    if (
+        Array.isArray(user.organizationMemberships) &&
+        user.organizationMemberships.some(membership =>
+            sameId(membership.organizationId, organizationId)
+        )
+    ) {
         return true;
     }
 
-    return canManageSailingClass(user, event.className);
+    return false;
 }
