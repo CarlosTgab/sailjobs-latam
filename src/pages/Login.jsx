@@ -1,82 +1,153 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import {
+    Link,
+    useNavigate
+} from "react-router-dom";
 
-import { login } from "../utils/authStorage";
+import {
+    loginWithSupabase
+} from "../utils/supabaseAuth";
+
+import {
+    normalizeUserRole
+} from "../utils/permissions";
+
+function getRedirectPath(user) {
+    const role =
+        normalizeUserRole(user);
+
+    if (role === "club" && user.clubId) {
+        return `/club-dashboard/${user.clubId}`;
+    }
+
+    if (role === "organization_admin") {
+        return "/organization-admin";
+    }
+
+    return "/profile";
+}
 
 function Login() {
+    const navigate =
+        useNavigate();
 
-    const navigate = useNavigate();
+    const [
+        email,
+        setEmail
+    ] = useState("");
 
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
+    const [
+        password,
+        setPassword
+    ] = useState("");
 
-    function handleSubmit(event) {
+    const [
+        formMessage,
+        setFormMessage
+    ] = useState("");
+
+    const [
+        loading,
+        setLoading
+    ] = useState(false);
+
+    async function handleSubmit(event) {
         event.preventDefault();
 
-        if (!email || !password) {
-            alert("Completá email y contraseña.");
-            return;
-        }
+        setFormMessage("");
+        setLoading(true);
 
-        const result = login(email, password);
+        try {
+            const user =
+                await loginWithSupabase(
+                    email,
+                    password
+                );
 
-        if (!result.success) {
-            alert(result.message);
-            return;
-        }
-
-        alert("Sesión iniciada correctamente.");
-
-        if (result.user.role === "club") {
-            navigate(`/club-dashboard/${result.user.clubId}`);
-        } else if (result.user.role === "coach") {
-            navigate("/coach-dashboard");
-        } else {
-            navigate("/user-dashboard");
+            navigate(
+                getRedirectPath(user)
+            );
+        } catch (error) {
+            setFormMessage(
+                error.message ||
+                "No se pudo iniciar sesión."
+            );
+        } finally {
+            setLoading(false);
         }
     }
 
     return (
-
         <div className="auth-page">
 
             <div className="auth-card">
 
-                <h1>Iniciar sesión</h1>
+                <h1>Ingresar</h1>
 
                 <p>
-                    Entrá a tu cuenta de SailJobs LATAM.
+                    Entrá a SailJobs LATAM con tu cuenta.
                 </p>
 
                 <form onSubmit={handleSubmit}>
 
+                    <label>Email</label>
+
                     <input
                         type="email"
-                        placeholder="Email"
                         value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        onChange={(event) =>
+                            setEmail(
+                                event.target.value
+                            )
+                        }
+                        placeholder="tu@email.com"
                     />
+
+                    <label>Contraseña</label>
 
                     <input
                         type="password"
-                        placeholder="Contraseña"
                         value={password}
-                        onChange={(e) => setPassword(e.target.value)}
+                        onChange={(event) =>
+                            setPassword(
+                                event.target.value
+                            )
+                        }
+                        placeholder="Tu contraseña"
                     />
 
+                    {formMessage && (
+                        <p
+                            style={{
+                                color: "#b42318"
+                            }}
+                        >
+                            {formMessage}
+                        </p>
+                    )}
+
                     <button
-                        className="apply-button"
                         type="submit"
+                        className="auth-button"
+                        disabled={loading}
                     >
-                        Ingresar
+                        {loading
+                            ? "Ingresando..."
+                            : "Ingresar"}
                     </button>
 
                 </form>
 
+                <p className="auth-switch">
+                    ¿No tenés cuenta?{" "}
+                    <Link to="/signup">
+                        Crear cuenta
+                    </Link>
+                </p>
+
             </div>
 
         </div>
-
     );
 }
 

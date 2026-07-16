@@ -7,6 +7,7 @@ import {
 
 import BetaBanner from "./components/BetaBanner";
 import Profile from "./pages/Profile";
+import AuthSync from "./components/AuthSync";
 
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
@@ -66,6 +67,8 @@ function App() {
   return (
 
     <BrowserRouter>
+
+      <AuthSync />
 
       <PageBackground />
 
