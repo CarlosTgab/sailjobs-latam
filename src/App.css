@@ -2211,3 +2211,81 @@ body {
     position: relative;
     z-index: 1;
 }
+
+.auth-card form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.auth-card label {
+    font-weight: 700;
+    color: #1f2937;
+    margin-top: 8px;
+}
+
+.auth-card input,
+.auth-card select,
+.auth-card textarea {
+    width: 100%;
+    border: 1px solid #cfd8e3;
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-size: 1rem;
+    background: rgba(255, 255, 255, 0.92);
+    color: #111827;
+}
+
+.auth-card input:focus,
+.auth-card select:focus,
+.auth-card textarea:focus {
+    outline: none;
+    border-color: #ff8400;
+    box-shadow: 0 0 0 3px rgba(255, 132, 0, 0.18);
+}
+
+.auth-button,
+.auth-card button[type="submit"] {
+    width: 100%;
+    border: none;
+    border-radius: 999px;
+    padding: 14px 20px;
+    margin-top: 14px;
+    background: #ff8400;
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 1rem;
+    cursor: pointer;
+    box-shadow: 0 10px 22px rgba(255, 132, 0, 0.28);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.auth-button:hover,
+.auth-card button[type="submit"]:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 14px 28px rgba(255, 132, 0, 0.34);
+}
+
+.auth-button:disabled,
+.auth-card button[type="submit"]:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.auth-switch {
+    margin-top: 18px;
+    text-align: center;
+    color: #475569;
+}
+
+.auth-switch a {
+    color: #0b3d70;
+    font-weight: 800;
+}
+
+.password-help {
+    font-size: 0.9rem;
+    color: #64748b;
+    margin-top: -4px;
+}

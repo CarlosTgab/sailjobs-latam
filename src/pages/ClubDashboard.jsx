@@ -3,6 +3,14 @@ import { useNavigate, useParams } from "react-router-dom";
 import staticClubs from "../data/clubs";
 import { getAllClubs } from "../utils/clubsStorage";
 
+import {
+    getCurrentUser
+} from "../utils/authStorage";
+
+import {
+    sameId
+} from "../utils/idUtils";
+
 import staticJobs from "../data/jobs";
 import { getAllJobs } from "../utils/jobsStorage";
 
@@ -25,9 +33,33 @@ function ClubDashboard() {
     const events = getAllEvents(staticEvents);
     const applications = getApplications();
 
-    const club = clubs.find(
-        item => Number(item.id) === Number(clubId)
-    );
+    const currentUser =
+        getCurrentUser();
+
+    const clubFromLocalData =
+        clubs.find(
+            item =>
+                sameId(item.id, clubId)
+        );
+
+    const clubFromCurrentUser =
+        currentUser &&
+            sameId(currentUser.clubId, clubId)
+            ? {
+                id: currentUser.clubId,
+                name: currentUser.clubName || currentUser.name || "Mi organización",
+                country: currentUser.country || "",
+                city: currentUser.city || "",
+                description: currentUser.description || "",
+                website: "",
+                logo: currentUser.profileImage || "",
+                logoUrl: currentUser.profileImage || ""
+            }
+            : null;
+
+    const club =
+        clubFromLocalData ||
+        clubFromCurrentUser;
 
     if (!club) {
         return (

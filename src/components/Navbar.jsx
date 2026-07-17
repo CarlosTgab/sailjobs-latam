@@ -9,9 +9,12 @@ import {
 } from "react";
 
 import {
-    getCurrentUser,
-    logout
+    getCurrentUser
 } from "../utils/authStorage";
+
+import {
+    logoutWithSupabase
+} from "../utils/supabaseAuth";
 
 import {
     normalizeUserRole
@@ -47,9 +50,11 @@ function Navbar() {
         setMenuOpen(false);
     }
 
-    function handleLogout() {
-        logout();
-        closeMenu();
+    async function handleLogout() {
+        await logoutWithSupabase();
+
+        setCurrentUser(null);
+
         navigate("/");
     }
 

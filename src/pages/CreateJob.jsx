@@ -5,6 +5,14 @@ import {
 } from "react-router-dom";
 
 import {
+    getCurrentUser
+} from "../utils/authStorage";
+
+import {
+    sameId
+} from "../utils/idUtils";
+
+import {
     COUNTRIES,
     JOB_CATEGORIES,
     OPPORTUNITY_TYPES,
@@ -39,18 +47,39 @@ function CreateJob() {
 
     const clubs = getAllClubs(staticClubs);
 
-    const club = clubs.find(
-        item =>
-            Number(item.id) ===
-            Number(clubId)
-    );
+    const currentUser =
+        getCurrentUser();
+
+    const clubFromLocalData =
+        clubs.find(
+            item =>
+                sameId(item.id, clubId)
+        );
+
+    const clubFromCurrentUser =
+        currentUser &&
+            sameId(currentUser.clubId, clubId)
+            ? {
+                id: currentUser.clubId,
+                name: currentUser.clubName || currentUser.name || "Mi organización",
+                country: currentUser.country || "",
+                city: currentUser.city || "",
+                description: currentUser.description || "",
+                website: "",
+                logo: currentUser.profileImage || "",
+                logoUrl: currentUser.profileImage || ""
+            }
+            : null;
+
+    const club =
+        clubFromLocalData ||
+        clubFromCurrentUser;
 
     const allEvents = getAllEvents(staticEvents);
 
     const clubEvents = allEvents.filter(
         event =>
-            Number(event.clubId) ===
-            Number(clubId)
+            sameId(event.clubId, clubId)
     );
 
     const [title, setTitle] = useState("");
@@ -282,7 +311,7 @@ function CreateJob() {
 
         if (
             opportunityType ===
-                OPPORTUNITY_TYPES.EVENT_ROLE &&
+            OPPORTUNITY_TYPES.EVENT_ROLE &&
             !eventId
         ) {
             setFormMessage(
@@ -294,7 +323,7 @@ function CreateJob() {
 
         if (
             opportunityType ===
-                OPPORTUNITY_TYPES.VOLUNTEER &&
+            OPPORTUNITY_TYPES.VOLUNTEER &&
             !eventId
         ) {
             setFormMessage(
@@ -333,7 +362,7 @@ function CreateJob() {
             salary:
                 compensationDetails.trim() ||
                 COMPENSATION_TYPE_LABELS[
-                    compensationType
+                compensationType
                 ] ||
                 "A confirmar",
 
@@ -450,10 +479,10 @@ function CreateJob() {
                         type="text"
                         placeholder={
                             opportunityType ===
-                            OPPORTUNITY_TYPES.EVENT_ROLE
+                                OPPORTUNITY_TYPES.EVENT_ROLE
                                 ? "Ejemplo: Jurado para Campeonato Argentino ILCA"
                                 : opportunityType ===
-                                  OPPORTUNITY_TYPES.VOLUNTEER
+                                    OPPORTUNITY_TYPES.VOLUNTEER
                                     ? "Ejemplo: Voluntarios para Nacional de Optimist"
                                     : "Ejemplo: Coach de Optimist para temporada de verano"
                         }
@@ -711,7 +740,7 @@ function CreateJob() {
 
                         {
                             ELIGIBLE_PROFILE_LABELS[
-                                ELIGIBLE_PROFILE_TYPES.PROFESSIONAL
+                            ELIGIBLE_PROFILE_TYPES.PROFESSIONAL
                             ]
                         }
 
@@ -735,7 +764,7 @@ function CreateJob() {
 
                         {
                             ELIGIBLE_PROFILE_LABELS[
-                                ELIGIBLE_PROFILE_TYPES.USER
+                            ELIGIBLE_PROFILE_TYPES.USER
                             ]
                         }
 

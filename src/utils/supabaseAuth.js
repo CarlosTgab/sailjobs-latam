@@ -3,6 +3,7 @@ import {
     setCurrentUser,
     logout as clearLocalSession
 } from "./authStorage";
+import { upsertStoredClub } from "./clubsStorage";
 
 const DEFAULT_PROFESSIONAL_PROFILE = {
     active: false,
@@ -109,6 +110,23 @@ export async function fetchSupabaseCurrentUser(userId) {
             .eq("owner_id", userId)
             .maybeSingle();
 
+    if (club) {
+        upsertStoredClub({
+            id: club.id,
+            ownerId: club.owner_id,
+            name: club.name,
+            country: club.country,
+            city: club.city,
+            description: club.description,
+            website: club.website,
+            logo: club.logo_url,
+            logoUrl: club.logo_url,
+            status: club.status,
+            createdAt: club.created_at,
+            updatedAt: club.updated_at
+        });
+    }
+
     return mapProfileToAppUser(
         profile,
         professionalProfile,
@@ -116,117 +134,41 @@ export async function fetchSupabaseCurrentUser(userId) {
     );
 }
 
-async function upsertBaseProfile(user, userData) {
-    const accountType =
-        userData.accountType || "user";
-
-    const isClub =
-        accountType === "club";
-
-    const isProfessional =
-        accountType === "professional" ||
-        accountType === "coach";
-
-    const profileTypes =
-        isClub
-            ? []
-            : isProfessional
-                ? ["user", "professional"]
-                : ["user"];
-
-    const role =
-        isClub
-            ? "club"
-            : "user";
-
+async function setupAccountInSupabase(userData) {
     const { error } =
-        await supabase
-            .from("profiles")
-            .upsert({
-                id: user.id,
-                email: normalizeEmail(user.email),
-                name: userData.name?.trim() || "",
-                phone: userData.phone?.trim() || "",
-                city: userData.city?.trim() || "",
-                country: userData.country || "",
-                role,
-                profile_types: profileTypes,
-                permissions: []
-            });
-
-    if (error) {
-        throw error;
-    }
-}
-
-async function createProfessionalProfile(userId, userData) {
-    const { error } =
-        await supabase
-            .from("professional_profiles")
-            .upsert({
-                user_id: userId,
-                active: true,
-                title: userData.professionalTitle || "",
-                summary: userData.professionalSummary || "",
-                phone: userData.phone || "",
-                city: userData.city || "",
-                country: userData.country || ""
-            });
-
-    if (error) {
-        throw error;
-    }
-}
-
-async function createClubAccount(userId, userData) {
-    const clubName =
-        userData.clubName?.trim() ||
-        userData.name?.trim() ||
-        "Club sin nombre";
-
-    const { data: club, error: clubError } =
-        await supabase
-            .from("clubs")
-            .insert({
-                owner_id: userId,
-                name: clubName,
-                country:
-                    userData.clubCountry ||
-                    userData.country ||
-                    "",
-                city:
-                    userData.clubCity ||
-                    userData.city ||
-                    "",
-                description:
+        await supabase.rpc(
+            "setup_new_account",
+            {
+                account_type_param:
+                    userData.accountType || "user",
+                name_param:
+                    userData.name?.trim() || "",
+                phone_param:
+                    userData.phone?.trim() || "",
+                city_param:
+                    userData.city?.trim() || "",
+                country_param:
+                    userData.country || "",
+                professional_title_param:
+                    userData.professionalTitle || "",
+                professional_summary_param:
+                    userData.professionalSummary || "",
+                club_name_param:
+                    userData.clubName || "",
+                club_city_param:
+                    userData.clubCity || "",
+                club_country_param:
+                    userData.clubCountry || "",
+                club_description_param:
                     userData.clubDescription || "",
-                website:
-                    userData.clubWebsite || "",
-                logo_url:
-                    userData.clubLogoUrl || "",
-                status: "active"
-            })
-            .select("*")
-            .single();
+                club_website_param:
+                    userData.clubWebsite || ""
+            }
+        );
 
-    if (clubError) {
-        throw clubError;
+    if (error) {
+        throw error;
     }
-
-    const { error: membershipError } =
-        await supabase
-            .from("club_memberships")
-            .insert({
-                club_id: club.id,
-                user_id: userId,
-                role: "owner"
-            });
-
-    if (membershipError) {
-        throw membershipError;
-    }
-
-    return club;
 }
 
 export async function registerWithSupabase(userData) {
@@ -267,30 +209,18 @@ export async function registerWithSupabase(userData) {
         );
     }
 
-    await upsertBaseProfile(
-        data.user,
+    const { data: sessionData } =
+        await supabase.auth.getSession();
+
+    if (!sessionData.session) {
+        throw new Error(
+            "La cuenta fue creada, pero falta confirmar el email o iniciar sesión. Para la beta, desactivá Confirm email en Supabase Authentication → Providers → Email."
+        );
+    }
+
+    await setupAccountInSupabase(
         userData
     );
-
-    const accountType =
-        userData.accountType || "user";
-
-    if (
-        accountType === "professional" ||
-        accountType === "coach"
-    ) {
-        await createProfessionalProfile(
-            data.user.id,
-            userData
-        );
-    }
-
-    if (accountType === "club") {
-        await createClubAccount(
-            data.user.id,
-            userData
-        );
-    }
 
     const appUser =
         await fetchSupabaseCurrentUser(

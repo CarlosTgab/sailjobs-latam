@@ -1,32 +1,58 @@
 import { useEffect } from "react";
 import { supabase } from "../lib/supabaseClient";
+
 import {
-    syncSupabaseSession,
-    logoutWithSupabase
+    syncSupabaseSession
 } from "../utils/supabaseAuth";
+
+import {
+    logout as clearLocalSession
+} from "../utils/authStorage";
 
 function AuthSync() {
     useEffect(() => {
-        syncSupabaseSession()
-            .catch(() => {
-                // Evitamos romper la app si todavía no hay sesión.
-            });
+        let isMounted = true;
+
+        async function loadInitialSession() {
+            try {
+                const {
+                    data
+                } = await supabase.auth.getSession();
+
+                if (!isMounted) {
+                    return;
+                }
+
+                if (data.session?.user) {
+                    await syncSupabaseSession();
+                } else {
+                    clearLocalSession();
+                }
+            } catch {
+                clearLocalSession();
+            }
+        }
+
+        loadInitialSession();
 
         const {
             data: { subscription }
         } = supabase.auth.onAuthStateChange(
-            (_event, session) => {
-                if (session?.user) {
-                    syncSupabaseSession()
-                        .catch(() => {});
-                } else {
-                    logoutWithSupabase()
-                        .catch(() => {});
+            async (_event, session) => {
+                try {
+                    if (session?.user) {
+                        await syncSupabaseSession();
+                    } else {
+                        clearLocalSession();
+                    }
+                } catch {
+                    clearLocalSession();
                 }
             }
         );
 
         return () => {
+            isMounted = false;
             subscription.unsubscribe();
         };
     }, []);
