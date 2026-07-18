@@ -17,6 +17,7 @@ import staticClubs from "../data/clubs";
 import { getAllClubs } from "../utils/clubsStorage";
 
 import { getCurrentUser } from "../utils/authStorage";
+import { sameId } from "../utils/idUtils";
 
 function AdminEvents() {
 
@@ -65,7 +66,7 @@ function AdminEvents() {
 
     function getClubName(clubId) {
         const club = clubs.find(
-            club => Number(club.id) === Number(clubId)
+            club => sameId(club.id, clubId)
         );
 
         return club ? club.name : "Club no encontrado";
@@ -73,7 +74,7 @@ function AdminEvents() {
 
     function getClub(clubId) {
         return clubs.find(
-            club => Number(club.id) === Number(clubId)
+            club => sameId(club.id, clubId)
         );
     }
 

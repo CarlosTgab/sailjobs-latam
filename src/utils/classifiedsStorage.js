@@ -1,43 +1,90 @@
-export function getStoredClassifieds() {
-    const data = localStorage.getItem("storedClassifieds");
+import { sameId } from "./idUtils";
 
-    return data ? JSON.parse(data) : [];
+const CLASSIFIEDS_STORAGE_KEY = "storedClassifieds";
+
+function readStorageArray(key) {
+    try {
+        const value = JSON.parse(localStorage.getItem(key));
+        return Array.isArray(value) ? value : [];
+    } catch {
+        return [];
+    }
+}
+
+function normalizeClassified(classified) {
+    if (!classified) {
+        return null;
+    }
+
+    return {
+        id: classified.id || crypto.randomUUID?.() || Date.now(),
+        title: classified.title || "Clasificado sin título",
+        category: classified.category || "",
+        price: classified.price || "",
+        country: classified.country || "",
+        city: classified.city || "",
+        description: classified.description || "",
+        images: Array.isArray(classified.images) ? classified.images : [],
+        sellerName: classified.sellerName || "",
+        sellerEmail: classified.sellerEmail || "",
+        sellerPhone: classified.sellerPhone || "",
+        userId: classified.userId || classified.user_id || null,
+        createdAt: classified.createdAt || classified.created_at || new Date().toISOString(),
+        updatedAt: classified.updatedAt || classified.updated_at || null,
+        status: classified.status || "active"
+    };
+}
+
+function uniqueClassifieds(classifieds) {
+    const result = [];
+
+    classifieds.forEach(classified => {
+        const normalized = normalizeClassified(classified);
+
+        if (!normalized) {
+            return;
+        }
+
+        if (!result.some(item => sameId(item.id, normalized.id))) {
+            result.push(normalized);
+        }
+    });
+
+    return result;
+}
+
+export function getStoredClassifieds() {
+    return uniqueClassifieds(readStorageArray(CLASSIFIEDS_STORAGE_KEY));
 }
 
 export function saveStoredClassifieds(classifieds) {
+    const normalized = uniqueClassifieds(classifieds);
+
     localStorage.setItem(
-        "storedClassifieds",
-        JSON.stringify(classifieds)
+        CLASSIFIEDS_STORAGE_KEY,
+        JSON.stringify(normalized)
     );
+
+    window.dispatchEvent(new Event("classifiedsChanged"));
+
+    return normalized;
 }
 
 export function createStoredClassified(classifiedData) {
     const classifieds = getStoredClassifieds();
 
-    const newClassified = {
-        id: Date.now(),
-        title: classifiedData.title,
-        category: classifiedData.category,
-        price: classifiedData.price,
-        country: classifiedData.country,
-        city: classifiedData.city,
-        description: classifiedData.description,
-        images: classifiedData.images || [],
-        sellerName: classifiedData.sellerName,
-        sellerEmail: classifiedData.sellerEmail,
-        sellerPhone: classifiedData.sellerPhone || "",
-        userId: classifiedData.userId,
-        createdAt: new Date().toISOString(),
+    const newClassified = normalizeClassified({
+        ...classifiedData,
+        id: classifiedData.id || crypto.randomUUID?.() || Date.now(),
+        createdAt: classifiedData.createdAt || new Date().toISOString(),
         updatedAt: null,
-        status: "active"
-    };
+        status: classifiedData.status || "active"
+    });
 
-    const updatedClassifieds = [
+    saveStoredClassifieds([
         ...classifieds,
         newClassified
-    ];
-
-    saveStoredClassifieds(updatedClassifieds);
+    ]);
 
     return newClassified;
 }
@@ -45,36 +92,39 @@ export function createStoredClassified(classifiedData) {
 export function updateStoredClassified(classifiedId, updatedData) {
     const classifieds = getStoredClassifieds();
 
-    const updatedClassifieds = classifieds.map((classified) => {
-        if (Number(classified.id) === Number(classifiedId)) {
-            return {
+    const updatedClassifieds = classifieds.map(classified => {
+        if (sameId(classified.id, classifiedId)) {
+            return normalizeClassified({
                 ...classified,
                 ...updatedData,
+                id: classified.id,
                 updatedAt: new Date().toISOString()
-            };
+            });
         }
 
         return classified;
     });
 
     saveStoredClassifieds(updatedClassifieds);
+
+    return updatedClassifieds.find(classified =>
+        sameId(classified.id, classifiedId)
+    );
 }
 
 export function deleteStoredClassified(classifiedId) {
     const classifieds = getStoredClassifieds();
 
-    const updatedClassifieds = classifieds.filter(
-        classified => Number(classified.id) !== Number(classifiedId)
+    saveStoredClassifieds(
+        classifieds.filter(classified =>
+            !sameId(classified.id, classifiedId)
+        )
     );
-
-    saveStoredClassifieds(updatedClassifieds);
 }
 
 export function getAllClassifieds(staticClassifieds = []) {
-    const storedClassifieds = getStoredClassifieds();
-
-    return [
+    return uniqueClassifieds([
         ...staticClassifieds,
-        ...storedClassifieds
-    ];
+        ...getStoredClassifieds()
+    ]);
 }

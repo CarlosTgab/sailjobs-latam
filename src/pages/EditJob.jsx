@@ -28,6 +28,7 @@ import { getAllEvents } from "../utils/eventsStorage";
 
 import { getCurrentUser } from "../utils/authStorage";
 import { canManageClub } from "../utils/permissions";
+import { sameId } from "../utils/idUtils";
 
 function EditJob() {
     const { id } = useParams();
@@ -40,11 +41,11 @@ function EditJob() {
     const allEvents = getAllEvents(staticEvents);
 
     const job = jobs.find(
-        item => Number(item.id) === Number(id)
+        item => sameId(item.id, id)
     );
 
     const club = job
-        ? clubs.find(item => Number(item.id) === Number(job.clubId))
+        ? clubs.find(item => sameId(item.id, job.clubId))
         : null;
 
     const canManageThisJob =
@@ -58,7 +59,7 @@ function EditJob() {
 
     const clubEvents = job
         ? allEvents.filter(
-            event => Number(event.clubId) === Number(job.clubId)
+            event => sameId(event.clubId, job.clubId)
         )
         : [];
 
@@ -192,7 +193,7 @@ function EditJob() {
         }
 
         const selectedEvent = allEvents.find(
-            event => Number(event.id) === Number(selectedEventId)
+            event => sameId(event.id, selectedEventId)
         );
 
         if (!selectedEvent) {

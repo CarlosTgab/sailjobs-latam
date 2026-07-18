@@ -15,6 +15,7 @@ import staticEvents from "../data/events";
 import { getAllEvents } from "../utils/eventsStorage";
 
 import { getApplications } from "../utils/applicationsStorage";
+import { sameId, sortByNewest } from "../utils/idUtils";
 
 import {
     OPPORTUNITY_TYPES,
@@ -86,20 +87,10 @@ function AdminDashboard() {
             APPLICATION_STATUS.REJECTED
     );
 
-    const latestUsers = [...users]
-        .sort(
-            (a, b) =>
-                Number(b.id) -
-                Number(a.id)
-        )
+    const latestUsers = sortByNewest(users)
         .slice(0, 5);
 
-    const latestOpportunities = [...jobs]
-        .sort(
-            (a, b) =>
-                Number(b.id) -
-                Number(a.id)
-        )
+    const latestOpportunities = sortByNewest(jobs)
         .slice(0, 5);
 
     const latestApplications = [...applications]
@@ -120,17 +111,13 @@ function AdminDashboard() {
 
     function getClub(clubId) {
         return clubs.find(
-            club =>
-                Number(club.id) ===
-                Number(clubId)
+            club => sameId(club.id, clubId)
         );
     }
 
     function getJob(jobId) {
         return jobs.find(
-            job =>
-                Number(job.id) ===
-                Number(jobId)
+            job => sameId(job.id, jobId)
         );
     }
 

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
 import { getCurrentUser } from "../utils/authStorage";
+import { sameId } from "../utils/idUtils";
 
 import {
     getAllClassifieds,
@@ -18,7 +19,7 @@ function ClassifiedDetail() {
     const classifieds = getAllClassifieds();
 
     const classified = classifieds.find(
-        item => Number(item.id) === Number(id)
+        item => sameId(item.id, id)
     );
 
     const images = classified
@@ -48,7 +49,7 @@ function ClassifiedDetail() {
 
     const isOwner =
         currentUser &&
-        Number(currentUser.id) === Number(classified.userId);
+        sameId(currentUser.id, classified.userId);
 
     function getWhatsappLink(phone) {
         if (!phone) {

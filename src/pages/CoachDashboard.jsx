@@ -191,8 +191,7 @@ function CoachDashboard() {
             ? getApplications()
                 .filter(
                     application =>
-                        Number(application.userId) ===
-                        Number(currentUser.id)
+                        sameId(application.userId, currentUser.id)
                 )
                 .sort(
                     (a, b) =>
@@ -206,8 +205,7 @@ function CoachDashboard() {
             ? getAllClassifieds()
                 .filter(
                     item =>
-                        Number(item.userId) ===
-                        Number(currentUser.id)
+                        sameId(item.userId, currentUser.id)
                 )
             : [];
 
@@ -216,8 +214,8 @@ function CoachDashboard() {
             .slice()
             .sort(
                 (a, b) =>
-                    Number(b.id) -
-                    Number(a.id)
+                    new Date(b.createdAt || 0) -
+                    new Date(a.createdAt || 0)
             )
             .slice(0, 4);
 
@@ -272,8 +270,7 @@ function CoachDashboard() {
 
         return jobs.find(
             job =>
-                Number(job.id) ===
-                Number(jobId)
+                sameId(job.id, jobId)
         );
 
     }
@@ -282,8 +279,7 @@ function CoachDashboard() {
 
         return clubs.find(
             club =>
-                Number(club.id) ===
-                Number(clubId)
+                sameId(club.id, clubId)
         );
 
     }

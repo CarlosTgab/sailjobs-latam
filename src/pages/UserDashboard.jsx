@@ -59,10 +59,10 @@ function UserDashboard() {
     const professionalIsActive = hasProfessionalProfile(currentUser);
 
     const classifieds = getAllClassifieds()
-        .filter(item => Number(item.userId) === Number(currentUser.id));
+        .filter(item => sameId(item.userId, currentUser.id));
 
     const applications = getApplications()
-        .filter(application => Number(application.userId) === Number(currentUser.id));
+        .filter(application => sameId(application.userId, currentUser.id));
 
     function getInitials(userName) {
         if (!userName) {

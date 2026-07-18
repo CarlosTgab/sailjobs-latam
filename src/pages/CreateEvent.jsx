@@ -6,6 +6,7 @@ import { getAllClubs } from "../utils/clubsStorage";
 
 import { getCurrentUser } from "../utils/authStorage";
 import { canManageClub } from "../utils/permissions";
+import { sameId } from "../utils/idUtils";
 import {
     SAILING_CLASSES,
     COUNTRIES
@@ -23,7 +24,7 @@ function CreateEvent() {
     const clubs = getAllClubs(staticClubs);
 
     const club = clubs.find(
-        c => c.id === Number(clubId)
+        c => sameId(c.id, clubId)
     );
 
     const [title, setTitle] = useState("");

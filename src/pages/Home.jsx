@@ -12,6 +12,7 @@ import staticEvents from "../data/events";
 import { getAllEvents } from "../utils/eventsStorage";
 
 import { getAllClassifieds } from "../utils/classifiedsStorage";
+import { sameId, sortByNewest } from "../utils/idUtils";
 
 import {
     getUsers,
@@ -36,8 +37,7 @@ function Home() {
         hasProfessionalProfile(user)
     );
 
-    const latestOpportunities = [...jobs]
-        .sort((a, b) => Number(b.id) - Number(a.id))
+    const latestOpportunities = sortByNewest(jobs)
         .slice(0, 3);
 
     const upcomingEvents = [...events]
@@ -46,7 +46,7 @@ function Home() {
 
     function getClub(clubId) {
         return clubs.find(
-            club => Number(club.id) === Number(clubId)
+            club => sameId(club.id, clubId)
         );
     }
 

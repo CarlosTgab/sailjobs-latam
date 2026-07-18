@@ -1,3 +1,5 @@
+import { sameId } from "./idUtils";
+
 export function getContactMessages() {
     const data = localStorage.getItem("contactMessages");
 
@@ -37,7 +39,7 @@ export function updateContactMessageStatus(messageId, newStatus) {
     const messages = getContactMessages();
 
     const updatedMessages = messages.map((message) => {
-        if (Number(message.id) === Number(messageId)) {
+        if (sameId(message.id, messageId)) {
             return {
                 ...message,
                 status: newStatus,

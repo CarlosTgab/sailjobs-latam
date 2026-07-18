@@ -9,6 +9,7 @@ import staticEvents from "../data/events";
 import { getApprovedEvents } from "../utils/eventsStorage";
 
 import { getAllClassifieds } from "../utils/classifiedsStorage";
+import { sortByNewest } from "../utils/idUtils";
 
 import {
     getCurrentUser,
@@ -30,14 +31,7 @@ function HomeSidebar() {
     const classifieds =
         getAllClassifieds();
 
-    const latestJobs = [
-        ...jobs
-    ]
-        .sort(
-            (a, b) =>
-                Number(b.id) -
-                Number(a.id)
-        )
+    const latestJobs = sortByNewest(jobs)
         .slice(0, 2);
 
     const upcomingEvents = [

@@ -444,10 +444,7 @@ function updateCurrentUserAccount(updatedData) {
     });
 
     const updatedUsers = users.map(user => {
-        if (
-            Number(user.id) ===
-            Number(currentUser.id)
-        ) {
+        if (sameId(user.id, currentUser.id)) {
             return updatedUser;
         }
 

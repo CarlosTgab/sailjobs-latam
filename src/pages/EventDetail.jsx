@@ -8,6 +8,7 @@ import { getAllClubs } from "../utils/clubsStorage";
 
 import staticJobs from "../data/jobs";
 import { getAllJobs } from "../utils/jobsStorage";
+import { sameId } from "../utils/idUtils";
 
 import {
     OPPORTUNITY_TYPE_LABELS,
@@ -23,7 +24,7 @@ function EventDetail() {
     const jobs = getAllJobs(staticJobs);
 
     const event = events.find(
-        item => Number(item.id) === Number(id)
+        item => sameId(item.id, id)
     );
 
     if (!event) {
@@ -42,11 +43,11 @@ function EventDetail() {
     }
 
     const club = clubs.find(
-        item => Number(item.id) === Number(event.clubId)
+        item => sameId(item.id, event.clubId)
     );
 
     const linkedOpportunities = jobs.filter(
-        job => Number(job.eventId) === Number(event.id)
+        job => sameId(job.eventId, event.id)
     );
 
     function formatDate(date) {

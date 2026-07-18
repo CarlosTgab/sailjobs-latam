@@ -1,42 +1,88 @@
-export function getStoredEvents() {
-    const data = localStorage.getItem("storedEvents");
+import { sameId } from "./idUtils";
 
-    return data ? JSON.parse(data) : [];
+const EVENTS_STORAGE_KEY = "storedEvents";
+
+function readStorageArray(key) {
+    try {
+        const value = JSON.parse(localStorage.getItem(key));
+        return Array.isArray(value) ? value : [];
+    } catch {
+        return [];
+    }
+}
+
+function normalizeEvent(event) {
+    if (!event) {
+        return null;
+    }
+
+    return {
+        id: event.id || crypto.randomUUID?.() || Date.now(),
+        title: event.title || "Evento sin título",
+        clubId: event.clubId || event.club_id || "",
+        className: event.className || event.class_name || "",
+        country: event.country || "",
+        city: event.city || "",
+        startDate: event.startDate || event.start_date || "",
+        endDate: event.endDate || event.end_date || "",
+        website: event.website || "",
+        source: event.source || "Club",
+        sourceUrl: event.sourceUrl || event.source_url || "",
+        status: event.status || "pending",
+        isOfficial: Boolean(event.isOfficial || event.is_official),
+        createdAt: event.createdAt || event.created_at || new Date().toISOString(),
+        updatedAt: event.updatedAt || event.updated_at || null
+    };
+}
+
+function uniqueEvents(events) {
+    const result = [];
+
+    events.forEach(event => {
+        const normalized = normalizeEvent(event);
+
+        if (!normalized) {
+            return;
+        }
+
+        if (!result.some(item => sameId(item.id, normalized.id))) {
+            result.push(normalized);
+        }
+    });
+
+    return result;
+}
+
+export function getStoredEvents() {
+    return uniqueEvents(readStorageArray(EVENTS_STORAGE_KEY));
 }
 
 export function saveStoredEvents(events) {
+    const normalized = uniqueEvents(events);
+
     localStorage.setItem(
-        "storedEvents",
-        JSON.stringify(events)
+        EVENTS_STORAGE_KEY,
+        JSON.stringify(normalized)
     );
+
+    window.dispatchEvent(new Event("eventsChanged"));
+
+    return normalized;
 }
 
 export function createStoredEvent(eventData) {
     const events = getStoredEvents();
 
-    const newEvent = {
-        id: Date.now(),
-        title: eventData.title,
-        clubId: eventData.clubId,
-        className: eventData.className,
-        country: eventData.country,
-        city: eventData.city,
-        startDate: eventData.startDate,
-        endDate: eventData.endDate,
-        website: eventData.website || "",
-        source: eventData.source || "Club",
-        sourceUrl: eventData.sourceUrl || "",
-        status: eventData.status || "pending",
-        isOfficial: eventData.isOfficial || false,
-        createdAt: new Date().toISOString()
-    };
+    const newEvent = normalizeEvent({
+        ...eventData,
+        id: eventData.id || crypto.randomUUID?.() || Date.now(),
+        createdAt: eventData.createdAt || new Date().toISOString()
+    });
 
-    const updatedEvents = [
+    saveStoredEvents([
         ...events,
         newEvent
-    ];
-
-    saveStoredEvents(updatedEvents);
+    ]);
 
     return newEvent;
 }
@@ -44,12 +90,13 @@ export function createStoredEvent(eventData) {
 export function updateStoredEventStatus(eventId, newStatus) {
     const events = getStoredEvents();
 
-    const updatedEvents = events.map((event) => {
-        if (event.id === eventId) {
-            return {
+    const updatedEvents = events.map(event => {
+        if (sameId(event.id, eventId)) {
+            return normalizeEvent({
                 ...event,
-                status: newStatus
-            };
+                status: newStatus,
+                updatedAt: new Date().toISOString()
+            });
         }
 
         return event;
@@ -58,16 +105,14 @@ export function updateStoredEventStatus(eventId, newStatus) {
     saveStoredEvents(updatedEvents);
 }
 
-export function getAllEvents(staticEvents) {
-    const storedEvents = getStoredEvents();
-
-    return [
+export function getAllEvents(staticEvents = []) {
+    return uniqueEvents([
         ...staticEvents,
-        ...storedEvents
-    ];
+        ...getStoredEvents()
+    ]);
 }
 
-export function getApprovedEvents(staticEvents) {
+export function getApprovedEvents(staticEvents = []) {
     const allEvents = getAllEvents(staticEvents);
 
     return allEvents.filter(

@@ -6,6 +6,7 @@ import {
 } from "../config/appConfig";
 
 import { getCurrentUser } from "../utils/authStorage";
+import { sameId } from "../utils/idUtils";
 
 import {
     getAllClassifieds,
@@ -22,7 +23,7 @@ function EditClassified() {
     const classifieds = getAllClassifieds();
 
     const classified = classifieds.find(
-        item => Number(item.id) === Number(id)
+        item => sameId(item.id, id)
     );
 
     const [title, setTitle] = useState(classified ? classified.title : "");
@@ -53,7 +54,7 @@ function EditClassified() {
 
     const isOwner =
         currentUser &&
-        Number(currentUser.id) === Number(classified.userId);
+        sameId(currentUser.id, classified.userId);
 
     if (!isOwner) {
         return (
