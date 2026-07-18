@@ -12,8 +12,11 @@ import {
     sameId
 } from "../utils/idUtils";
 
+import LocationSelects, {
+    CUSTOM_CITY_VALUE
+} from "../components/LocationSelects";
+
 import {
-    COUNTRIES,
     JOB_CATEGORIES,
     OPPORTUNITY_TYPES,
     OPPORTUNITY_TYPE_LABELS,
@@ -39,8 +42,22 @@ import {
     getAllEvents
 } from "../utils/eventsStorage";
 
-function CreateJob() {
+function getResolvedCity(cityValue, customCityValue, stateValue) {
+    const resolvedCity =
+        cityValue === CUSTOM_CITY_VALUE || !cityValue
+            ? customCityValue.trim()
+            : cityValue.trim();
 
+    if (!resolvedCity) {
+        return "";
+    }
+
+    return stateValue
+        ? `${resolvedCity}, ${stateValue}`
+        : resolvedCity;
+}
+
+function CreateJob() {
     const { clubId } = useParams();
 
     const navigate = useNavigate();
@@ -129,10 +146,22 @@ function CreateJob() {
     ]);
 
     const [country, setCountry] =
-        useState(club?.country || "");
+        useState("");
+
+    const [countryCode, setCountryCode] =
+        useState("");
+
+    const [state, setState] =
+        useState("");
+
+    const [stateCode, setStateCode] =
+        useState("");
 
     const [city, setCity] =
-        useState(club?.city || "");
+        useState("");
+
+    const [customCity, setCustomCity] =
+        useState("");
 
     const [description, setDescription] =
         useState("");
@@ -147,9 +176,7 @@ function CreateJob() {
 
     if (!club) {
         return (
-
             <div className="dashboard-page">
-
                 <h1>
                     Organización no encontrada
                 </h1>
@@ -168,15 +195,11 @@ function CreateJob() {
                 >
                     ← Volver a clubes
                 </button>
-
             </div>
-
         );
     }
 
-    function handleOpportunityTypeChange(
-        newType
-    ) {
+    function handleOpportunityTypeChange(newType) {
         setOpportunityType(newType);
 
         if (
@@ -223,27 +246,6 @@ function CreateJob() {
 
     function handleEventChange(selectedEventId) {
         setEventId(selectedEventId);
-
-        if (!selectedEventId) {
-            return;
-        }
-
-        const selectedEvent = allEvents.find(
-            event =>
-                sameId(event.id, selectedEventId)
-        );
-
-        if (!selectedEvent) {
-            return;
-        }
-
-        if (selectedEvent.country) {
-            setCountry(selectedEvent.country);
-        }
-
-        if (selectedEvent.city) {
-            setCity(selectedEvent.city);
-        }
     }
 
     function toggleEligibleProfile(profile) {
@@ -281,17 +283,25 @@ function CreateJob() {
     }
 
     function validateForm() {
+        const resolvedCity =
+            getResolvedCity(
+                city,
+                customCity,
+                state
+            );
+
         if (
             !title.trim() ||
             !category ||
             !opportunityType ||
             !compensationType ||
             !country ||
-            !city ||
+            !state ||
+            !resolvedCity ||
             !description.trim()
         ) {
             setFormMessage(
-                "Completá todos los campos obligatorios."
+                "Completá todos los campos obligatorios, incluida la ubicación completa."
             );
 
             return false;
@@ -340,6 +350,13 @@ function CreateJob() {
 
         setFormMessage("");
 
+        const resolvedCity =
+            getResolvedCity(
+                city,
+                customCity,
+                state
+            );
+
         if (!validateForm()) {
             return;
         }
@@ -370,7 +387,14 @@ function CreateJob() {
             compensationDetails,
             salary: compensationDetails,
             country,
-            city,
+            countryCode,
+            state,
+            stateCode,
+            city: resolvedCity,
+            cityName:
+                city === CUSTOM_CITY_VALUE || !city
+                    ? customCity.trim()
+                    : city.trim(),
             duration,
             openings: Number(openings) || 1,
             applicationDeadline,
@@ -389,9 +413,7 @@ function CreateJob() {
     }
 
     return (
-
         <div className="dashboard-page">
-
             <button
                 className="back-button"
                 onClick={() =>
@@ -404,9 +426,7 @@ function CreateJob() {
             </button>
 
             <div className="dashboard-hero">
-
                 <div>
-
                     <h1>
                         Publicar oportunidad
                     </h1>
@@ -417,15 +437,11 @@ function CreateJob() {
                         convocatorias de voluntarios para{" "}
                         {club.name}.
                     </p>
-
                 </div>
-
             </div>
 
             <div className="detail-card">
-
                 <form onSubmit={handleSubmit}>
-
                     <h2>
                         Información principal
                     </h2>
@@ -442,7 +458,6 @@ function CreateJob() {
                             )
                         }
                     >
-
                         {Object.entries(
                             OPPORTUNITY_TYPE_LABELS
                         ).map(
@@ -450,17 +465,14 @@ function CreateJob() {
                                 value,
                                 label
                             ]) => (
-
                                 <option
                                     key={value}
                                     value={value}
                                 >
                                     {label}
                                 </option>
-
                             )
                         )}
-
                     </select>
 
                     <label>
@@ -498,20 +510,16 @@ function CreateJob() {
                             )
                         }
                     >
-
                         {JOB_CATEGORIES.map(
                             item => (
-
                                 <option
                                     key={item}
                                     value={item}
                                 >
                                     {item}
                                 </option>
-
                             )
                         )}
-
                     </select>
 
                     <label>
@@ -526,13 +534,11 @@ function CreateJob() {
                             )
                         }
                     >
-
                         <option value="">
                             Sin evento vinculado
                         </option>
 
                         {clubEvents.map(event => (
-
                             <option
                                 key={event.id}
                                 value={event.id}
@@ -541,9 +547,7 @@ function CreateJob() {
                                 {" · "}
                                 {event.className}
                             </option>
-
                         ))}
-
                     </select>
 
                     <p className="password-help">
@@ -559,51 +563,17 @@ function CreateJob() {
                         Ubicación y fechas
                     </h2>
 
-                    <label>
-                        País *
-                    </label>
-
-                    <select
-                        value={country}
-                        onChange={(event) =>
-                            setCountry(
-                                event.target.value
-                            )
-                        }
-                    >
-
-                        <option value="">
-                            Seleccionar país
-                        </option>
-
-                        {COUNTRIES.map(
-                            countryOption => (
-
-                                <option
-                                    key={countryOption}
-                                    value={countryOption}
-                                >
-                                    {countryOption}
-                                </option>
-
-                            )
-                        )}
-
-                    </select>
-
-                    <label>
-                        Ciudad *
-                    </label>
-
-                    <input
-                        type="text"
-                        placeholder="Ciudad"
-                        value={city}
-                        onChange={(event) =>
-                            setCity(
-                                event.target.value
-                            )
-                        }
+                    <LocationSelects
+                        countryCode={countryCode}
+                        setCountryCode={setCountryCode}
+                        setCountry={setCountry}
+                        stateCode={stateCode}
+                        setStateCode={setStateCode}
+                        setState={setState}
+                        city={city}
+                        setCity={setCity}
+                        customCity={customCity}
+                        setCustomCity={setCustomCity}
                     />
 
                     <label>
@@ -670,7 +640,6 @@ function CreateJob() {
                             )
                         }
                     >
-
                         {Object.entries(
                             COMPENSATION_TYPE_LABELS
                         ).map(
@@ -678,17 +647,14 @@ function CreateJob() {
                                 value,
                                 label
                             ]) => (
-
                                 <option
                                     key={value}
                                     value={value}
                                 >
                                     {label}
                                 </option>
-
                             )
                         )}
-
                     </select>
 
                     <label>
@@ -715,7 +681,6 @@ function CreateJob() {
                     </h2>
 
                     <label className="checkbox-row">
-
                         <input
                             type="checkbox"
                             checked={
@@ -735,11 +700,9 @@ function CreateJob() {
                             ELIGIBLE_PROFILE_TYPES.PROFESSIONAL
                             ]
                         }
-
                     </label>
 
                     <label className="checkbox-row">
-
                         <input
                             type="checkbox"
                             checked={
@@ -759,7 +722,6 @@ function CreateJob() {
                             ELIGIBLE_PROFILE_TYPES.USER
                             ]
                         }
-
                     </label>
 
                     <p className="password-help">
@@ -810,7 +772,6 @@ function CreateJob() {
                     />
 
                     {formMessage && (
-
                         <p
                             style={{
                                 color: "#b42318"
@@ -818,11 +779,9 @@ function CreateJob() {
                         >
                             {formMessage}
                         </p>
-
                     )}
 
                     <div className="dashboard-actions">
-
                         <button
                             type="button"
                             className="reject-button"
@@ -841,15 +800,10 @@ function CreateJob() {
                         >
                             Publicar oportunidad
                         </button>
-
                     </div>
-
                 </form>
-
             </div>
-
         </div>
-
     );
 }
 

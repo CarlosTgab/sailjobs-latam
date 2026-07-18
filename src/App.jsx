@@ -5,6 +5,8 @@ import {
   Navigate
 } from "react-router-dom";
 
+import ScrollToTop from "./components/ScrollToTop";
+
 import BetaBanner from "./components/BetaBanner";
 import Profile from "./pages/Profile";
 import AuthSync from "./components/AuthSync";
@@ -69,6 +71,7 @@ function App() {
     <BrowserRouter>
 
       <AuthSync />
+      <ScrollToTop />
 
       <PageBackground />
 

@@ -3,10 +3,11 @@ import { useNavigate } from "react-router-dom";
 
 import {
     JOB_CATEGORIES,
-    COUNTRIES,
     OPPORTUNITY_TYPE_LABELS,
     COMPENSATION_TYPE_LABELS
 } from "../config/appConfig";
+
+import LocationFilterSelects from "../components/LocationFilterSelects";
 
 import staticJobs from "../data/jobs";
 import { getAllJobs } from "../utils/jobsStorage";
@@ -15,6 +16,38 @@ import staticClubs from "../data/clubs";
 import { getAllClubs } from "../utils/clubsStorage";
 import { sameId, sortByNewest } from "../utils/idUtils";
 
+function normalizeText(value) {
+    return String(value || "")
+        .trim()
+        .toLowerCase();
+}
+
+function getJobCityName(job) {
+    if (job.cityName) {
+        return job.cityName;
+    }
+
+    if (job.city && job.city.includes(",")) {
+        return job.city.split(",")[0].trim();
+    }
+
+    return job.city || "";
+}
+
+function getLocationLabel(job) {
+    const parts = [
+        getJobCityName(job),
+        job.state,
+        job.country
+    ].filter(Boolean);
+
+    if (parts.length > 0) {
+        return parts.join(", ");
+    }
+
+    return "Ubicación no informada";
+}
+
 function Jobs() {
     const navigate = useNavigate();
 
@@ -22,16 +55,16 @@ function Jobs() {
     const clubs = getAllClubs(staticClubs);
 
     const [search, setSearch] = useState("");
-    const [selectedCountry, setSelectedCountry] = useState("");
     const [selectedCategory, setSelectedCategory] = useState("");
     const [selectedType, setSelectedType] = useState("");
 
-    const countries = [
-        ...new Set([
-            ...COUNTRIES,
-            ...jobs.map(job => job.country)
-        ])
-    ].filter(Boolean);
+    const [selectedCountryCode, setSelectedCountryCode] = useState("");
+    const [selectedCountry, setSelectedCountry] = useState("");
+
+    const [selectedStateCode, setSelectedStateCode] = useState("");
+    const [selectedState, setSelectedState] = useState("");
+
+    const [selectedCity, setSelectedCity] = useState("");
 
     function getClub(clubId) {
         return clubs.find(
@@ -55,6 +88,34 @@ function Jobs() {
         return job.salary || "A confirmar";
     }
 
+    function matchesCountry(job) {
+        if (!selectedCountry) return true;
+
+        return (
+            normalizeText(job.country) === normalizeText(selectedCountry) ||
+            normalizeText(job.countryCode) === normalizeText(selectedCountryCode)
+        );
+    }
+
+    function matchesState(job) {
+        if (!selectedState) return true;
+
+        return (
+            normalizeText(job.state) === normalizeText(selectedState) ||
+            normalizeText(job.stateCode) === normalizeText(selectedStateCode) ||
+            normalizeText(job.city).includes(normalizeText(selectedState))
+        );
+    }
+
+    function matchesCity(job) {
+        if (!selectedCity) return true;
+
+        return (
+            normalizeText(getJobCityName(job)) === normalizeText(selectedCity) ||
+            normalizeText(job.city).includes(normalizeText(selectedCity))
+        );
+    }
+
     const filteredJobs = jobs
         .filter(job => {
             const club = getClub(job.clubId);
@@ -63,6 +124,8 @@ function Jobs() {
                 job.title,
                 job.category,
                 job.city,
+                job.cityName,
+                job.state,
                 job.country,
                 job.description,
                 job.duration,
@@ -81,10 +144,6 @@ function Jobs() {
                 !search.trim() ||
                 searchableText.includes(search.trim().toLowerCase());
 
-            const matchesCountry =
-                !selectedCountry ||
-                job.country === selectedCountry;
-
             const matchesCategory =
                 !selectedCategory ||
                 job.category === selectedCategory;
@@ -95,20 +154,28 @@ function Jobs() {
 
             return (
                 matchesSearch &&
-                matchesCountry &&
+                matchesCountry(job) &&
+                matchesState(job) &&
+                matchesCity(job) &&
                 matchesCategory &&
                 matchesType
             );
-        })
-        ;
+        });
 
     const sortedJobs = sortByNewest(filteredJobs);
 
     function clearFilters() {
         setSearch("");
-        setSelectedCountry("");
         setSelectedCategory("");
         setSelectedType("");
+
+        setSelectedCountryCode("");
+        setSelectedCountry("");
+
+        setSelectedStateCode("");
+        setSelectedState("");
+
+        setSelectedCity("");
     }
 
     return (
@@ -164,20 +231,16 @@ function Jobs() {
                     ))}
                 </select>
 
-                <select
-                    value={selectedCountry}
-                    onChange={(event) => setSelectedCountry(event.target.value)}
-                >
-                    <option value="">
-                        Todos los países
-                    </option>
-
-                    {countries.map(country => (
-                        <option key={country} value={country}>
-                            {country}
-                        </option>
-                    ))}
-                </select>
+                <LocationFilterSelects
+                    countryCode={selectedCountryCode}
+                    setCountryCode={setSelectedCountryCode}
+                    setCountry={setSelectedCountry}
+                    stateCode={selectedStateCode}
+                    setStateCode={setSelectedStateCode}
+                    setState={setSelectedState}
+                    city={selectedCity}
+                    setCity={setSelectedCity}
+                />
 
                 <button
                     className="filter-clear-button"
@@ -228,7 +291,7 @@ function Jobs() {
 
                                 <p>
                                     <strong>Ubicación:</strong>{" "}
-                                    {job.city}, {job.country}
+                                    {getLocationLabel(job)}
                                 </p>
 
                                 <p>

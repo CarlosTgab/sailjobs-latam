@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
 import {
-    COUNTRIES,
     JOB_CATEGORIES,
     OPPORTUNITY_TYPES,
     OPPORTUNITY_TYPE_LABELS,
@@ -11,6 +10,10 @@ import {
     ELIGIBLE_PROFILE_TYPES,
     ELIGIBLE_PROFILE_LABELS
 } from "../config/appConfig";
+
+import LocationSelects, {
+    CUSTOM_CITY_VALUE
+} from "../components/LocationSelects";
 
 import staticJobs from "../data/jobs";
 
@@ -21,14 +24,55 @@ import {
 } from "../utils/jobsStorage";
 
 import staticClubs from "../data/clubs";
-import { getAllClubs } from "../utils/clubsStorage";
+
+import {
+    getAllClubs
+} from "../utils/clubsStorage";
 
 import staticEvents from "../data/events";
-import { getAllEvents } from "../utils/eventsStorage";
 
-import { getCurrentUser } from "../utils/authStorage";
-import { canManageClub } from "../utils/permissions";
-import { sameId } from "../utils/idUtils";
+import {
+    getAllEvents
+} from "../utils/eventsStorage";
+
+import {
+    getCurrentUser
+} from "../utils/authStorage";
+
+import {
+    canManageClub
+} from "../utils/permissions";
+
+import {
+    sameId
+} from "../utils/idUtils";
+
+function getResolvedCity(cityValue, customCityValue, stateValue) {
+    const resolvedCity =
+        cityValue === CUSTOM_CITY_VALUE || !cityValue
+            ? customCityValue.trim()
+            : cityValue.trim();
+
+    if (!resolvedCity) {
+        return "";
+    }
+
+    return stateValue
+        ? `${resolvedCity}, ${stateValue}`
+        : resolvedCity;
+}
+
+function getInitialCityName(job) {
+    if (job?.cityName) {
+        return job.cityName;
+    }
+
+    if (job?.city && job.city.includes(",")) {
+        return job.city.split(",")[0].trim();
+    }
+
+    return job?.city || "";
+}
 
 function EditJob() {
     const { id } = useParams();
@@ -94,7 +138,14 @@ function EditJob() {
     );
 
     const [country, setCountry] = useState(job?.country || club?.country || "");
-    const [city, setCity] = useState(job?.city || club?.city || "");
+    const [countryCode, setCountryCode] = useState(job?.countryCode || "");
+
+    const [state, setState] = useState(job?.state || "");
+    const [stateCode, setStateCode] = useState(job?.stateCode || "");
+
+    const [city, setCity] = useState(getInitialCityName(job));
+    const [customCity, setCustomCity] = useState("");
+
     const [description, setDescription] = useState(job?.description || "");
 
     const [requirementsText, setRequirementsText] = useState(
@@ -187,26 +238,6 @@ function EditJob() {
 
     function handleEventChange(selectedEventId) {
         setEventId(selectedEventId);
-
-        if (!selectedEventId) {
-            return;
-        }
-
-        const selectedEvent = allEvents.find(
-            event => sameId(event.id, selectedEventId)
-        );
-
-        if (!selectedEvent) {
-            return;
-        }
-
-        if (selectedEvent.country) {
-            setCountry(selectedEvent.country);
-        }
-
-        if (selectedEvent.city) {
-            setCity(selectedEvent.city);
-        }
     }
 
     function toggleEligibleProfile(profile) {
@@ -239,16 +270,24 @@ function EditJob() {
     }
 
     function validateForm() {
+        const resolvedCity =
+            getResolvedCity(
+                city,
+                customCity,
+                state
+            );
+
         if (
             !title.trim() ||
             !category ||
             !opportunityType ||
             !compensationType ||
             !country ||
-            !city ||
+            !state ||
+            !resolvedCity ||
             !description.trim()
         ) {
-            setFormMessage("Completá todos los campos obligatorios.");
+            setFormMessage("Completá todos los campos obligatorios, incluida la ubicación completa.");
             return false;
         }
 
@@ -279,11 +318,23 @@ function EditJob() {
 
         setFormMessage("");
 
+        const resolvedCity =
+            getResolvedCity(
+                city,
+                customCity,
+                state
+            );
+
         if (!validateForm()) {
             return;
         }
 
         updateStoredJob(job.id, {
+            clubId: job.clubId,
+            clubName: job.clubName || club?.name || currentUser?.clubName || "Mi organización",
+            organizationName: job.organizationName || job.clubName || club?.name || currentUser?.clubName || "Mi organización",
+            createdBy: job.createdBy || currentUser?.id || null,
+
             title: title.trim(),
             category,
             opportunityType,
@@ -298,8 +349,17 @@ function EditJob() {
             applicationDeadline,
             eventId,
             eligibleProfiles,
+
             country,
-            city: city.trim(),
+            countryCode,
+            state,
+            stateCode,
+            city: resolvedCity,
+            cityName:
+                city === CUSTOM_CITY_VALUE || !city
+                    ? customCity.trim()
+                    : city.trim(),
+
             description: description.trim(),
             requirements: parseRequirements()
         });
@@ -392,29 +452,17 @@ function EditJob() {
 
                     <h2>Ubicación y fechas</h2>
 
-                    <label>País *</label>
-
-                    <select
-                        value={country}
-                        onChange={(event) => setCountry(event.target.value)}
-                    >
-                        <option value="">
-                            Seleccionar país
-                        </option>
-
-                        {COUNTRIES.map(countryOption => (
-                            <option key={countryOption} value={countryOption}>
-                                {countryOption}
-                            </option>
-                        ))}
-                    </select>
-
-                    <label>Ciudad *</label>
-
-                    <input
-                        type="text"
-                        value={city}
-                        onChange={(event) => setCity(event.target.value)}
+                    <LocationSelects
+                        countryCode={countryCode}
+                        setCountryCode={setCountryCode}
+                        setCountry={setCountry}
+                        stateCode={stateCode}
+                        setStateCode={setStateCode}
+                        setState={setState}
+                        city={city}
+                        setCity={setCity}
+                        customCity={customCity}
+                        setCustomCity={setCustomCity}
                     />
 
                     <label>Duración</label>

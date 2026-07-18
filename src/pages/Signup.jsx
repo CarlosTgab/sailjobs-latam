@@ -4,9 +4,9 @@ import {
     useNavigate
 } from "react-router-dom";
 
-import {
-    COUNTRIES
-} from "../config/appConfig";
+import LocationSelects, {
+    CUSTOM_CITY_VALUE
+} from "../components/LocationSelects";
 
 import {
     registerWithSupabase
@@ -29,6 +29,21 @@ function getRedirectPath(user) {
     }
 
     return "/profile";
+}
+
+function getResolvedCity(cityValue, customCityValue, stateValue) {
+    const resolvedCity =
+        cityValue === CUSTOM_CITY_VALUE || !cityValue
+            ? customCityValue.trim()
+            : cityValue.trim();
+
+    if (!resolvedCity) {
+        return "";
+    }
+
+    return stateValue
+        ? `${resolvedCity}, ${stateValue}`
+        : resolvedCity;
 }
 
 function Signup() {
@@ -66,8 +81,28 @@ function Signup() {
     ] = useState("");
 
     const [
+        customCity,
+        setCustomCity
+    ] = useState("");
+
+    const [
         country,
         setCountry
+    ] = useState("");
+
+    const [
+        countryCode,
+        setCountryCode
+    ] = useState("");
+
+    const [
+        state,
+        setState
+    ] = useState("");
+
+    const [
+        stateCode,
+        setStateCode
     ] = useState("");
 
     const [
@@ -91,8 +126,28 @@ function Signup() {
     ] = useState("");
 
     const [
+        clubCustomCity,
+        setClubCustomCity
+    ] = useState("");
+
+    const [
         clubCountry,
         setClubCountry
+    ] = useState("");
+
+    const [
+        clubCountryCode,
+        setClubCountryCode
+    ] = useState("");
+
+    const [
+        clubState,
+        setClubState
+    ] = useState("");
+
+    const [
+        clubStateCode,
+        setClubStateCode
     ] = useState("");
 
     const [
@@ -128,6 +183,20 @@ function Signup() {
         setLoading(true);
 
         try {
+            const resolvedCity =
+                getResolvedCity(
+                    city,
+                    customCity,
+                    state
+                );
+
+            const resolvedClubCity =
+                getResolvedCity(
+                    clubCity,
+                    clubCustomCity,
+                    clubState
+                );
+
             const user =
                 await registerWithSupabase({
                     accountType,
@@ -135,12 +204,12 @@ function Signup() {
                     email,
                     password,
                     phone,
-                    city,
+                    city: resolvedCity,
                     country,
                     professionalTitle,
                     professionalSummary,
                     clubName,
-                    clubCity,
+                    clubCity: resolvedClubCity,
                     clubCountry,
                     clubDescription,
                     clubWebsite
@@ -161,9 +230,7 @@ function Signup() {
 
     return (
         <div className="auth-page">
-
             <div className="auth-card">
-
                 <h1>Crear cuenta</h1>
 
                 <p>
@@ -171,7 +238,6 @@ function Signup() {
                 </p>
 
                 <div className="account-type-grid">
-
                     <button
                         type="button"
                         className={
@@ -237,11 +303,9 @@ function Signup() {
                             postulaciones.
                         </span>
                     </button>
-
                 </div>
 
                 <form onSubmit={handleSubmit}>
-
                     <label>
                         Nombre completo
                     </label>
@@ -250,9 +314,7 @@ function Signup() {
                         type="text"
                         value={name}
                         onChange={(event) =>
-                            setName(
-                                event.target.value
-                            )
+                            setName(event.target.value)
                         }
                         placeholder="Tu nombre"
                     />
@@ -265,9 +327,7 @@ function Signup() {
                         type="email"
                         value={email}
                         onChange={(event) =>
-                            setEmail(
-                                event.target.value
-                            )
+                            setEmail(event.target.value)
                         }
                         placeholder="tu@email.com"
                     />
@@ -280,9 +340,7 @@ function Signup() {
                         type="password"
                         value={password}
                         onChange={(event) =>
-                            setPassword(
-                                event.target.value
-                            )
+                            setPassword(event.target.value)
                         }
                         placeholder="Mínimo 8 caracteres, una letra y un número"
                     />
@@ -300,53 +358,23 @@ function Signup() {
                         type="text"
                         value={phone}
                         onChange={(event) =>
-                            setPhone(
-                                event.target.value
-                            )
+                            setPhone(event.target.value)
                         }
                         placeholder="Opcional"
                     />
 
-                    <label>
-                        Ciudad
-                    </label>
-
-                    <input
-                        type="text"
-                        value={city}
-                        onChange={(event) =>
-                            setCity(
-                                event.target.value
-                            )
-                        }
-                        placeholder="Rosario, Buenos Aires, Montevideo..."
+                    <LocationSelects
+                        countryCode={countryCode}
+                        setCountryCode={setCountryCode}
+                        setCountry={setCountry}
+                        stateCode={stateCode}
+                        setStateCode={setStateCode}
+                        setState={setState}
+                        city={city}
+                        setCity={setCity}
+                        customCity={customCity}
+                        setCustomCity={setCustomCity}
                     />
-
-                    <label>
-                        País
-                    </label>
-
-                    <select
-                        value={country}
-                        onChange={(event) =>
-                            setCountry(
-                                event.target.value
-                            )
-                        }
-                    >
-                        <option value="">
-                            Seleccionar país
-                        </option>
-
-                        {COUNTRIES.map(countryOption => (
-                            <option
-                                key={countryOption}
-                                value={countryOption}
-                            >
-                                {countryOption}
-                            </option>
-                        ))}
-                    </select>
 
                     {isProfessional && (
                         <>
@@ -358,9 +386,7 @@ function Signup() {
                                 type="text"
                                 value={professionalTitle}
                                 onChange={(event) =>
-                                    setProfessionalTitle(
-                                        event.target.value
-                                    )
+                                    setProfessionalTitle(event.target.value)
                                 }
                                 placeholder="Ej: Coach ILCA / Race Officer / Instructor"
                             />
@@ -373,9 +399,7 @@ function Signup() {
                                 rows="5"
                                 value={professionalSummary}
                                 onChange={(event) =>
-                                    setProfessionalSummary(
-                                        event.target.value
-                                    )
+                                    setProfessionalSummary(event.target.value)
                                 }
                                 placeholder="Contá brevemente tu experiencia náutica."
                             />
@@ -398,53 +422,28 @@ function Signup() {
                                 type="text"
                                 value={clubName}
                                 onChange={(event) =>
-                                    setClubName(
-                                        event.target.value
-                                    )
+                                    setClubName(event.target.value)
                                 }
                                 placeholder="Ej: Club de Velas Rosario"
                             />
 
-                            <label>
-                                Ciudad del club
-                            </label>
-
-                            <input
-                                type="text"
-                                value={clubCity}
-                                onChange={(event) =>
-                                    setClubCity(
-                                        event.target.value
-                                    )
-                                }
-                                placeholder="Ciudad"
+                            <LocationSelects
+                                countryCode={clubCountryCode}
+                                setCountryCode={setClubCountryCode}
+                                setCountry={setClubCountry}
+                                stateCode={clubStateCode}
+                                setStateCode={setClubStateCode}
+                                setState={setClubState}
+                                city={clubCity}
+                                setCity={setClubCity}
+                                customCity={clubCustomCity}
+                                setCustomCity={setClubCustomCity}
+                                labels={{
+                                    country: "País del club",
+                                    state: "Provincia / Estado del club",
+                                    city: "Ciudad / Localidad del club"
+                                }}
                             />
-
-                            <label>
-                                País del club
-                            </label>
-
-                            <select
-                                value={clubCountry}
-                                onChange={(event) =>
-                                    setClubCountry(
-                                        event.target.value
-                                    )
-                                }
-                            >
-                                <option value="">
-                                    Seleccionar país
-                                </option>
-
-                                {COUNTRIES.map(countryOption => (
-                                    <option
-                                        key={countryOption}
-                                        value={countryOption}
-                                    >
-                                        {countryOption}
-                                    </option>
-                                ))}
-                            </select>
 
                             <label>
                                 Sitio web
@@ -454,9 +453,7 @@ function Signup() {
                                 type="url"
                                 value={clubWebsite}
                                 onChange={(event) =>
-                                    setClubWebsite(
-                                        event.target.value
-                                    )
+                                    setClubWebsite(event.target.value)
                                 }
                                 placeholder="https://..."
                             />
@@ -469,9 +466,7 @@ function Signup() {
                                 rows="5"
                                 value={clubDescription}
                                 onChange={(event) =>
-                                    setClubDescription(
-                                        event.target.value
-                                    )
+                                    setClubDescription(event.target.value)
                                 }
                                 placeholder="Contá brevemente qué tipo de organización es."
                             />
@@ -497,7 +492,6 @@ function Signup() {
                             ? "Creando cuenta..."
                             : "Crear cuenta"}
                     </button>
-
                 </form>
 
                 <p className="auth-switch">
@@ -506,9 +500,7 @@ function Signup() {
                         Ingresar
                     </Link>
                 </p>
-
             </div>
-
         </div>
     );
 }

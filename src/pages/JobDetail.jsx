@@ -5,9 +5,9 @@ import {
     useNavigate
 } from "react-router-dom";
 
-import {
-    COUNTRIES
-} from "../config/appConfig";
+import LocationSelects, {
+    CUSTOM_CITY_VALUE
+} from "../components/LocationSelects";
 
 import staticJobs from "../data/jobs";
 
@@ -36,6 +36,48 @@ import {
     getApplications,
     saveApplication
 } from "../utils/applicationsStorage";
+
+
+function getJobCityName(job) {
+    if (job?.cityName) {
+        return job.cityName;
+    }
+
+    if (job?.city && job.city.includes(",")) {
+        return job.city.split(",")[0].trim();
+    }
+
+    return job?.city || "";
+}
+
+function getLocationLabel(job) {
+    const parts = [
+        getJobCityName(job),
+        job?.state,
+        job?.country
+    ].filter(Boolean);
+
+    if (parts.length > 0) {
+        return parts.join(", ");
+    }
+
+    return "Ubicación no informada";
+}
+
+function getResolvedCity(cityValue, customCityValue, stateValue) {
+    const resolvedCity =
+        cityValue === CUSTOM_CITY_VALUE || !cityValue
+            ? customCityValue.trim()
+            : cityValue.trim();
+
+    if (!resolvedCity) {
+        return "";
+    }
+
+    return stateValue
+        ? `${resolvedCity}, ${stateValue}`
+        : resolvedCity;
+}
 
 function JobDetail() {
 
@@ -113,6 +155,32 @@ function JobDetail() {
     ] = useState(
         professionalProfile.country || ""
     );
+
+
+    const [
+        applicantCountryCode,
+        setApplicantCountryCode
+    ] = useState("");
+
+    const [
+        applicantStateCode,
+        setApplicantStateCode
+    ] = useState("");
+
+    const [
+        applicantState,
+        setApplicantState
+    ] = useState("");
+
+    const [
+        applicantCity,
+        setApplicantCity
+    ] = useState("");
+
+    const [
+        applicantCustomCity,
+        setApplicantCustomCity
+    ] = useState("");
 
     const [
         cv,
@@ -216,7 +284,7 @@ function JobDetail() {
             if (activateProfile) {
 
                 navigate(
-                    "/user-dashboard"
+                    "/profile"
                 );
 
             }
@@ -246,6 +314,13 @@ function JobDetail() {
 
         event.preventDefault();
 
+        const resolvedApplicantCity =
+            getResolvedCity(
+                applicantCity,
+                applicantCustomCity,
+                applicantState
+            );
+
         if (
             !currentUser ||
             !hasProfessionalProfile(
@@ -266,6 +341,7 @@ function JobDetail() {
             !email.trim() ||
             !phone.trim() ||
             !country ||
+            !resolvedApplicantCity ||
             !message.trim()
         ) {
 
@@ -321,6 +397,20 @@ function JobDetail() {
 
             country,
 
+            state:
+                applicantState,
+
+            stateCode:
+                applicantStateCode,
+
+            city:
+                resolvedApplicantCity,
+
+            cityName:
+                applicantCity === CUSTOM_CITY_VALUE || !applicantCity
+                    ? applicantCustomCity.trim()
+                    : applicantCity.trim(),
+
             cv:
                 applicationCvName,
 
@@ -368,8 +458,15 @@ function JobDetail() {
                     phone.trim(),
 
                 city:
+                    resolvedApplicantCity ||
                     currentProfile.city ||
                     "",
+
+                state:
+                    applicantState,
+
+                stateCode:
+                    applicantStateCode,
 
                 country:
                     country ||
@@ -520,10 +617,23 @@ function JobDetail() {
                         Ubicación:
                     </strong>{" "}
 
-                    {job.city},{" "}
-                    {job.country}
+                    {getLocationLabel(job)}
 
                 </p>
+
+                {job.state && (
+
+                    <p>
+
+                        <strong>
+                            Provincia / Estado:
+                        </strong>{" "}
+
+                        {job.state}
+
+                    </p>
+
+                )}
 
                 <p>
 
@@ -823,43 +933,18 @@ function JobDetail() {
                                 }
                             />
 
-                            <label>
-                                País
-                            </label>
-
-                            <select
-                                value={country}
-                                onChange={(event) =>
-                                    setCountry(
-                                        event.target.value
-                                    )
-                                }
-                            >
-
-                                <option value="">
-                                    Seleccionar país *
-                                </option>
-
-                                {COUNTRIES.map(
-                                    countryOption => (
-
-                                        <option
-                                            key={
-                                                countryOption
-                                            }
-                                            value={
-                                                countryOption
-                                            }
-                                        >
-                                            {
-                                                countryOption
-                                            }
-                                        </option>
-
-                                    )
-                                )}
-
-                            </select>
+                            <LocationSelects
+                                countryCode={applicantCountryCode}
+                                setCountryCode={setApplicantCountryCode}
+                                setCountry={setCountry}
+                                stateCode={applicantStateCode}
+                                setStateCode={setApplicantStateCode}
+                                setState={setApplicantState}
+                                city={applicantCity}
+                                setCity={setApplicantCity}
+                                customCity={applicantCustomCity}
+                                setCustomCity={setApplicantCustomCity}
+                            />
 
                             <label>
                                 CV para esta postulación

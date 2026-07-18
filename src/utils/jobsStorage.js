@@ -4,22 +4,15 @@ const JOBS_STORAGE_KEY = "storedJobs";
 
 function readStorageArray(key) {
     try {
-        const value = JSON.parse(
-            localStorage.getItem(key)
-        );
-
-        return Array.isArray(value)
-            ? value
-            : [];
+        const value = JSON.parse(localStorage.getItem(key));
+        return Array.isArray(value) ? value : [];
     } catch {
         return [];
     }
 }
 
 function normalizeJob(job) {
-    if (!job) {
-        return null;
-    }
+    if (!job) return null;
 
     const id =
         job.id ||
@@ -33,31 +26,23 @@ function normalizeJob(job) {
         job.organization_name ||
         "";
 
+    const cityName =
+        job.cityName ||
+        job.city_name ||
+        job.city ||
+        "";
+
     return {
         id,
 
-        title:
-            job.title ||
-            "Oportunidad sin título",
+        title: job.title || "Oportunidad sin título",
+        category: job.category || "Coach",
 
-        category:
-            job.category ||
-            "Coach",
-
-        clubId:
-            job.clubId ||
-            job.club_id ||
-            "",
-
+        clubId: job.clubId || job.club_id || "",
         clubName,
+        organizationName: clubName,
 
-        organizationName:
-            clubName,
-
-        createdBy:
-            job.createdBy ||
-            job.created_by ||
-            null,
+        createdBy: job.createdBy || job.created_by || null,
 
         opportunityType:
             job.opportunityType ||
@@ -81,20 +66,18 @@ function normalizeJob(job) {
             job.compensation_details ||
             "",
 
-        country:
-            job.country ||
-            "",
+        country: job.country || "",
+        countryCode: job.countryCode || job.country_code || "",
 
-        city:
-            job.city ||
-            "",
+        state: job.state || job.province || job.region || "",
+        stateCode: job.stateCode || job.state_code || "",
 
-        duration:
-            job.duration ||
-            "",
+        city: job.city || "",
+        cityName,
 
-        openings:
-            Number(job.openings) || 1,
+        duration: job.duration || "",
+
+        openings: Number(job.openings) || 1,
 
         applicationDeadline:
             job.applicationDeadline ||
@@ -106,33 +89,22 @@ function normalizeJob(job) {
             job.event_id ||
             "",
 
-        eligibleProfiles:
-            Array.isArray(job.eligibleProfiles)
-                ? job.eligibleProfiles
-                : Array.isArray(job.eligible_profiles)
-                    ? job.eligible_profiles
-                    : ["professional"],
+        eligibleProfiles: Array.isArray(job.eligibleProfiles)
+            ? job.eligibleProfiles
+            : Array.isArray(job.eligible_profiles)
+                ? job.eligible_profiles
+                : ["professional"],
 
-        description:
-            job.description ||
-            "",
+        description: job.description || "",
 
-        requirements:
-            Array.isArray(job.requirements)
-                ? job.requirements
-                : [],
+        requirements: Array.isArray(job.requirements)
+            ? job.requirements
+            : [],
 
-        applyLink:
-            job.applyLink ||
-            "#",
+        applyLink: job.applyLink || "#",
+        website: job.website || "#",
 
-        website:
-            job.website ||
-            "#",
-
-        status:
-            job.status ||
-            "active",
+        status: job.status || "active",
 
         createdAt:
             job.createdAt ||
@@ -150,20 +122,13 @@ function uniqueJobs(jobs) {
     const result = [];
 
     jobs.forEach(job => {
-        const normalizedJob =
-            normalizeJob(job);
+        const normalizedJob = normalizeJob(job);
 
-        if (!normalizedJob) {
-            return;
-        }
+        if (!normalizedJob) return;
 
-        const alreadyExists =
-            result.some(existingJob =>
-                sameId(
-                    existingJob.id,
-                    normalizedJob.id
-                )
-            );
+        const alreadyExists = result.some(existingJob =>
+            sameId(existingJob.id, normalizedJob.id)
+        );
 
         if (!alreadyExists) {
             result.push(normalizedJob);
@@ -209,8 +174,7 @@ export function createStoredJob(jobData) {
             createdAt:
                 jobData.createdAt ||
                 new Date().toISOString(),
-            updatedAt:
-                null,
+            updatedAt: null,
             status:
                 jobData.status ||
                 "active"
