@@ -15,6 +15,11 @@ import { getCurrentUser } from "../utils/authStorage";
 import { canManageClub } from "../utils/permissions";
 
 import {
+    sameId,
+    hasId
+} from "../utils/idUtils";
+
+import {
     OPPORTUNITY_TYPE_LABELS,
     COMPENSATION_TYPE_LABELS
 } from "../config/appConfig";
@@ -31,7 +36,7 @@ function ClubDetail() {
     const applications = getApplications();
 
     const club = clubs.find(
-        item => Number(item.id) === Number(id)
+        item => sameId(item.id, id)
     );
 
     if (!club) {
@@ -54,24 +59,38 @@ function ClubDetail() {
     }
 
     const clubOpportunities = jobs
-        .filter(job => Number(job.clubId) === Number(club.id))
-        .sort((a, b) => Number(b.id) - Number(a.id));
+        .filter(job => sameId(job.clubId, club.id))
+        .sort((a, b) => {
+            const dateA = a.createdAt || "";
+            const dateB = b.createdAt || "";
+
+            if (dateA || dateB) {
+                return new Date(dateB) - new Date(dateA);
+            }
+
+            return String(b.id).localeCompare(String(a.id));
+        });
 
     const clubEvents = events
-        .filter(event => Number(event.clubId) === Number(club.id))
-        .sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+        .filter(event => sameId(event.clubId, club.id))
+        .sort((a, b) => {
+            const dateA = a.startDate || a.start_date || "";
+            const dateB = b.startDate || b.start_date || "";
+
+            return new Date(dateA) - new Date(dateB);
+        });
 
     const clubJobIds = clubOpportunities.map(
-        job => Number(job.id)
+        job => job.id
     );
 
     const clubApplications = applications.filter(application => {
         const belongsByClubId =
             application.clubId &&
-            Number(application.clubId) === Number(club.id);
+            sameId(application.clubId, club.id);
 
         const belongsByJobId =
-            clubJobIds.includes(Number(application.jobId));
+            hasId(clubJobIds, application.jobId);
 
         return belongsByClubId || belongsByJobId;
     });
@@ -116,7 +135,11 @@ function ClubDetail() {
             <div className="detail-card">
                 <div className="dashboard-hero-info">
                     <img
-                        src={club.logo || "/logos/default-club.svg"}
+                        src={
+                            club.logo ||
+                            club.logoUrl ||
+                            "/logos/default-club.svg"
+                        }
                         alt={club.name}
                         className="dashboard-club-logo"
                     />
@@ -125,7 +148,8 @@ function ClubDetail() {
                         <h1>{club.name}</h1>
 
                         <p>
-                            {club.city}, {club.country}
+                            {club.city || "Ciudad no informada"},{" "}
+                            {club.country || "País no informado"}
                         </p>
 
                         <p>
@@ -242,7 +266,8 @@ function ClubDetail() {
 
                                 <p>
                                     <strong>Ubicación:</strong>{" "}
-                                    {job.city}, {job.country}
+                                    {job.city || "Ciudad no informada"},{" "}
+                                    {job.country || "País no informado"}
                                 </p>
 
                                 <p>

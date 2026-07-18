@@ -345,48 +345,39 @@ function CreateJob() {
             return;
         }
 
+        const resolvedClubId =
+            club?.id ||
+            clubId ||
+            currentUser?.clubId;
+
+        const resolvedClubName =
+            club?.name ||
+            currentUser?.clubName ||
+            currentUser?.name ||
+            "Mi organización";
+
         const createdJob = createStoredJob({
-            clubId: Number(clubId),
+            clubId: resolvedClubId,
+            clubName: resolvedClubName,
+            organizationName: resolvedClubName,
+            createdBy: currentUser?.id || null,
 
             title: title.trim(),
-
             category,
-
             opportunityType,
-
             compensationType,
-
-            compensationDetails:
-                compensationDetails.trim(),
-
-            salary:
-                compensationDetails.trim() ||
-                COMPENSATION_TYPE_LABELS[
-                compensationType
-                ] ||
-                "A confirmar",
-
-            duration:
-                duration.trim() ||
-                "A confirmar",
-
-            openings: Number(openings),
-
-            applicationDeadline,
-
-            eventId,
-
-            eligibleProfiles,
-
+            compensationDetails,
+            salary: compensationDetails,
             country,
-
-            city: city.trim(),
-
-            description:
-                description.trim(),
-
-            requirements:
-                parseRequirements()
+            city,
+            duration,
+            openings: Number(openings) || 1,
+            applicationDeadline,
+            eligibleProfiles,
+            description: description.trim(),
+            requirements,
+            eventId,
+            createdAt: new Date().toISOString()
         });
 
         alert(
