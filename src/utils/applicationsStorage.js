@@ -1,3 +1,5 @@
+import { sameId } from "./idUtils";
+
 const APPLICATIONS_STORAGE_KEY = "applications";
 
 function normalizeApplicationStatus(status) {
@@ -158,12 +160,7 @@ export function getApplicationById(
     return (
         getApplications().find(
             application =>
-                Number(
-                    application.id
-                ) ===
-                Number(
-                    applicationId
-                )
+                sameId(application.id, applicationId)
         ) || null
     );
 }
@@ -180,12 +177,7 @@ export function updateApplicationStatus(
             application => {
 
                 if (
-                    Number(
-                        application.id
-                    ) !==
-                    Number(
-                        applicationId
-                    )
+                    !sameId(application.id, applicationId)
                 ) {
                     return application;
                 }
@@ -212,12 +204,7 @@ export function updateApplicationStatus(
     return (
         updatedApplications.find(
             application =>
-                Number(
-                    application.id
-                ) ===
-                Number(
-                    applicationId
-                )
+                sameId(application.id, applicationId)
         ) || null
     );
 }
@@ -231,12 +218,7 @@ export function deleteApplication(
     const updatedApplications =
         applications.filter(
             application =>
-                Number(
-                    application.id
-                ) !==
-                Number(
-                    applicationId
-                )
+                !sameId(application.id, applicationId)
         );
 
     saveApplications(

@@ -13,6 +13,7 @@ import { getAllJobs } from "../utils/jobsStorage";
 
 import staticEvents from "../data/events";
 import { getAllEvents } from "../utils/eventsStorage";
+import { sameId } from "../utils/idUtils";
 
 function Clubs() {
     const navigate = useNavigate();
@@ -58,13 +59,13 @@ function Clubs() {
 
     function getClubOpportunities(clubId) {
         return jobs.filter(
-            job => Number(job.clubId) === Number(clubId)
+            job => sameId(job.clubId, clubId)
         );
     }
 
     function getClubEvents(clubId) {
         return events.filter(
-            event => Number(event.clubId) === Number(clubId)
+            event => sameId(event.clubId, clubId)
         );
     }
 

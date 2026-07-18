@@ -2,7 +2,9 @@ import {
     useParams,
     useNavigate
 } from "react-router-dom";
+
 import { sameId } from "../utils/idUtils";
+
 
 import {
     getApplications

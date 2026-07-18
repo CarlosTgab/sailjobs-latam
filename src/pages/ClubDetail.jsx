@@ -16,7 +16,8 @@ import { canManageClub } from "../utils/permissions";
 
 import {
     sameId,
-    hasId
+    hasId,
+    sortByNewest
 } from "../utils/idUtils";
 
 import {
@@ -58,18 +59,9 @@ function ClubDetail() {
         );
     }
 
-    const clubOpportunities = jobs
-        .filter(job => sameId(job.clubId, club.id))
-        .sort((a, b) => {
-            const dateA = a.createdAt || "";
-            const dateB = b.createdAt || "";
-
-            if (dateA || dateB) {
-                return new Date(dateB) - new Date(dateA);
-            }
-
-            return String(b.id).localeCompare(String(a.id));
-        });
+    const clubOpportunities = sortByNewest(
+        jobs.filter(job => sameId(job.clubId, club.id))
+    );
 
     const clubEvents = events
         .filter(event => sameId(event.clubId, club.id))

@@ -13,6 +13,7 @@ import { getAllJobs } from "../utils/jobsStorage";
 
 import staticClubs from "../data/clubs";
 import { getAllClubs } from "../utils/clubsStorage";
+import { sameId, sortByNewest } from "../utils/idUtils";
 
 function Jobs() {
     const navigate = useNavigate();
@@ -34,7 +35,7 @@ function Jobs() {
 
     function getClub(clubId) {
         return clubs.find(
-            club => Number(club.id) === Number(clubId)
+            club => sameId(club.id, clubId)
         );
     }
 
@@ -68,6 +69,8 @@ function Jobs() {
                 job.compensationDetails,
                 job.salary,
                 club?.name,
+                job.clubName,
+                job.organizationName,
                 getOpportunityTypeLabel(job.opportunityType)
             ]
                 .filter(Boolean)
@@ -97,7 +100,9 @@ function Jobs() {
                 matchesType
             );
         })
-        .sort((a, b) => Number(b.id) - Number(a.id));
+        ;
+
+    const sortedJobs = sortByNewest(filteredJobs);
 
     function clearFilters() {
         setSearch("");
@@ -184,7 +189,7 @@ function Jobs() {
 
             <div className="dashboard-stats">
                 <div className="dashboard-stat-card">
-                    <h2>{filteredJobs.length}</h2>
+                    <h2>{sortedJobs.length}</h2>
                     <p>Resultados</p>
                 </div>
 
@@ -194,9 +199,9 @@ function Jobs() {
                 </div>
             </div>
 
-            {filteredJobs.length > 0 ? (
+            {sortedJobs.length > 0 ? (
                 <div className="dashboard-grid">
-                    {filteredJobs.map(job => {
+                    {sortedJobs.map(job => {
                         const club = getClub(job.clubId);
 
                         return (
@@ -218,7 +223,7 @@ function Jobs() {
 
                                 <p>
                                     <strong>Club / organización:</strong>{" "}
-                                    {club ? club.name : "No informado"}
+                                    {club?.name || job.clubName || job.organizationName || "No informado"}
                                 </p>
 
                                 <p>

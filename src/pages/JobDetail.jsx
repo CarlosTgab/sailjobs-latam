@@ -63,9 +63,21 @@ function JobDetail() {
     );
 
     const club = job
-        ? clubs.find(
-            item =>
-                sameId(item.id, job.clubId)
+        ? (
+            clubs.find(
+                item =>
+                    sameId(item.id, job.clubId)
+            ) ||
+            (job.clubId || job.clubName || job.organizationName
+                ? {
+                    id: job.clubId,
+                    name: job.clubName || job.organizationName || "Organización no informada",
+                    country: job.country || "",
+                    city: job.city || "",
+                    logo: "/logos/default-club.svg",
+                    logoUrl: "/logos/default-club.svg"
+                }
+                : null)
         )
         : null;
 
@@ -957,16 +969,23 @@ function JobDetail() {
                                 <button
                                     type="button"
                                     className="reject-button"
-                                    onClick={
-                                        handleCloseModal
-                                    }
+                                    onClick={(event) => {
+                                        event.preventDefault();
+                                        event.stopPropagation();
+                                        handleCloseModal();
+                                    }}
                                 >
                                     Cancelar
                                 </button>
 
                                 <button
-                                    type="submit"
+                                    type="button"
                                     className="accept-button"
+                                    onClick={(event) => {
+                                        event.preventDefault();
+                                        event.stopPropagation();
+                                        handleSubmitApplication(event);
+                                    }}
                                 >
                                     Enviar postulación
                                 </button>

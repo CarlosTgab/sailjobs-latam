@@ -230,8 +230,7 @@ function CreateJob() {
 
         const selectedEvent = allEvents.find(
             event =>
-                Number(event.id) ===
-                Number(selectedEventId)
+                sameId(event.id, selectedEventId)
         );
 
         if (!selectedEvent) {
@@ -355,6 +354,8 @@ function CreateJob() {
             currentUser?.clubName ||
             currentUser?.name ||
             "Mi organización";
+
+        const requirements = parseRequirements();
 
         const createdJob = createStoredJob({
             clubId: resolvedClubId,

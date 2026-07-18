@@ -8,7 +8,9 @@ import {
 } from "../utils/authStorage";
 
 import {
-    sameId
+    sameId,
+    hasId,
+    sortByNewest
 } from "../utils/idUtils";
 
 import staticJobs from "../data/jobs";
@@ -81,24 +83,24 @@ function ClubDashboard() {
     }
 
     const clubJobs = jobs.filter(
-        job => Number(job.clubId) === Number(clubId)
+        job => sameId(job.clubId, clubId)
     );
 
     const clubEvents = events.filter(
-        event => Number(event.clubId) === Number(clubId)
+        event => sameId(event.clubId, clubId)
     );
 
     const clubJobIds = clubJobs.map(
-        job => Number(job.id)
+        job => job.id
     );
 
     const clubApplications = applications.filter(application => {
         const belongsByClubId =
             application.clubId &&
-            Number(application.clubId) === Number(clubId);
+            sameId(application.clubId, clubId);
 
         const belongsByJobId =
-            clubJobIds.includes(Number(application.jobId));
+            hasId(clubJobIds, application.jobId);
 
         return belongsByClubId || belongsByJobId;
     });
@@ -111,8 +113,7 @@ function ClubDashboard() {
         application => application.status === APPLICATION_STATUS.ACCEPTED
     );
 
-    const latestOpportunities = [...clubJobs]
-        .sort((a, b) => Number(b.id) - Number(a.id))
+    const latestOpportunities = sortByNewest(clubJobs)
         .slice(0, 4);
 
     const latestApplications = [...clubApplications]
@@ -147,7 +148,7 @@ function ClubDashboard() {
 
     function getApplicationJob(application) {
         return clubJobs.find(
-            job => Number(job.id) === Number(application.jobId)
+            job => sameId(job.id, application.jobId)
         );
     }
 
