@@ -69,9 +69,17 @@ function Ranking() {
         };
     }, []);
 
-    const rankings = remoteRanking?.entries?.length > 0
+    const hasRemoteRanking =
+        remoteRanking?.entries?.length > 0;
+
+    const isWaitingForRemoteRanking =
+        isLoadingRanking && !hasRemoteRanking;
+
+    const rankings = hasRemoteRanking
         ? remoteRanking.entries
-        : staticRankings;
+        : isWaitingForRemoteRanking
+            ? []
+            : staticRankings;
 
     const sourceLabel = remoteRanking?.metadata
         ? `Última actualización publicada: ${formatDate(remoteRanking.metadata.createdAt)}${remoteRanking.metadata.sourceType === "url" ? " · Fuente externa" : ""}${remoteRanking.metadata.sourceFileName ? ` · ${remoteRanking.metadata.sourceFileName}` : ""}`
@@ -180,187 +188,199 @@ function Ranking() {
                 )}
             </div>
 
-            <div className="calendar-filters">
-                <input
-                    type="text"
-                    placeholder="Buscar timonel, club, clase o categoría..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                />
-
-                <select
-                    value={selectedClass}
-                    onChange={(e) => setSelectedClass(e.target.value)}
-                >
-                    <option value="">
-                        Todas las clases
-                    </option>
-
-                    {classes.map((className) => (
-                        <option
-                            key={className}
-                            value={className}
-                        >
-                            {className}
-                        </option>
-                    ))}
-                </select>
-
-                <select
-                    value={selectedClub}
-                    onChange={(e) => setSelectedClub(e.target.value)}
-                >
-                    <option value="">
-                        Todos los clubes
-                    </option>
-
-                    {clubs.map((club) => (
-                        <option
-                            key={club}
-                            value={club}
-                        >
-                            {club}
-                        </option>
-                    ))}
-                </select>
-
-                <select
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                >
-                    <option value="">
-                        Todas las categorías
-                    </option>
-
-                    {categories.map((category) => (
-                        <option
-                            key={category}
-                            value={category}
-                        >
-                            {category}
-                        </option>
-                    ))}
-                </select>
-
-                <button
-                    className="filter-clear-button"
-                    onClick={clearFilters}
-                >
-                    Limpiar filtros
-                </button>
-            </div>
-
-            {selectedClass && (
+            {isWaitingForRemoteRanking ? (
                 <div className="detail-card">
-                    <h2>Top 3 {selectedClass}</h2>
+                    <h2>Cargando ranking publicado...</h2>
 
-                    {podium.length > 0 ? (
-                        <div className="ranking-podium">
-                            {podium.map((sailor, index) => (
-                                <div
-                                    className={`ranking-podium-card podium-${index + 1}`}
-                                    key={sailor.id}
+                    <p>
+                        Estamos consultando la última versión publicada en Supabase.
+                    </p>
+                </div>
+            ) : (
+                <>
+                    <div className="calendar-filters">
+                        <input
+                            type="text"
+                            placeholder="Buscar timonel, club, clase o categoría..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
+
+                        <select
+                            value={selectedClass}
+                            onChange={(e) => setSelectedClass(e.target.value)}
+                        >
+                            <option value="">
+                                Todas las clases
+                            </option>
+
+                            {classes.map((className) => (
+                                <option
+                                    key={className}
+                                    value={className}
                                 >
-                                    <div className="ranking-medal">
-                                        #{sailor.position}
-                                    </div>
-
-                                    <h3>{sailor.name}</h3>
-
-                                    <p>
-                                        {sailor.club}
-                                    </p>
-
-                                    <p>
-                                        {sailor.category}
-                                    </p>
-
-                                    <strong>
-                                        {sailor.netPoints} netos
-                                    </strong>
-                                </div>
+                                    {className}
+                                </option>
                             ))}
-                        </div>
-                    ) : (
-                        <p>No hay navegantes para esos filtros.</p>
-                    )}
-                </div>
-            )}
+                        </select>
 
-            <div className="detail-card">
-                <div className="ranking-table-header">
-                    <h2>Tabla general</h2>
+                        <select
+                            value={selectedClub}
+                            onChange={(e) => setSelectedClub(e.target.value)}
+                        >
+                            <option value="">
+                                Todos los clubes
+                            </option>
 
-                    <p>
-                        {filteredRankings.length} resultados
-                    </p>
-                </div>
+                            {clubs.map((club) => (
+                                <option
+                                    key={club}
+                                    value={club}
+                                >
+                                    {club}
+                                </option>
+                            ))}
+                        </select>
 
-                {filteredRankings.length > 0 ? (
-                    <div className="ranking-table-wrapper">
-                        <table className="ranking-table">
-                            <thead>
-                                <tr>
-                                    <th>Pos.</th>
-                                    <th>Timonel</th>
-                                    <th>Club</th>
-                                    <th>Clase</th>
-                                    <th>Categoría</th>
-                                    <th>Net</th>
-                                    <th>Totales</th>
-                                    <th>Campeonatos</th>
-                                </tr>
-                            </thead>
+                        <select
+                            value={selectedCategory}
+                            onChange={(e) => setSelectedCategory(e.target.value)}
+                        >
+                            <option value="">
+                                Todas las categorías
+                            </option>
 
-                            <tbody>
-                                {filteredRankings.map((sailor) => (
-                                    <tr key={sailor.id}>
-                                        <td>
-                                            #{sailor.position}
-                                        </td>
+                            {categories.map((category) => (
+                                <option
+                                    key={category}
+                                    value={category}
+                                >
+                                    {category}
+                                </option>
+                            ))}
+                        </select>
 
-                                        <td>
-                                            <strong>
-                                                {sailor.name}
-                                            </strong>
-                                        </td>
-
-                                        <td>
-                                            {sailor.club}
-                                        </td>
-
-                                        <td>
-                                            {sailor.className}
-                                        </td>
-
-                                        <td>
-                                            {sailor.category}
-                                        </td>
-
-                                        <td>
-                                            <strong>
-                                                {sailor.netPoints}
-                                            </strong>
-                                        </td>
-
-                                        <td>
-                                            {sailor.totalPoints}
-                                        </td>
-
-                                        <td>
-                                            {sailor.events}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                        <button
+                            className="filter-clear-button"
+                            onClick={clearFilters}
+                        >
+                            Limpiar filtros
+                        </button>
                     </div>
-                ) : (
-                    <p>
-                        No se encontraron resultados para los filtros seleccionados.
-                    </p>
-                )}
-            </div>
+
+                    {selectedClass && (
+                        <div className="detail-card">
+                            <h2>Top 3 {selectedClass}</h2>
+
+                            {podium.length > 0 ? (
+                                <div className="ranking-podium">
+                                    {podium.map((sailor, index) => (
+                                        <div
+                                            className={`ranking-podium-card podium-${index + 1}`}
+                                            key={sailor.id}
+                                        >
+                                            <div className="ranking-medal">
+                                                #{sailor.position}
+                                            </div>
+
+                                            <h3>{sailor.name}</h3>
+
+                                            <p>
+                                                {sailor.club}
+                                            </p>
+
+                                            <p>
+                                                {sailor.category}
+                                            </p>
+
+                                            <strong>
+                                                {sailor.netPoints} netos
+                                            </strong>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p>No hay navegantes para esos filtros.</p>
+                            )}
+                        </div>
+                    )}
+
+                    <div className="detail-card">
+                        <div className="ranking-table-header">
+                            <h2>Tabla general</h2>
+
+                            <p>
+                                {filteredRankings.length} resultados
+                            </p>
+                        </div>
+
+                        {filteredRankings.length > 0 ? (
+                            <div className="ranking-table-wrapper">
+                                <table className="ranking-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Pos.</th>
+                                            <th>Timonel</th>
+                                            <th>Club</th>
+                                            <th>Clase</th>
+                                            <th>Categoría</th>
+                                            <th>Net</th>
+                                            <th>Totales</th>
+                                            <th>Campeonatos</th>
+                                        </tr>
+                                    </thead>
+
+                                    <tbody>
+                                        {filteredRankings.map((sailor) => (
+                                            <tr key={sailor.id}>
+                                                <td>
+                                                    #{sailor.position}
+                                                </td>
+
+                                                <td>
+                                                    <strong>
+                                                        {sailor.name}
+                                                    </strong>
+                                                </td>
+
+                                                <td>
+                                                    {sailor.club}
+                                                </td>
+
+                                                <td>
+                                                    {sailor.className}
+                                                </td>
+
+                                                <td>
+                                                    {sailor.category}
+                                                </td>
+
+                                                <td>
+                                                    <strong>
+                                                        {sailor.netPoints}
+                                                    </strong>
+                                                </td>
+
+                                                <td>
+                                                    {sailor.totalPoints}
+                                                </td>
+
+                                                <td>
+                                                    {sailor.events}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : (
+                            <p>
+                                No se encontraron resultados para los filtros seleccionados.
+                            </p>
+                        )}
+                    </div>
+                </>
+            )}
         </div>
     );
 }
