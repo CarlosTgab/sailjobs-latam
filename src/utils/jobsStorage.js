@@ -1,6 +1,7 @@
 import { sameId } from "./idUtils";
 
 const JOBS_STORAGE_KEY = "storedJobs";
+const HIDDEN_JOBS_STORAGE_KEY = "hiddenJobs";
 
 function readStorageArray(key) {
     try {
@@ -9,6 +10,13 @@ function readStorageArray(key) {
     } catch {
         return [];
     }
+}
+
+function writeStorageArray(key, items) {
+    localStorage.setItem(
+        key,
+        JSON.stringify(items)
+    );
 }
 
 function normalizeJob(job) {
@@ -105,6 +113,8 @@ function normalizeJob(job) {
         website: job.website || "#",
 
         status: job.status || "active",
+        moderationReason: job.moderationReason || "",
+        moderatedAt: job.moderatedAt || job.moderated_at || null,
 
         createdAt:
             job.createdAt ||
@@ -136,6 +146,38 @@ function uniqueJobs(jobs) {
     });
 
     return result;
+}
+
+function isVisibleJob(job) {
+    return job.status !== "hidden";
+}
+
+export function getHiddenJobIds() {
+    return readStorageArray(HIDDEN_JOBS_STORAGE_KEY);
+}
+
+function saveHiddenJobIds(ids) {
+    const uniqueIds = [];
+
+    ids.forEach(id => {
+        if (!uniqueIds.some(existingId => sameId(existingId, id))) {
+            uniqueIds.push(id);
+        }
+    });
+
+    writeStorageArray(HIDDEN_JOBS_STORAGE_KEY, uniqueIds);
+
+    window.dispatchEvent(
+        new Event("jobsChanged")
+    );
+
+    return uniqueIds;
+}
+
+export function isJobHidden(jobId) {
+    return getHiddenJobIds().some(id =>
+        sameId(id, jobId)
+    );
 }
 
 export function getStoredJobs() {
@@ -215,6 +257,45 @@ export function updateStoredJob(jobId, updatedData) {
     );
 }
 
+export function hideStoredJob(jobId, reason = "") {
+    const storedJob = getStoredJobs().find(job =>
+        sameId(job.id, jobId)
+    );
+
+    saveHiddenJobIds([
+        ...getHiddenJobIds(),
+        jobId
+    ]);
+
+    if (storedJob) {
+        updateStoredJob(jobId, {
+            status: "hidden",
+            moderationReason: reason,
+            moderatedAt: new Date().toISOString()
+        });
+    }
+}
+
+export function restoreStoredJob(jobId) {
+    saveHiddenJobIds(
+        getHiddenJobIds().filter(id =>
+            !sameId(id, jobId)
+        )
+    );
+
+    const storedJob = getStoredJobs().find(job =>
+        sameId(job.id, jobId)
+    );
+
+    if (storedJob) {
+        updateStoredJob(jobId, {
+            status: "active",
+            moderationReason: "",
+            moderatedAt: new Date().toISOString()
+        });
+    }
+}
+
 export function deleteStoredJob(jobId) {
     const jobs =
         getStoredJobs();
@@ -236,9 +317,25 @@ export function isStoredJob(jobId) {
     );
 }
 
-export function getAllJobs(staticJobs = []) {
+export function getAllJobsForAdmin(staticJobs = []) {
+    const hiddenIds = getHiddenJobIds();
+
     return uniqueJobs([
         ...staticJobs,
         ...getStoredJobs()
-    ]);
+    ]).map(job => {
+        if (hiddenIds.some(id => sameId(id, job.id))) {
+            return {
+                ...job,
+                status: "hidden"
+            };
+        }
+
+        return job;
+    });
+}
+
+export function getAllJobs(staticJobs = []) {
+    return getAllJobsForAdmin(staticJobs)
+        .filter(isVisibleJob);
 }

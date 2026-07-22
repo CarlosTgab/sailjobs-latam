@@ -18,6 +18,7 @@ import {
 } from "../utils/authStorage";
 
 import {
+    isSuperadmin as hasSuperadminPermission,
     normalizeUserRole
 } from "../utils/permissions";
 
@@ -53,7 +54,7 @@ function Profile() {
 
     const normalizedRole = normalizeUserRole(currentUser);
 
-    const isSuperadmin = normalizedRole === "superadmin";
+    const isSuperadmin = hasSuperadminPermission(currentUser);
     const isOrganizationAdmin = normalizedRole === "organization_admin";
     const isClub = normalizedRole === "club";
 
@@ -164,6 +165,84 @@ function Profile() {
                     >
                         Iniciar sesión
                     </button>
+                </div>
+            </div>
+        );
+    }
+
+    if (isSuperadmin) {
+        return (
+            <div className="dashboard-page">
+                <div className="dashboard-hero">
+                    <div>
+                        <h1>Cuenta superadmin</h1>
+
+                        <p>
+                            Esta cuenta administra la plataforma. No necesita activar
+                            perfil profesional ni postularse a oportunidades.
+                        </p>
+                    </div>
+
+                    <div className="dashboard-actions">
+                        <button
+                            className="apply-button"
+                            onClick={() => navigate("/superadmin")}
+                        >
+                            Ir al panel admin
+                        </button>
+
+                        <button
+                            className="apply-button"
+                            onClick={() => navigate("/admin/jobs")}
+                        >
+                            Moderar oportunidades
+                        </button>
+
+                        <button
+                            className="apply-button"
+                            onClick={() => navigate("/admin/classifieds")}
+                        >
+                            Moderar clasificados
+                        </button>
+                    </div>
+                </div>
+
+                <div className="dashboard-stats">
+                    <div className="dashboard-stat-card">
+                        <h2>Admin</h2>
+                        <p>Tipo de cuenta</p>
+                    </div>
+
+                    <div className="dashboard-stat-card">
+                        <h2>{currentUser.permissions?.length || 0}</h2>
+                        <p>Permisos activos</p>
+                    </div>
+                </div>
+
+                <div className="detail-card">
+                    <div className="section-header">
+                        <h2>Datos de administración</h2>
+                    </div>
+
+                    <p>
+                        <strong>Nombre:</strong>{" "}
+                        {currentUser.name || "Superadmin"}
+                    </p>
+
+                    <p>
+                        <strong>Email:</strong>{" "}
+                        {currentUser.email}
+                    </p>
+
+                    <p>
+                        <strong>Rol interno:</strong>{" "}
+                        {currentUser.role || "superadmin"}
+                    </p>
+
+                    <p>
+                        <strong>Permisos:</strong>{" "}
+                        {currentUser.permissions?.join(", ") || "superadmin"}
+                    </p>
                 </div>
             </div>
         );

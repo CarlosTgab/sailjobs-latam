@@ -9,7 +9,9 @@ import staticClubs from "../data/clubs";
 import { getAllClubs } from "../utils/clubsStorage";
 
 import staticJobs from "../data/jobs";
-import { getAllJobs } from "../utils/jobsStorage";
+import { getAllJobsForAdmin } from "../utils/jobsStorage";
+
+import { getAllClassifiedsForAdmin } from "../utils/classifiedsStorage";
 
 import staticEvents from "../data/events";
 import { getAllEvents } from "../utils/eventsStorage";
@@ -28,7 +30,8 @@ function AdminDashboard() {
 
     const users = getUsers();
     const clubs = getAllClubs(staticClubs);
-    const jobs = getAllJobs(staticJobs);
+    const jobs = getAllJobsForAdmin(staticJobs);
+    const classifieds = getAllClassifiedsForAdmin();
     const events = getAllEvents(staticEvents);
     const applications = getApplications();
 
@@ -202,6 +205,20 @@ function AdminDashboard() {
 
                     <button
                         className="apply-button"
+                        onClick={() => navigate("/admin/jobs")}
+                    >
+                        Moderar oportunidades
+                    </button>
+
+                    <button
+                        className="apply-button"
+                        onClick={() => navigate("/admin/classifieds")}
+                    >
+                        Moderar clasificados
+                    </button>
+
+                    <button
+                        className="apply-button"
                         onClick={() => navigate("/admin/messages")}
                     >
                         Mensajes de contacto
@@ -209,9 +226,9 @@ function AdminDashboard() {
 
                     <button
                         className="apply-button"
-                        onClick={() => navigate("/jobs")}
+                        onClick={() => navigate("/admin/ranking")}
                     >
-                        Ver oportunidades
+                        Actualizar ranking
                     </button>
                 </div>
             </div>
@@ -238,6 +255,11 @@ function AdminDashboard() {
                 </div>
 
                 <div className="dashboard-stat-card">
+                    <h2>{classifieds.length}</h2>
+                    <p>Clasificados publicados</p>
+                </div>
+
+                <div className="dashboard-stat-card">
                     <h2>{applications.length}</h2>
                     <p>Postulaciones totales</p>
                 </div>
@@ -254,9 +276,9 @@ function AdminDashboard() {
 
                     <button
                         className="small-action-button"
-                        onClick={() => navigate("/jobs")}
+                        onClick={() => navigate("/admin/jobs")}
                     >
-                        Ver todas
+                        Moderar todas
                     </button>
                 </div>
 

@@ -16,13 +16,25 @@ function normalizeEvent(event) {
         return null;
     }
 
+    const cityName =
+        event.cityName ||
+        event.city_name ||
+        event.city ||
+        "";
+
     return {
         id: event.id || crypto.randomUUID?.() || Date.now(),
         title: event.title || "Evento sin título",
         clubId: event.clubId || event.club_id || "",
         className: event.className || event.class_name || "",
+
         country: event.country || "",
+        countryCode: event.countryCode || event.country_code || "",
+        state: event.state || event.province || event.region || "",
+        stateCode: event.stateCode || event.state_code || "",
         city: event.city || "",
+        cityName,
+
         startDate: event.startDate || event.start_date || "",
         endDate: event.endDate || event.end_date || "",
         website: event.website || "",
@@ -76,7 +88,8 @@ export function createStoredEvent(eventData) {
     const newEvent = normalizeEvent({
         ...eventData,
         id: eventData.id || crypto.randomUUID?.() || Date.now(),
-        createdAt: eventData.createdAt || new Date().toISOString()
+        createdAt: eventData.createdAt || new Date().toISOString(),
+        updatedAt: null
     });
 
     saveStoredEvents([

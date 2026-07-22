@@ -9,12 +9,17 @@ import {
 } from "../utils/supabaseAuth";
 
 import {
+    isSuperadmin,
     normalizeUserRole
 } from "../utils/permissions";
 
 function getRedirectPath(user) {
     const role =
         normalizeUserRole(user);
+
+    if (isSuperadmin(user)) {
+        return "/superadmin";
+    }
 
     if (role === "club" && user.clubId) {
         return `/club-dashboard/${user.clubId}`;

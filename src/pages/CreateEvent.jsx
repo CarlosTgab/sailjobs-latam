@@ -7,15 +7,33 @@ import { getAllClubs } from "../utils/clubsStorage";
 import { getCurrentUser } from "../utils/authStorage";
 import { canManageClub } from "../utils/permissions";
 import { sameId } from "../utils/idUtils";
+
 import {
-    SAILING_CLASSES,
-    COUNTRIES
+    SAILING_CLASSES
 } from "../config/appConfig";
+
+import LocationSelects, {
+    CUSTOM_CITY_VALUE
+} from "../components/LocationSelects";
 
 import { createStoredEvent } from "../utils/eventsStorage";
 
-function CreateEvent() {
+function getResolvedCity(cityValue, customCityValue, stateValue) {
+    const resolvedCity =
+        cityValue === CUSTOM_CITY_VALUE || !cityValue
+            ? customCityValue.trim()
+            : cityValue.trim();
 
+    if (!resolvedCity) {
+        return "";
+    }
+
+    return stateValue
+        ? `${resolvedCity}, ${stateValue}`
+        : resolvedCity;
+}
+
+function CreateEvent() {
     const { clubId } = useParams();
     const navigate = useNavigate();
 
@@ -23,14 +41,36 @@ function CreateEvent() {
 
     const clubs = getAllClubs(staticClubs);
 
-    const club = clubs.find(
-        c => sameId(c.id, clubId)
+    const clubFromLocalData = clubs.find(
+        club => sameId(club.id, clubId)
     );
+
+    const clubFromCurrentUser =
+        currentUser && sameId(currentUser.clubId, clubId)
+            ? {
+                id: currentUser.clubId,
+                name: currentUser.clubName || currentUser.name || "Mi organización",
+                country: currentUser.country || "",
+                city: currentUser.city || ""
+            }
+            : null;
+
+    const club =
+        clubFromLocalData ||
+        clubFromCurrentUser;
 
     const [title, setTitle] = useState("");
     const [className, setClassName] = useState("");
-    const [country, setCountry] = useState(club ? club.country : "");
-    const [city, setCity] = useState(club ? club.city : "");
+
+    const [country, setCountry] = useState("");
+    const [countryCode, setCountryCode] = useState("");
+
+    const [state, setState] = useState("");
+    const [stateCode, setStateCode] = useState("");
+
+    const [city, setCity] = useState("");
+    const [customCity, setCustomCity] = useState("");
+
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [website, setWebsite] = useState("");
@@ -39,7 +79,6 @@ function CreateEvent() {
     if (!canManageClub(currentUser, clubId)) {
         return (
             <div className="dashboard-page">
-
                 <h1>Acceso denegado</h1>
 
                 <p>
@@ -52,7 +91,6 @@ function CreateEvent() {
                 >
                     ← Volver a clubes
                 </button>
-
             </div>
         );
     }
@@ -60,7 +98,6 @@ function CreateEvent() {
     if (!club) {
         return (
             <div className="dashboard-page">
-
                 <h1>Club no encontrado</h1>
 
                 <button
@@ -69,16 +106,30 @@ function CreateEvent() {
                 >
                     ← Volver a clubes
                 </button>
-
             </div>
         );
     }
 
-    function handleSubmit(e) {
-        e.preventDefault();
+    function handleSubmit(event) {
+        event.preventDefault();
 
-        if (!title || !className || !country || !city || !startDate || !endDate) {
-            setMessage("Completá todos los campos obligatorios.");
+        const resolvedCity =
+            getResolvedCity(
+                city,
+                customCity,
+                state
+            );
+
+        if (
+            !title.trim() ||
+            !className ||
+            !country ||
+            !state ||
+            !resolvedCity ||
+            !startDate ||
+            !endDate
+        ) {
+            setMessage("Completá todos los campos obligatorios, incluida la ubicación completa.");
             return;
         }
 
@@ -88,14 +139,23 @@ function CreateEvent() {
         }
 
         createStoredEvent({
-            title,
+            title: title.trim(),
             clubId: club.id,
             className,
+
             country,
-            city,
+            countryCode,
+            state,
+            stateCode,
+            city: resolvedCity,
+            cityName:
+                city === CUSTOM_CITY_VALUE || !city
+                    ? customCity.trim()
+                    : city.trim(),
+
             startDate,
             endDate,
-            website,
+            website: website.trim(),
             source: "Club",
             sourceUrl: "",
             status: "pending",
@@ -106,9 +166,7 @@ function CreateEvent() {
     }
 
     return (
-
         <div className="dashboard-page">
-
             <button
                 className="back-button"
                 onClick={() => navigate(`/club-dashboard/${club.id}`)}
@@ -116,35 +174,45 @@ function CreateEvent() {
                 ← Volver al panel
             </button>
 
-            <h1>Proponer evento</h1>
+            <div className="dashboard-hero">
+                <div>
+                    <h1>Proponer evento</h1>
 
-            <p>
-                Cargá un evento para {club.name}. El evento quedará pendiente hasta ser aprobado.
-            </p>
+                    <p>
+                        Cargá un evento para {club.name}. El evento quedará pendiente hasta ser aprobado.
+                    </p>
+                </div>
+            </div>
 
             <div className="detail-card">
-
                 <form
                     className="auth-form"
                     onSubmit={handleSubmit}
                 >
+                    <label>
+                        Nombre del evento *
+                    </label>
 
                     <input
                         type="text"
-                        placeholder="Nombre del evento *"
+                        placeholder="Ej: Campeonato Argentino ILCA"
                         value={title}
-                        onChange={(e) => setTitle(e.target.value)}
+                        onChange={(event) => setTitle(event.target.value)}
                     />
+
+                    <label>
+                        Clase *
+                    </label>
 
                     <select
                         value={className}
-                        onChange={(e) => setClassName(e.target.value)}
+                        onChange={(event) => setClassName(event.target.value)}
                     >
                         <option value="">
                             Seleccionar clase *
                         </option>
 
-                        {SAILING_CLASSES.map((classOption) => (
+                        {SAILING_CLASSES.map(classOption => (
                             <option
                                 key={classOption}
                                 value={classOption}
@@ -154,29 +222,17 @@ function CreateEvent() {
                         ))}
                     </select>
 
-                    <select
-                        value={country}
-                        onChange={(e) => setCountry(e.target.value)}
-                    >
-                        <option value="">
-                            Seleccionar país *
-                        </option>
-
-                        {COUNTRIES.map((countryOption) => (
-                            <option
-                                key={countryOption}
-                                value={countryOption}
-                            >
-                                {countryOption}
-                            </option>
-                        ))}
-                    </select>
-
-                    <input
-                        type="text"
-                        placeholder="Ciudad *"
-                        value={city}
-                        onChange={(e) => setCity(e.target.value)}
+                    <LocationSelects
+                        countryCode={countryCode}
+                        setCountryCode={setCountryCode}
+                        setCountry={setCountry}
+                        stateCode={stateCode}
+                        setStateCode={setStateCode}
+                        setState={setState}
+                        city={city}
+                        setCity={setCity}
+                        customCity={customCity}
+                        setCustomCity={setCustomCity}
                     />
 
                     <label>
@@ -186,7 +242,7 @@ function CreateEvent() {
                     <input
                         type="date"
                         value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
+                        onChange={(event) => setStartDate(event.target.value)}
                     />
 
                     <label>
@@ -196,35 +252,45 @@ function CreateEvent() {
                     <input
                         type="date"
                         value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
+                        onChange={(event) => setEndDate(event.target.value)}
                     />
+
+                    <label>
+                        Sitio web del evento
+                    </label>
 
                     <input
                         type="url"
-                        placeholder="Sitio web del evento"
+                        placeholder="https://..."
                         value={website}
-                        onChange={(e) => setWebsite(e.target.value)}
+                        onChange={(event) => setWebsite(event.target.value)}
                     />
 
                     {message && (
-                        <p>
+                        <p style={{ color: "#b42318" }}>
                             {message}
                         </p>
                     )}
 
-                    <button
-                        className="apply-button"
-                        type="submit"
-                    >
-                        Enviar evento a revisión
-                    </button>
+                    <div className="dashboard-actions">
+                        <button
+                            type="button"
+                            className="reject-button"
+                            onClick={() => navigate(`/club-dashboard/${club.id}`)}
+                        >
+                            Cancelar
+                        </button>
 
+                        <button
+                            className="accept-button"
+                            type="submit"
+                        >
+                            Enviar evento a revisión
+                        </button>
+                    </div>
                 </form>
-
             </div>
-
         </div>
-
     );
 }
 

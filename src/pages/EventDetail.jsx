@@ -15,6 +15,58 @@ import {
     COMPENSATION_TYPE_LABELS
 } from "../config/appConfig";
 
+function getEventCityName(event) {
+    if (event?.cityName) {
+        return event.cityName;
+    }
+
+    if (event?.city && event.city.includes(",")) {
+        return event.city.split(",")[0].trim();
+    }
+
+    return event?.city || "";
+}
+
+function getEventLocationLabel(event) {
+    const parts = [
+        getEventCityName(event),
+        event?.state,
+        event?.country
+    ].filter(Boolean);
+
+    if (parts.length > 0) {
+        return parts.join(", ");
+    }
+
+    return "Ubicación no informada";
+}
+
+function getJobCityName(job) {
+    if (job?.cityName) {
+        return job.cityName;
+    }
+
+    if (job?.city && job.city.includes(",")) {
+        return job.city.split(",")[0].trim();
+    }
+
+    return job?.city || "";
+}
+
+function getJobLocationLabel(job) {
+    const parts = [
+        getJobCityName(job),
+        job?.state,
+        job?.country
+    ].filter(Boolean);
+
+    if (parts.length > 0) {
+        return parts.join(", ");
+    }
+
+    return "Ubicación no informada";
+}
+
 function EventDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -111,7 +163,7 @@ function EventDetail() {
                     <h1>{event.title}</h1>
 
                     <p>
-                        {event.city}, {event.country}
+                        {getEventLocationLabel(event)}
                     </p>
                 </div>
             </div>
@@ -136,8 +188,15 @@ function EventDetail() {
 
                 <p>
                     <strong>Ubicación:</strong>{" "}
-                    {event.city}, {event.country}
+                    {getEventLocationLabel(event)}
                 </p>
+
+                {event.state && (
+                    <p>
+                        <strong>Provincia / Estado:</strong>{" "}
+                        {event.state}
+                    </p>
+                )}
 
                 {club && (
                     <p>
@@ -232,6 +291,11 @@ function EventDetail() {
                                 </div>
 
                                 <h3>{job.title}</h3>
+
+                                <p>
+                                    <strong>Ubicación:</strong>{" "}
+                                    {getJobLocationLabel(job)}
+                                </p>
 
                                 <p>
                                     <strong>Vacantes:</strong>{" "}

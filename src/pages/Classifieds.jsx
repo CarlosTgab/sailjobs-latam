@@ -7,6 +7,7 @@ import {
 } from "../config/appConfig";
 
 import { getCurrentUser } from "../utils/authStorage";
+import { isSuperadmin } from "../utils/permissions";
 import { getAllClassifieds } from "../utils/classifiedsStorage";
 
 function Classifieds() {
@@ -14,6 +15,7 @@ function Classifieds() {
     const navigate = useNavigate();
 
     const currentUser = getCurrentUser();
+    const currentUserIsSuperadmin = isSuperadmin(currentUser);
 
     const [search, setSearch] = useState("");
     const [selectedCategory, setSelectedCategory] = useState("");
@@ -53,6 +55,11 @@ function Classifieds() {
     });
 
     function handleCreateClassified() {
+        if (currentUserIsSuperadmin) {
+            navigate("/admin/classifieds");
+            return;
+        }
+
         if (!currentUser) {
             alert("Tenés que iniciar sesión para publicar un clasificado.");
             navigate("/login");
@@ -99,7 +106,9 @@ function Classifieds() {
                     className="apply-button"
                     onClick={handleCreateClassified}
                 >
-                    Publicar clasificado
+                    {currentUserIsSuperadmin
+                        ? "Panel de moderación"
+                        : "Publicar clasificado"}
                 </button>
 
             </div>

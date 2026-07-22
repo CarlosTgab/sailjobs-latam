@@ -17,6 +17,7 @@ import {
 } from "../utils/supabaseAuth";
 
 import {
+    isSuperadmin,
     normalizeUserRole
 } from "../utils/permissions";
 
@@ -29,6 +30,7 @@ function Navbar() {
 
     const normalizedRole = normalizeUserRole(currentUser);
 
+    const isAdmin = isSuperadmin(currentUser);
     const isClub = normalizedRole === "club";
     const isOrganizationAdmin = normalizedRole === "organization_admin";
 
@@ -56,6 +58,27 @@ function Navbar() {
         setCurrentUser(null);
 
         navigate("/");
+    }
+
+    function handleUserNavigation() {
+        closeMenu();
+
+        if (isAdmin) {
+            navigate("/superadmin");
+            return;
+        }
+
+        if (isClub && currentUser.clubId) {
+            navigate(`/club-dashboard/${currentUser.clubId}`);
+            return;
+        }
+
+        if (isOrganizationAdmin) {
+            navigate("/organization-admin");
+            return;
+        }
+
+        navigate("/profile");
     }
 
     return (
@@ -125,7 +148,16 @@ function Navbar() {
                     </>
                 )}
 
-                {currentUser && isClub && (
+                {currentUser && isAdmin && (
+                    <Link
+                        to="/superadmin"
+                        onClick={closeMenu}
+                    >
+                        Panel admin
+                    </Link>
+                )}
+
+                {currentUser && !isAdmin && isClub && (
                     <Link
                         to={`/club-dashboard/${currentUser.clubId}`}
                         onClick={closeMenu}
@@ -134,7 +166,7 @@ function Navbar() {
                     </Link>
                 )}
 
-                {currentUser && isOrganizationAdmin && (
+                {currentUser && !isAdmin && isOrganizationAdmin && (
                     <Link
                         to="/organization-admin"
                         onClick={closeMenu}
@@ -143,7 +175,7 @@ function Navbar() {
                     </Link>
                 )}
 
-                {currentUser && !isClub && !isOrganizationAdmin && (
+                {currentUser && !isAdmin && !isClub && !isOrganizationAdmin && (
                     <Link to="/profile" onClick={closeMenu}>
                         Mi perfil
                     </Link>
@@ -153,21 +185,7 @@ function Navbar() {
                     <>
                         <span
                             className="navbar-user"
-                            onClick={() => {
-                                closeMenu();
-
-                                if (isClub && currentUser.clubId) {
-                                    navigate(`/club-dashboard/${currentUser.clubId}`);
-                                    return;
-                                }
-
-                                if (isOrganizationAdmin) {
-                                    navigate("/organization-admin");
-                                    return;
-                                }
-
-                                navigate("/profile");
-                            }}
+                            onClick={handleUserNavigation}
                             style={{ cursor: "pointer" }}
                         >
                             {currentUser.name}

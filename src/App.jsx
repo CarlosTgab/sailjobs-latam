@@ -52,7 +52,10 @@ import OrganizationAdminDashboard from "./pages/OrganizationAdminDashboard";
 
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminEvents from "./pages/AdminEvents";
+import AdminJobs from "./pages/AdminJobs";
+import AdminClassifieds from "./pages/AdminClassifieds";
 import AdminMessages from "./pages/AdminMessages";
+import AdminRanking from "./pages/AdminRanking";
 
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -307,6 +310,44 @@ function App() {
           }
         />
 
+
+
+        <Route
+          path="/admin/jobs"
+          element={
+
+            <RequireRole
+              roles={[
+                "superadmin",
+                "admin"
+              ]}
+            >
+
+              <AdminJobs />
+
+            </RequireRole>
+
+          }
+        />
+
+        <Route
+          path="/admin/classifieds"
+          element={
+
+            <RequireRole
+              roles={[
+                "superadmin",
+                "admin"
+              ]}
+            >
+
+              <AdminClassifieds />
+
+            </RequireRole>
+
+          }
+        />
+
         <Route
           path="/admin/messages"
           element={
@@ -319,6 +360,24 @@ function App() {
             >
 
               <AdminMessages />
+
+            </RequireRole>
+
+          }
+        />
+
+        <Route
+          path="/admin/ranking"
+          element={
+
+            <RequireRole
+              roles={[
+                "superadmin",
+                "admin"
+              ]}
+            >
+
+              <AdminRanking />
 
             </RequireRole>
 

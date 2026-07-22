@@ -6,6 +6,7 @@ import {
 } from "../config/appConfig";
 
 import { getCurrentUser } from "../utils/authStorage";
+import { isSuperadmin } from "../utils/permissions";
 import { createStoredClassified } from "../utils/classifiedsStorage";
 
 function CreateClassified() {
@@ -13,6 +14,7 @@ function CreateClassified() {
     const navigate = useNavigate();
 
     const currentUser = getCurrentUser();
+    const currentUserIsSuperadmin = isSuperadmin(currentUser);
 
     const [title, setTitle] = useState("");
     const [category, setCategory] = useState("");
@@ -39,6 +41,28 @@ function CreateClassified() {
                     onClick={() => navigate("/login")}
                 >
                     Iniciar sesión
+                </button>
+
+            </div>
+        );
+    }
+
+    if (currentUserIsSuperadmin) {
+        return (
+            <div className="dashboard-page">
+
+                <h1>Cuenta de administración</h1>
+
+                <p>
+                    Las cuentas superadmin no publican clasificados. Usá el panel
+                    de moderación para revisar o dar de baja publicaciones.
+                </p>
+
+                <button
+                    className="apply-button"
+                    onClick={() => navigate("/admin/classifieds")}
+                >
+                    Ir a moderación de clasificados
                 </button>
 
             </div>

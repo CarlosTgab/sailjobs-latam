@@ -2,11 +2,13 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
 import { getCurrentUser } from "../utils/authStorage";
+import { isSuperadmin } from "../utils/permissions";
 import { sameId } from "../utils/idUtils";
 
 import {
     getAllClassifieds,
-    deleteStoredClassified
+    deleteStoredClassified,
+    hideStoredClassified
 } from "../utils/classifiedsStorage";
 
 function ClassifiedDetail() {
@@ -47,8 +49,12 @@ function ClassifiedDetail() {
         );
     }
 
+    const currentUserIsSuperadmin =
+        isSuperadmin(currentUser);
+
     const isOwner =
         currentUser &&
+        !currentUserIsSuperadmin &&
         sameId(currentUser.id, classified.userId);
 
     function getWhatsappLink(phone) {
@@ -82,6 +88,20 @@ function ClassifiedDetail() {
         deleteStoredClassified(classified.id);
 
         navigate("/classifieds");
+    }
+
+    function handleModerateClassified() {
+        const confirmModeration = window.confirm(
+            "¿Seguro que querés dar de baja este clasificado? No se verá en la página pública."
+        );
+
+        if (!confirmModeration) {
+            return;
+        }
+
+        hideStoredClassified(classified.id);
+
+        navigate("/admin/classifieds");
     }
 
     return (
@@ -217,6 +237,28 @@ function ClassifiedDetail() {
                             <strong>Última actualización:</strong>{" "}
                             {new Date(classified.updatedAt).toLocaleDateString("es-AR")}
                         </p>
+                    )}
+
+                    {currentUserIsSuperadmin && (
+
+                        <div className="dashboard-actions">
+
+                            <button
+                                className="reject-button"
+                                onClick={handleModerateClassified}
+                            >
+                                Dar de baja clasificado
+                            </button>
+
+                            <button
+                                className="apply-button"
+                                onClick={() => navigate("/admin/classifieds")}
+                            >
+                                Panel de moderación
+                            </button>
+
+                        </div>
+
                     )}
 
                     {isOwner && (

@@ -14,6 +14,7 @@ import staticJobs from "../data/jobs";
 import {
     getAllJobs,
     deleteStoredJob,
+    hideStoredJob,
     isStoredJob
 } from "../utils/jobsStorage";
 
@@ -29,7 +30,8 @@ import {
 } from "../utils/authStorage";
 
 import {
-    canManageClub
+    canManageClub,
+    isSuperadmin
 } from "../utils/permissions";
 
 import {
@@ -89,6 +91,9 @@ function JobDetail() {
 
     const currentUser =
         getCurrentUser();
+
+    const currentUserIsSuperadmin =
+        isSuperadmin(currentUser);
 
     const professionalProfile =
         currentUser?.professionalProfile || {};
@@ -232,7 +237,8 @@ function JobDetail() {
 
     const canEditOrDelete =
         canManageThisJob &&
-        jobWasCreatedInApp;
+        jobWasCreatedInApp &&
+        !currentUserIsSuperadmin;
 
     const applications =
         getApplications();
@@ -252,9 +258,16 @@ function JobDetail() {
         );
 
     const canApply =
+        !currentUserIsSuperadmin &&
         hasProfessionalProfile(
             currentUser
         );
+
+    const canShowProfessionalActivation =
+        currentUser &&
+        !currentUserIsSuperadmin &&
+        !canApply &&
+        !canManageThisJob;
 
     const jobCategory =
         job.category ||
@@ -269,6 +282,16 @@ function JobDetail() {
             );
 
             navigate("/login");
+
+            return;
+
+        }
+
+        if (currentUserIsSuperadmin) {
+
+            alert(
+                "Las cuentas superadmin no se postulan a oportunidades. Usá el panel admin para moderar o dar de baja publicaciones."
+            );
 
             return;
 
@@ -532,6 +555,23 @@ function JobDetail() {
         }
     }
 
+    function handleHideJob() {
+
+        const confirmModeration =
+            window.confirm(
+                "¿Seguro que querés dar de baja esta oportunidad? No se verá en la página pública."
+            );
+
+        if (!confirmModeration) {
+            return;
+        }
+
+        hideStoredJob(job.id);
+
+        navigate("/admin/jobs");
+    }
+
+
     function handleCloseModal() {
 
         setShowApplyModal(false);
@@ -782,9 +822,7 @@ function JobDetail() {
 
                         )}
 
-                    {currentUser &&
-                        !canApply &&
-                        !canManageThisJob && (
+                    {canShowProfessionalActivation && (
 
                             <button
                                 className="apply-button"
@@ -825,11 +863,41 @@ function JobDetail() {
 
                     )}
 
+                    {currentUserIsSuperadmin && (
+
+                        <>
+
+                            {jobWasCreatedInApp && (
+
+                                <button
+                                    className="apply-button"
+                                    onClick={() =>
+                                        navigate(
+                                            `/jobs/${job.id}/edit`
+                                        )
+                                    }
+                                >
+                                    Editar oportunidad
+                                </button>
+
+                            )}
+
+                            <button
+                                className="reject-button"
+                                onClick={
+                                    handleHideJob
+                                }
+                            >
+                                Dar de baja oportunidad
+                            </button>
+
+                        </>
+
+                    )}
+
                 </div>
 
-                {currentUser &&
-                    !canApply &&
-                    !canManageThisJob && (
+                {canShowProfessionalActivation && (
 
                         <p
                             style={{
@@ -846,6 +914,7 @@ function JobDetail() {
                     )}
 
                 {canManageThisJob &&
+                    !currentUserIsSuperadmin &&
                     !jobWasCreatedInApp && (
 
                         <p

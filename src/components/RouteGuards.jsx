@@ -11,6 +11,7 @@ import {
 
 import {
     canManageClub,
+    isSuperadmin,
     normalizeUserRole
 } from "../utils/permissions";
 
@@ -65,6 +66,13 @@ export function RequireRole({
         );
 
     if (
+        normalizedAllowedRoles.includes("superadmin") &&
+        isSuperadmin(currentUser)
+    ) {
+        return children;
+    }
+
+    if (
         !normalizedAllowedRoles.includes(
             currentRole
         )
@@ -92,6 +100,15 @@ export function RequireProfile({
         return (
             <Navigate
                 to="/login"
+                replace
+            />
+        );
+    }
+
+    if (isSuperadmin(currentUser)) {
+        return (
+            <Navigate
+                to="/superadmin"
                 replace
             />
         );
