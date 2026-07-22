@@ -74,7 +74,7 @@ function Ranking() {
         : staticRankings;
 
     const sourceLabel = remoteRanking?.metadata
-        ? `Última actualización publicada: ${formatDate(remoteRanking.metadata.createdAt)}${remoteRanking.metadata.sourceFileName ? ` · ${remoteRanking.metadata.sourceFileName}` : ""}`
+        ? `Última actualización publicada: ${formatDate(remoteRanking.metadata.createdAt)}${remoteRanking.metadata.sourceType === "url" ? " · Fuente externa" : ""}${remoteRanking.metadata.sourceFileName ? ` · ${remoteRanking.metadata.sourceFileName}` : ""}`
         : "Mostrando ranking base incluido en la beta.";
 
     const classes = useMemo(

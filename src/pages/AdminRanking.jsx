@@ -1,8 +1,17 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { parseRankingExcel } from "../utils/rankingParser";
-import { publishRankingImport } from "../utils/rankingStorage";
+import {
+    normalizeRankingSourceUrl,
+    parseRankingExcel,
+    parseRankingFromUrl
+} from "../utils/rankingParser";
+
+import {
+    getActiveRankingSource,
+    publishRankingImport,
+    saveRankingSource
+} from "../utils/rankingStorage";
 
 function getClassSummary(entries) {
     return entries.reduce((summary, entry) => {
@@ -14,17 +23,29 @@ function getClassSummary(entries) {
     }, {});
 }
 
+function getSuggestedTitle() {
+    const today = new Date();
+
+    return `Ranking 2026 - ${today.toLocaleDateString("es-AR")}`;
+}
+
 function AdminRanking() {
     const navigate = useNavigate();
 
-    const [importTitle, setImportTitle] = useState("Ranking 2026");
+    const [importTitle, setImportTitle] = useState(getSuggestedTitle());
     const [sourceFileName, setSourceFileName] = useState("");
+    const [sourceUrl, setSourceUrl] = useState("");
+    const [sourceName, setSourceName] = useState("Ranking ILCA / AAL");
+    const [sourceType, setSourceType] = useState("file");
     const [entries, setEntries] = useState([]);
     const [warnings, setWarnings] = useState([]);
     const [message, setMessage] = useState("");
     const [errorMessage, setErrorMessage] = useState("");
+    const [isLoadingSource, setIsLoadingSource] = useState(false);
     const [isParsing, setIsParsing] = useState(false);
     const [isPublishing, setIsPublishing] = useState(false);
+
+    const normalizedSourceUrl = normalizeRankingSourceUrl(sourceUrl);
 
     const classSummary = useMemo(
         () => getClassSummary(entries),
@@ -33,19 +54,59 @@ function AdminRanking() {
 
     const previewEntries = entries.slice(0, 20);
 
+    useEffect(() => {
+        let isMounted = true;
+
+        async function loadRankingSource() {
+            setIsLoadingSource(true);
+
+            try {
+                const activeSource = await getActiveRankingSource();
+
+                if (!isMounted || !activeSource) {
+                    return;
+                }
+
+                setSourceName(activeSource.name || "Ranking ILCA / AAL");
+                setSourceUrl(activeSource.sourceUrl || "");
+            } catch {
+                if (isMounted) {
+                    setMessage(
+                        "No hay fuente externa guardada todavía. Podés pegar una URL pública abajo."
+                    );
+                }
+            } finally {
+                if (isMounted) {
+                    setIsLoadingSource(false);
+                }
+            }
+        }
+
+        loadRankingSource();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
+    function resetPreview() {
+        setWarnings([]);
+        setEntries([]);
+    }
+
     async function handleFileChange(event) {
         const file = event.target.files?.[0];
 
         setMessage("");
         setErrorMessage("");
-        setWarnings([]);
-        setEntries([]);
+        resetPreview();
 
         if (!file) {
             setSourceFileName("");
             return;
         }
 
+        setSourceType("file");
         setSourceFileName(file.name);
         setIsParsing(true);
 
@@ -66,12 +127,62 @@ function AdminRanking() {
         }
     }
 
+    async function handleReadFromUrl() {
+        setMessage("");
+        setErrorMessage("");
+        resetPreview();
+
+        if (!sourceUrl.trim()) {
+            setErrorMessage("Pegá una URL pública del ranking.");
+            return;
+        }
+
+        setSourceType("url");
+        setSourceFileName(sourceUrl.trim());
+        setIsParsing(true);
+
+        try {
+            const parsedRanking = await parseRankingFromUrl(sourceUrl);
+
+            setEntries(parsedRanking.entries);
+            setWarnings(parsedRanking.warnings);
+            setMessage(
+                `Fuente externa leída correctamente: ${parsedRanking.entries.length} registros encontrados.`
+            );
+        } catch (error) {
+            setErrorMessage(
+                error.message || "No se pudo leer la fuente externa del ranking."
+            );
+        } finally {
+            setIsParsing(false);
+        }
+    }
+
+    async function handleSaveSource() {
+        setMessage("");
+        setErrorMessage("");
+
+        try {
+            await saveRankingSource({
+                name: sourceName,
+                sourceUrl,
+                sourceType: "url"
+            });
+
+            setMessage("Fuente externa guardada correctamente.");
+        } catch (error) {
+            setErrorMessage(
+                error.message || "No se pudo guardar la fuente externa."
+            );
+        }
+    }
+
     async function handlePublish() {
         setMessage("");
         setErrorMessage("");
 
         if (entries.length === 0) {
-            setErrorMessage("Primero cargá un Excel válido.");
+            setErrorMessage("Primero cargá un Excel válido o leé una fuente externa válida.");
             return;
         }
 
@@ -86,9 +197,19 @@ function AdminRanking() {
         setIsPublishing(true);
 
         try {
+            if (sourceType === "url" && sourceUrl.trim()) {
+                await saveRankingSource({
+                    name: sourceName,
+                    sourceUrl,
+                    sourceType: "url"
+                });
+            }
+
             await publishRankingImport({
                 title: importTitle,
                 sourceFileName,
+                sourceUrl: sourceType === "url" ? sourceUrl.trim() : "",
+                sourceType,
                 entries
             });
 
@@ -98,7 +219,7 @@ function AdminRanking() {
         } catch (error) {
             setErrorMessage(
                 error.message ||
-                "No se pudo publicar el ranking. Revisá que hayas corrido el SQL de ranking en Supabase."
+                "No se pudo publicar el ranking. Revisá que hayas corrido el SQL actualizado de ranking en Supabase."
             );
         } finally {
             setIsPublishing(false);
@@ -119,8 +240,8 @@ function AdminRanking() {
                     <h1>Actualizar ranking</h1>
 
                     <p>
-                        Subí el Excel oficial del ranking ILCA. SailJobs lo lee,
-                        muestra una vista previa y lo publica para todos los usuarios.
+                        Subí el Excel oficial o conectá una URL pública. SailJobs lee la fuente,
+                        muestra una vista previa y publica el ranking para todos los usuarios.
                     </p>
                 </div>
 
@@ -135,7 +256,72 @@ function AdminRanking() {
             </div>
 
             <div className="detail-card">
-                <h2>Importar Excel</h2>
+                <h2>Fuente externa</h2>
+
+                <p>
+                    Usá esta opción cuando el ranking esté publicado como Google Sheets, CSV o Excel público.
+                    Así no hace falta descargar y subir el archivo cada vez.
+                </p>
+
+                <form className="auth-form">
+                    <label>
+                        Nombre de la fuente
+                    </label>
+
+                    <input
+                        type="text"
+                        value={sourceName}
+                        onChange={(event) => setSourceName(event.target.value)}
+                        placeholder="Ej: Ranking oficial AAL"
+                    />
+
+                    <label>
+                        URL pública del ranking
+                    </label>
+
+                    <input
+                        type="url"
+                        value={sourceUrl}
+                        onChange={(event) => setSourceUrl(event.target.value)}
+                        placeholder="Pegá el enlace público al Excel, CSV o Google Sheet"
+                    />
+
+                    {normalizedSourceUrl && normalizedSourceUrl !== sourceUrl.trim() && (
+                        <p className="password-help">
+                            SailJobs intentará leer esta URL convertida: {normalizedSourceUrl}
+                        </p>
+                    )}
+
+                    <div className="dashboard-actions">
+                        <button
+                            className="apply-button"
+                            type="button"
+                            onClick={handleReadFromUrl}
+                            disabled={isParsing || isLoadingSource}
+                        >
+                            {isParsing && sourceType === "url"
+                                ? "Leyendo fuente..."
+                                : "Leer ranking desde URL"}
+                        </button>
+
+                        <button
+                            className="small-action-button"
+                            type="button"
+                            onClick={handleSaveSource}
+                            disabled={!sourceUrl.trim()}
+                        >
+                            Guardar fuente
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div className="detail-card">
+                <h2>Importar archivo manual</h2>
+
+                <p>
+                    Dejá esta opción como respaldo si la fuente externa no permite lectura automática.
+                </p>
 
                 <form className="auth-form">
                     <label>
@@ -160,8 +346,12 @@ function AdminRanking() {
                     />
                 </form>
 
+                {isLoadingSource && (
+                    <p>Cargando fuente guardada...</p>
+                )}
+
                 {isParsing && (
-                    <p>Procesando archivo...</p>
+                    <p>Procesando ranking...</p>
                 )}
 
                 {message && (

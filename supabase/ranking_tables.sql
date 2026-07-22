@@ -22,12 +22,20 @@ create table if not exists public.ranking_imports (
     id uuid primary key default gen_random_uuid(),
     title text not null default 'Ranking',
     source_file_name text,
+    source_url text,
+    source_type text not null default 'file',
     imported_by uuid references auth.users(id) on delete set null,
     status text not null default 'published',
     is_active boolean not null default true,
     row_count integer not null default 0,
     created_at timestamptz not null default now()
 );
+
+alter table public.ranking_imports
+add column if not exists source_url text;
+
+alter table public.ranking_imports
+add column if not exists source_type text not null default 'file';
 
 create table if not exists public.ranking_entries (
     id uuid primary key default gen_random_uuid(),
@@ -46,14 +54,29 @@ create table if not exists public.ranking_entries (
     created_at timestamptz not null default now()
 );
 
+create table if not exists public.ranking_sources (
+    id uuid primary key default gen_random_uuid(),
+    name text not null default 'Ranking externo',
+    source_url text not null,
+    source_type text not null default 'url',
+    is_active boolean not null default true,
+    created_by uuid references auth.users(id) on delete set null,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now()
+);
+
 create index if not exists ranking_imports_active_idx
 on public.ranking_imports (is_active, status, created_at desc);
 
 create index if not exists ranking_entries_import_class_position_idx
 on public.ranking_entries (import_id, class_name, position);
 
+create index if not exists ranking_sources_active_idx
+on public.ranking_sources (is_active, updated_at desc);
+
 alter table public.ranking_imports enable row level security;
 alter table public.ranking_entries enable row level security;
+alter table public.ranking_sources enable row level security;
 
 drop policy if exists "Public can read active ranking imports" on public.ranking_imports;
 create policy "Public can read active ranking imports"
@@ -80,6 +103,13 @@ using (
     )
 );
 
+drop policy if exists "Public can read active ranking sources" on public.ranking_sources;
+create policy "Public can read active ranking sources"
+on public.ranking_sources
+for select
+to anon, authenticated
+using (is_active = true);
+
 drop policy if exists "Superadmins manage ranking imports" on public.ranking_imports;
 create policy "Superadmins manage ranking imports"
 on public.ranking_imports
@@ -96,9 +126,70 @@ to authenticated
 using (public.is_superadmin(auth.uid()))
 with check (public.is_superadmin(auth.uid()));
 
-create or replace function public.publish_ranking_import(
+drop policy if exists "Superadmins manage ranking sources" on public.ranking_sources;
+create policy "Superadmins manage ranking sources"
+on public.ranking_sources
+for all
+to authenticated
+using (public.is_superadmin(auth.uid()))
+with check (public.is_superadmin(auth.uid()));
+
+create or replace function public.upsert_ranking_source(
+    source_name_param text,
+    source_url_param text,
+    source_type_param text default 'url'
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    source_id uuid;
+begin
+    if auth.uid() is null then
+        raise exception 'Tenés que iniciar sesión para guardar la fuente del ranking.';
+    end if;
+
+    if not public.is_superadmin(auth.uid()) then
+        raise exception 'Solo un superadmin puede guardar la fuente del ranking.';
+    end if;
+
+    if nullif(trim(source_url_param), '') is null then
+        raise exception 'La URL de la fuente no puede estar vacía.';
+    end if;
+
+    update public.ranking_sources
+    set is_active = false
+    where is_active = true;
+
+    insert into public.ranking_sources (
+        name,
+        source_url,
+        source_type,
+        is_active,
+        created_by,
+        updated_at
+    )
+    values (
+        coalesce(nullif(trim(source_name_param), ''), 'Ranking externo'),
+        trim(source_url_param),
+        coalesce(nullif(trim(source_type_param), ''), 'url'),
+        true,
+        auth.uid(),
+        now()
+    )
+    returning id into source_id;
+
+    return source_id;
+end;
+$$;
+
+create or replace function public.publish_ranking_import_v2(
     import_title_param text,
     source_file_name_param text,
+    source_url_param text,
+    source_type_param text,
     entries_param jsonb
 )
 returns uuid
@@ -128,6 +219,8 @@ begin
     insert into public.ranking_imports (
         title,
         source_file_name,
+        source_url,
+        source_type,
         imported_by,
         status,
         is_active,
@@ -136,6 +229,8 @@ begin
     values (
         coalesce(nullif(trim(import_title_param), ''), 'Ranking'),
         nullif(trim(source_file_name_param), ''),
+        nullif(trim(source_url_param), ''),
+        coalesce(nullif(trim(source_type_param), ''), 'file'),
         auth.uid(),
         'published',
         true,
@@ -200,4 +295,5 @@ begin
 end;
 $$;
 
-grant execute on function public.publish_ranking_import(text, text, jsonb) to authenticated;
+grant execute on function public.upsert_ranking_source(text, text, text) to authenticated;
+grant execute on function public.publish_ranking_import_v2(text, text, text, text, jsonb) to authenticated;

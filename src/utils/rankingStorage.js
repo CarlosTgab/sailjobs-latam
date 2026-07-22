@@ -79,6 +79,8 @@ export async function getLatestPublishedRanking() {
             id: rankingImport.id,
             title: rankingImport.title,
             sourceFileName: rankingImport.source_file_name,
+            sourceUrl: rankingImport.source_url || "",
+            sourceType: rankingImport.source_type || "file",
             rowCount: rankingImport.row_count,
             createdAt: rankingImport.created_at
         },
@@ -86,9 +88,62 @@ export async function getLatestPublishedRanking() {
     };
 }
 
+export async function getActiveRankingSource() {
+    const { data, error } =
+        await supabase
+            .from("ranking_sources")
+            .select("*")
+            .eq("is_active", true)
+            .order("updated_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+    if (error) {
+        throw error;
+    }
+
+    if (!data) {
+        return null;
+    }
+
+    return {
+        id: data.id,
+        name: data.name || "Ranking externo",
+        sourceUrl: data.source_url || "",
+        sourceType: data.source_type || "url",
+        updatedAt: data.updated_at,
+        createdAt: data.created_at
+    };
+}
+
+export async function saveRankingSource({
+    name,
+    sourceUrl,
+    sourceType = "url"
+}) {
+    if (!sourceUrl?.trim()) {
+        throw new Error("Pegá una URL pública del ranking.");
+    }
+
+    const { data, error } =
+        await supabase.rpc("upsert_ranking_source", {
+            source_name_param: name || "Ranking externo",
+            source_url_param: sourceUrl.trim(),
+            source_type_param: sourceType || "url"
+        });
+
+    if (error) {
+        throw error;
+    }
+
+    return data;
+}
+
 export async function publishRankingImport({
     title,
     sourceFileName,
+    sourceUrl = "",
+    sourceType = "file",
     entries
 }) {
     if (!Array.isArray(entries) || entries.length === 0) {
@@ -98,9 +153,11 @@ export async function publishRankingImport({
     const payload = entries.map(mapEntryToPayload);
 
     const { data, error } =
-        await supabase.rpc("publish_ranking_import", {
+        await supabase.rpc("publish_ranking_import_v2", {
             import_title_param: title || "Ranking",
             source_file_name_param: sourceFileName || "",
+            source_url_param: sourceUrl || "",
+            source_type_param: sourceType || "file",
             entries_param: payload
         });
 

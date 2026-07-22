@@ -221,17 +221,7 @@ function parseSheet(sheetName, worksheet) {
     };
 }
 
-export async function parseRankingExcel(file) {
-    if (!file) {
-        throw new Error("Seleccioná un archivo Excel.");
-    }
-
-    const arrayBuffer = await file.arrayBuffer();
-
-    const workbook = XLSX.read(arrayBuffer, {
-        type: "array"
-    });
-
+function parseWorkbook(workbook) {
     const entries = [];
     const warnings = [];
 
@@ -248,7 +238,7 @@ export async function parseRankingExcel(file) {
 
     if (entries.length === 0) {
         throw new Error(
-            "No pude leer resultados del Excel. Revisá que tenga columnas Pos, Apellido, Nombre, CLUB, Categoría, Net y Totales."
+            "No pude leer resultados del ranking. Revisá que la fuente tenga columnas Pos, Apellido, Nombre, CLUB, Categoría, Net y Totales."
         );
     }
 
@@ -257,4 +247,115 @@ export async function parseRankingExcel(file) {
         warnings,
         sheetNames: workbook.SheetNames
     };
+}
+
+function isLikelyCsvUrl(url) {
+    const normalizedUrl = normalizeText(url);
+
+    return (
+        normalizedUrl.includes("output=csv") ||
+        normalizedUrl.includes("format=csv") ||
+        normalizedUrl.endsWith(".csv") ||
+        normalizedUrl.includes("tqx=out:csv")
+    );
+}
+
+function getGoogleSpreadsheetId(url) {
+    const match = String(url || "").match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+    return match?.[1] || "";
+}
+
+function getGoogleDriveFileId(url) {
+    const byPath = String(url || "").match(/\/file\/d\/([a-zA-Z0-9-_]+)/);
+    if (byPath?.[1]) return byPath[1];
+
+    const byQuery = String(url || "").match(/[?&]id=([a-zA-Z0-9-_]+)/);
+    return byQuery?.[1] || "";
+}
+
+export function normalizeRankingSourceUrl(sourceUrl) {
+    const trimmedUrl = String(sourceUrl || "").trim();
+
+    if (!trimmedUrl) {
+        return "";
+    }
+
+    const spreadsheetId = getGoogleSpreadsheetId(trimmedUrl);
+
+    if (spreadsheetId) {
+        return `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=xlsx`;
+    }
+
+    const driveFileId = getGoogleDriveFileId(trimmedUrl);
+
+    if (driveFileId) {
+        return `https://drive.google.com/uc?export=download&id=${driveFileId}`;
+    }
+
+    return trimmedUrl;
+}
+
+export async function parseRankingArrayBuffer(arrayBuffer) {
+    if (!arrayBuffer) {
+        throw new Error("No hay contenido para leer.");
+    }
+
+    const workbook = XLSX.read(arrayBuffer, {
+        type: "array"
+    });
+
+    return parseWorkbook(workbook);
+}
+
+export async function parseRankingExcel(file) {
+    if (!file) {
+        throw new Error("Seleccioná un archivo Excel.");
+    }
+
+    const arrayBuffer = await file.arrayBuffer();
+
+    return parseRankingArrayBuffer(arrayBuffer);
+}
+
+export async function parseRankingFromUrl(sourceUrl) {
+    const normalizedUrl = normalizeRankingSourceUrl(sourceUrl);
+
+    if (!normalizedUrl) {
+        throw new Error("Pegá una URL pública del ranking.");
+    }
+
+    let response;
+
+    try {
+        response = await fetch(normalizedUrl);
+    } catch {
+        throw new Error(
+            "No pude descargar la fuente externa. Verificá que la URL sea pública y permita acceso desde el navegador."
+        );
+    }
+
+    if (!response.ok) {
+        throw new Error(
+            `No pude descargar la fuente externa. Estado HTTP: ${response.status}.`
+        );
+    }
+
+    if (isLikelyCsvUrl(normalizedUrl)) {
+        const csvText = await response.text();
+        const workbook = XLSX.read(csvText, {
+            type: "string"
+        });
+
+        return parseWorkbook(workbook);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+
+    try {
+        return parseRankingArrayBuffer(arrayBuffer);
+    } catch (error) {
+        throw new Error(
+            `${error.message} Si la fuente es Google Sheets, probá publicarla como CSV o usar el enlace de exportación.`
+        );
+    }
 }
