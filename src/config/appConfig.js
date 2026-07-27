@@ -17,21 +17,39 @@ export const USER_ROLES = {
 export const ROLE_LABELS = {
     superadmin: "Superadministrador",
     organization_admin: "Administrador de organización",
-    club: "Club / organización",
+    club: "Administrador de club",
     coach: "Profesional náutico",
     user: "Usuario general"
+};
+
+export const ENTITY_TYPES = {
+    CLUB: "club",
+    ORGANIZATION: "organization"
+};
+
+export const ENTITY_TYPE_LABELS = {
+    club: "Club náutico",
+    organization: "Organización náutica"
 };
 
 export const ORGANIZATION_TYPES = {
     FEDERATION: "federation",
     CLASS_ASSOCIATION: "class_association",
-    REGIONAL_ASSOCIATION: "regional_association"
+    REGIONAL_ASSOCIATION: "regional_association",
+    EVENT_ORGANIZER: "event_organizer",
+    SAILING_SCHOOL: "sailing_school",
+    COMPANY: "company",
+    OTHER: "other"
 };
 
 export const ORGANIZATION_TYPE_LABELS = {
     federation: "Federación",
     class_association: "Asociación de clase",
-    regional_association: "Asociación regional"
+    regional_association: "Asociación regional",
+    event_organizer: "Organizador de eventos",
+    sailing_school: "Escuela / academia náutica",
+    company: "Empresa / proveedor náutico",
+    other: "Otra organización"
 };
 
 export const EVENT_STATUS = {

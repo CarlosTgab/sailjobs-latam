@@ -2477,3 +2477,117 @@ body {
         width: 100%;
     }
 }
+
+/* =========================
+   IMPORTADOR FAY - FIX VISUAL
+========================= */
+
+.admin-fay-page .dashboard-hero {
+    align-items: flex-start;
+    gap: 24px;
+}
+
+.admin-fay-page .dashboard-hero .dashboard-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 12px;
+    min-width: 320px;
+}
+
+.admin-fay-page .detail-card {
+    overflow: visible;
+}
+
+.admin-fay-page .calendar-filters {
+    align-items: stretch;
+    gap: 14px;
+    margin: 22px 0 22px;
+}
+
+.admin-fay-page .calendar-filters input,
+.admin-fay-page .calendar-filters select {
+    min-width: 240px;
+    height: 48px;
+    border: 1px solid #cfd8e3;
+    border-radius: 12px;
+    padding: 12px 15px;
+    background: rgba(255, 255, 255, 0.98);
+    color: #111827;
+    font-family: inherit;
+    font-size: 1rem;
+    box-sizing: border-box;
+}
+
+.admin-fay-page .admin-import-textarea {
+    width: 100%;
+    min-height: 280px;
+    display: block;
+    border: 1px solid #cfd8e3;
+    border-radius: 16px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.98);
+    color: #111827;
+    font-family: inherit;
+    font-size: 1rem;
+    line-height: 1.5;
+    resize: vertical;
+    box-sizing: border-box;
+}
+
+.admin-fay-page .admin-import-textarea:focus,
+.admin-fay-page .calendar-filters input:focus,
+.admin-fay-page .calendar-filters select:focus {
+    outline: none;
+    border-color: #ff8400;
+    box-shadow: 0 0 0 3px rgba(255, 132, 0, 0.18);
+}
+
+.admin-fay-page .section-header {
+    gap: 20px;
+}
+
+.admin-fay-page .section-header .dashboard-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.admin-fay-page .dashboard-card label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 800;
+    color: #0f2d52;
+}
+
+.admin-fay-page .dashboard-card input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #ff8400;
+}
+
+@media (max-width: 820px) {
+    .admin-fay-page .dashboard-hero,
+    .admin-fay-page .section-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .admin-fay-page .dashboard-hero .dashboard-actions,
+    .admin-fay-page .section-header .dashboard-actions {
+        min-width: 0;
+        justify-content: flex-start;
+    }
+
+    .admin-fay-page .calendar-filters input,
+    .admin-fay-page .calendar-filters select {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .admin-fay-page .admin-import-textarea {
+        min-height: 240px;
+    }
+}

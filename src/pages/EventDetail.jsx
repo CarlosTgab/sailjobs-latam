@@ -67,6 +67,42 @@ function getJobLocationLabel(job) {
     return "Ubicación no informada";
 }
 
+function getEventOrganizerName(event, club) {
+    if (club) {
+        return club.name;
+    }
+
+    if (event?.organizationName) {
+        return event.organizationName;
+    }
+
+    if (event?.organizingClubName) {
+        return event.organizingClubName;
+    }
+
+    if (event?.source) {
+        return event.source;
+    }
+
+    return "Organizador no informado";
+}
+
+function getEventOrganizerLabel(event, club) {
+    if (club) {
+        return "Club organizador";
+    }
+
+    if (event?.organizerType === "organization" || event?.organizationName) {
+        return "Organización";
+    }
+
+    if (event?.organizingClubName) {
+        return "Organizador indicado";
+    }
+
+    return "Organizador";
+}
+
 function EventDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -97,6 +133,9 @@ function EventDetail() {
     const club = clubs.find(
         item => sameId(item.id, event.clubId)
     );
+
+    const organizerName = getEventOrganizerName(event, club);
+    const organizerLabel = getEventOrganizerLabel(event, club);
 
     const linkedOpportunities = jobs.filter(
         job => sameId(job.eventId, event.id)
@@ -150,7 +189,7 @@ function EventDetail() {
 
                     {event.isOfficial && (
                         <span className="status-pill approved">
-                            Oficial
+                            {event.source === "FAY" ? "Oficial FAY" : "Oficial"}
                         </span>
                     )}
 
@@ -198,16 +237,25 @@ function EventDetail() {
                     </p>
                 )}
 
-                {club && (
-                    <p>
-                        <strong>Organizador:</strong>{" "}
+                <p>
+                    <strong>{organizerLabel}:</strong>{" "}
 
+                    {club ? (
                         <span
                             className="detail-link"
                             onClick={() => navigate(`/clubs/${club.id}`)}
                         >
-                            {club.name}
+                            {organizerName}
                         </span>
+                    ) : (
+                        organizerName
+                    )}
+                </p>
+
+                {event.organizingClubName && !club && event.organizationName && (
+                    <p>
+                        <strong>Club / sede indicada por FAY:</strong>{" "}
+                        {event.organizingClubName}
                     </p>
                 )}
 

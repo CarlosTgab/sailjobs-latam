@@ -14,7 +14,10 @@ import { getAllJobsForAdmin } from "../utils/jobsStorage";
 import { getAllClassifiedsForAdmin } from "../utils/classifiedsStorage";
 
 import staticEvents from "../data/events";
-import { getAllEvents } from "../utils/eventsStorage";
+import {
+    getAllEvents,
+    getImportedEventsBySource
+} from "../utils/eventsStorage";
 
 import { getApplications } from "../utils/applicationsStorage";
 import { sameId, sortByNewest } from "../utils/idUtils";
@@ -33,6 +36,7 @@ function AdminDashboard() {
     const jobs = getAllJobsForAdmin(staticJobs);
     const classifieds = getAllClassifiedsForAdmin();
     const events = getAllEvents(staticEvents);
+    const fayEvents = getImportedEventsBySource("fay");
     const applications = getApplications();
 
     const professionalUsers = users.filter(
@@ -205,6 +209,13 @@ function AdminDashboard() {
 
                     <button
                         className="apply-button"
+                        onClick={() => navigate("/admin/import-fay")}
+                    >
+                        Importar calendario FAY
+                    </button>
+
+                    <button
+                        className="apply-button"
                         onClick={() => navigate("/admin/jobs")}
                     >
                         Moderar oportunidades
@@ -222,13 +233,6 @@ function AdminDashboard() {
                         onClick={() => navigate("/admin/messages")}
                     >
                         Mensajes de contacto
-                    </button>
-
-                    <button
-                        className="apply-button"
-                        onClick={() => navigate("/admin/ranking")}
-                    >
-                        Actualizar ranking
                     </button>
                 </div>
             </div>
@@ -267,6 +271,11 @@ function AdminDashboard() {
                 <div className="dashboard-stat-card">
                     <h2>{events.length}</h2>
                     <p>Eventos en calendario</p>
+                </div>
+
+                <div className="dashboard-stat-card">
+                    <h2>{fayEvents.length}</h2>
+                    <p>Eventos FAY importados</p>
                 </div>
             </div>
 

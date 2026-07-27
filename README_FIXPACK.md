@@ -1,68 +1,101 @@
-# Paquete Ranking dinámico
+# SailJobs LATAM — Fixpack separación Club / Organización
 
-Este paquete agrega un flujo real para actualizar el ranking desde el panel superadmin.
+## Objetivo
 
-## Archivos incluidos
+Este paquete separa mejor las cuentas de:
 
-- `package.json`
-- `src/App.jsx`
-- `src/pages/AdminDashboard.jsx`
-- `src/pages/AdminRanking.jsx`
-- `src/pages/Ranking.jsx`
-- `src/utils/rankingParser.js`
-- `src/utils/rankingStorage.js`
-- `supabase/ranking_tables.sql`
+- Usuario común
+- Profesional náutico
+- Club náutico
+- Organización náutica
+- Superadmin
 
-## Qué agrega
+La diferencia principal queda así:
 
-- Ruta `/admin/ranking` protegida para superadmin.
-- Botón `Actualizar ranking` en `/superadmin`.
-- Importador de Excel para archivos `.xlsx` y `.xls`.
-- Vista previa antes de publicar.
-- Publicación en Supabase usando `ranking_imports` y `ranking_entries`.
-- `/ranking` ahora lee primero el último ranking publicado desde Supabase.
-- Si no hay ranking publicado o falla la conexión, `/ranking` usa el ranking base de `src/data/rankings.js`.
+- **Club náutico**: yacht club, club de vela, club organizador local, sede deportiva.
+- **Organización náutica**: federación, asociación de clase, organizador de eventos, escuela/academia o entidad no club.
 
-## Pasos para aplicar
+## Archivos modificados
 
-1. Extraer el ZIP sobre la raíz del proyecto.
-2. Instalar la dependencia para leer Excel:
-
-```powershell
-npm i xlsx
+```txt
+src/config/appConfig.js
+src/utils/clubsStorage.js
+src/utils/permissions.js
+src/utils/supabaseAuth.js
+src/utils/authStorage.js
+src/pages/Signup.jsx
+src/components/Navbar.jsx
+src/pages/Clubs.jsx
+src/pages/ClubDetail.jsx
+src/pages/ClubDashboard.jsx
+src/pages/OrganizationAdminDashboard.jsx
+sql/2026-organization-account-separation.sql
 ```
 
-3. Ir a Supabase → SQL Editor y correr completo:
+## Qué cambia en la app
 
-```text
-supabase/ranking_tables.sql
+1. En signup ahora aparecen cuentas separadas:
+   - Perfil profesional náutico
+   - Cuenta personal
+   - Club náutico
+   - Organización náutica
+
+2. Si el usuario elige **Club náutico**, queda como:
+   - `role = club`
+   - `entityType = club`
+   - Dashboard principal: `/club-dashboard/:id`
+
+3. Si el usuario elige **Organización náutica**, queda como:
+   - `role = organization_admin`
+   - `permissions = ["organization_admin"]`
+   - `entityType = organization`
+   - Dashboard principal: `/organization-admin`
+
+4. La página `/clubs` ahora permite filtrar por:
+   - Todos los tipos
+   - Club náutico
+   - Organización náutica
+
+5. El panel de organización ya no se plantea como club disfrazado. Muestra:
+   - Oportunidades publicadas
+   - Postulaciones recibidas
+   - Eventos vinculados
+   - Eventos pendientes
+   - Clases administradas
+
+## Paso obligatorio en Supabase
+
+Antes de probar una cuenta nueva de tipo **Organización náutica**, corré este SQL:
+
+```txt
+sql/2026-organization-account-separation.sql
 ```
 
-4. Compilar:
+Ese SQL:
+
+- Agrega `entity_type` a `public.clubs`.
+- Agrega `organization_type` a `public.clubs`.
+- Actualiza el trigger de protección de perfiles.
+- Agrega una versión nueva de `setup_new_account` compatible con organizaciones.
+
+## Cómo aplicar
+
+Desde la raíz del proyecto:
 
 ```powershell
+Expand-Archive -Path .\sailjobs_entity_separation_fixpack.zip -DestinationPath . -Force
 npm run build
 npm run dev
 ```
 
-5. Entrar como superadmin y abrir:
+Después corré el SQL en Supabase y probá:
 
-```text
-/admin/ranking
-```
+1. Crear cuenta tipo Club náutico.
+2. Confirmar que entra al panel del club.
+3. Crear cuenta tipo Organización náutica.
+4. Confirmar que entra a `/organization-admin`.
+5. Ir a `/clubs` y filtrar por Club / Organización.
 
-6. Subir el Excel oficial del ranking, revisar la vista previa y tocar `Publicar ranking`.
+## Nota
 
-## Formato esperado del Excel
-
-El parser busca hojas como `ILCA 4`, `ILCA 6`, `ILCA 7` y una fila de encabezados con columnas similares a:
-
-- `Pos`
-- `Apellido`
-- `Nombre`
-- `CLUB`
-- `Categoria` / `Categoría`
-- `Net`
-- `Totales`
-
-Las columnas de campeonatos ubicadas después de `Totales` se cuentan como campeonatos cargados para cada timonel.
+Por ahora seguimos usando la tabla `public.clubs` como tabla genérica de entidades, con `entity_type = 'club'` o `entity_type = 'organization'`. Más adelante podemos migrar el nombre conceptual a `organizations`, pero no conviene hacerlo todavía porque rompería muchas rutas y relaciones ya armadas.

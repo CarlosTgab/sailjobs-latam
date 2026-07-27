@@ -108,6 +108,45 @@ export function normalizeUserAccount(user) {
         profiles.includes("professional") ||
         user.professionalProfile?.active === true;
 
+    const organizationMemberships =
+        Array.isArray(user.organizationMemberships)
+            ? [...user.organizationMemberships]
+            : [];
+
+    if (user.clubId) {
+        const alreadyHasClub = organizationMemberships.some(
+            membership =>
+                sameId(membership.clubId, user.clubId) ||
+                sameId(membership.organizationId, user.clubId)
+        );
+
+        if (!alreadyHasClub) {
+            organizationMemberships.push({
+                clubId: user.clubId,
+                organizationId: user.clubId,
+                role: "owner",
+                entityType: "club"
+            });
+        }
+    }
+
+    if (user.organizationId) {
+        const alreadyHasOrganization = organizationMemberships.some(
+            membership =>
+                sameId(membership.organizationId, user.organizationId) ||
+                sameId(membership.clubId, user.organizationId)
+        );
+
+        if (!alreadyHasOrganization) {
+            organizationMemberships.push({
+                clubId: user.organizationId,
+                organizationId: user.organizationId,
+                role: "owner",
+                entityType: "organization"
+            });
+        }
+    }
+
     return {
         ...user,
 
@@ -115,10 +154,7 @@ export function normalizeUserAccount(user) {
 
         permissions,
 
-        organizationMemberships:
-            Array.isArray(user.organizationMemberships)
-                ? user.organizationMemberships
-                : [],
+        organizationMemberships,
 
         professionalProfile: {
             ...DEFAULT_PROFESSIONAL_PROFILE,
@@ -298,7 +334,11 @@ export function signup(userData) {
 
     let createdClub = null;
 
-    if (selectedAccountType === "club") {
+    const createsManagedEntity =
+        selectedAccountType === "club" ||
+        selectedAccountType === "organization";
+
+    if (createsManagedEntity) {
         if (
             !userData.clubName ||
             !userData.clubCountry ||
@@ -307,12 +347,19 @@ export function signup(userData) {
             return {
                 success: false,
                 message:
-                    "Completá los datos del club."
+                    selectedAccountType === "club"
+                        ? "Completá los datos del club."
+                        : "Completá los datos de la organización."
             };
         }
 
         createdClub = createStoredClub({
             name: userData.clubName,
+            entityType: selectedAccountType,
+            organizationType:
+                selectedAccountType === "club"
+                    ? "club"
+                    : userData.organizationType || "other",
             country: userData.clubCountry,
             city: userData.clubCity,
             website: userData.clubWebsite,
@@ -332,6 +379,10 @@ export function signup(userData) {
         legacyRole = "club";
     }
 
+    if (selectedAccountType === "organization") {
+        legacyRole = "organization_admin";
+    }
+
     if (selectedAccountType === "coach") {
         /*
          * Conservamos temporalmente el rol viejo
@@ -342,14 +393,19 @@ export function signup(userData) {
     }
 
     const profiles =
-        selectedAccountType === "club"
-            ? []
+        createsManagedEntity
+            ? ["user"]
             : createsProfessionalProfile
                 ? [
                     "user",
                     "professional"
                 ]
                 : ["user"];
+
+    const permissions =
+        selectedAccountType === "organization"
+            ? ["organization_admin"]
+            : [];
 
     const newUser = normalizeUserAccount({
         id: Date.now() + 1,
@@ -362,15 +418,59 @@ export function signup(userData) {
 
         role: legacyRole,
 
-        clubId: createdClub
+        clubId:
+            selectedAccountType === "club" && createdClub
+                ? createdClub.id
+                : null,
+
+        clubName:
+            selectedAccountType === "club" && createdClub
+                ? createdClub.name
+                : "",
+
+        organizationId:
+            selectedAccountType === "organization" && createdClub
+                ? createdClub.id
+                : null,
+
+        organizationName:
+            selectedAccountType === "organization" && createdClub
+                ? createdClub.name
+                : "",
+
+        entityId: createdClub
             ? createdClub.id
             : null,
 
+        entityName: createdClub
+            ? createdClub.name
+            : "",
+
+        entityType:
+            createsManagedEntity
+                ? selectedAccountType
+                : null,
+
+        organizationType:
+            selectedAccountType === "club"
+                ? "club"
+                : userData.organizationType || "",
+
         profiles,
 
-        permissions: [],
+        permissions,
 
-        organizationMemberships: [],
+        organizationMemberships:
+            createdClub
+                ? [
+                    {
+                        clubId: createdClub.id,
+                        organizationId: createdClub.id,
+                        role: "owner",
+                        entityType: selectedAccountType
+                    }
+                ]
+                : [],
 
         professionalProfile: {
             ...DEFAULT_PROFESSIONAL_PROFILE,
@@ -468,9 +568,14 @@ export function updateCurrentUserProfile(
         "permissions",
         "organizationMemberships",
         "organizationId",
+        "organizationName",
         "organizationType",
+        "entityId",
+        "entityName",
+        "entityType",
         "managedClasses",
         "clubId",
+        "clubName",
         "profiles",
         "professionalProfile"
     ]);

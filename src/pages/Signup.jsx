@@ -13,12 +13,21 @@ import {
 } from "../utils/supabaseAuth";
 
 import {
+    isSuperadmin,
     normalizeUserRole
 } from "../utils/permissions";
+
+import {
+    ORGANIZATION_TYPE_LABELS
+} from "../config/appConfig";
 
 function getRedirectPath(user) {
     const role =
         normalizeUserRole(user);
+
+    if (isSuperadmin(user)) {
+        return "/superadmin";
+    }
 
     if (role === "club" && user.clubId) {
         return `/club-dashboard/${user.clubId}`;
@@ -121,6 +130,11 @@ function Signup() {
     ] = useState("");
 
     const [
+        organizationType,
+        setOrganizationType
+    ] = useState("class_association");
+
+    const [
         clubCity,
         setClubCity
     ] = useState("");
@@ -176,6 +190,17 @@ function Signup() {
     const isClub =
         accountType === "club";
 
+    const isOrganization =
+        accountType === "organization";
+
+    const isManagedEntity =
+        isClub || isOrganization;
+
+    const managedEntityLabel =
+        isClub
+            ? "club"
+            : "organización";
+
     async function handleSubmit(event) {
         event.preventDefault();
 
@@ -212,7 +237,11 @@ function Signup() {
                     clubCity: resolvedClubCity,
                     clubCountry,
                     clubDescription,
-                    clubWebsite
+                    clubWebsite,
+                    organizationType:
+                        isOrganization
+                            ? organizationType
+                            : "club"
                 });
 
             navigate(
@@ -294,13 +323,33 @@ function Signup() {
                         }
                     >
                         <strong>
-                            Club / organización
+                            Club náutico
                         </strong>
 
                         <span>
-                            Para publicar oportunidades,
-                            campeonatos y administrar
-                            postulaciones.
+                            Para clubes, yacht clubs, escuelas
+                            de vela de club y sedes deportivas.
+                        </span>
+                    </button>
+
+                    <button
+                        type="button"
+                        className={
+                            accountType === "organization"
+                                ? "account-type-card selected"
+                                : "account-type-card"
+                        }
+                        onClick={() =>
+                            setAccountType("organization")
+                        }
+                    >
+                        <strong>
+                            Organización náutica
+                        </strong>
+
+                        <span>
+                            Para federaciones, asociaciones de clase,
+                            organizadores de eventos o entidades no club.
                         </span>
                     </button>
                 </div>
@@ -406,16 +455,16 @@ function Signup() {
                         </>
                     )}
 
-                    {isClub && (
+                    {isManagedEntity && (
                         <>
                             <hr />
 
                             <h2>
-                                Datos del club / organización
+                                Datos del {managedEntityLabel}
                             </h2>
 
                             <label>
-                                Nombre del club / organización
+                                Nombre del {managedEntityLabel}
                             </label>
 
                             <input
@@ -424,8 +473,38 @@ function Signup() {
                                 onChange={(event) =>
                                     setClubName(event.target.value)
                                 }
-                                placeholder="Ej: Club de Velas Rosario"
+                                placeholder={
+                                    isClub
+                                        ? "Ej: Club de Velas Rosario"
+                                        : "Ej: Asociación Argentina de ILCA"
+                                }
                             />
+
+                            {isOrganization && (
+                                <>
+                                    <label>
+                                        Tipo de organización
+                                    </label>
+
+                                    <select
+                                        value={organizationType}
+                                        onChange={(event) =>
+                                            setOrganizationType(event.target.value)
+                                        }
+                                    >
+                                        {Object.entries(ORGANIZATION_TYPE_LABELS).map(
+                                            ([value, label]) => (
+                                                <option
+                                                    key={value}
+                                                    value={value}
+                                                >
+                                                    {label}
+                                                </option>
+                                            )
+                                        )}
+                                    </select>
+                                </>
+                            )}
 
                             <LocationSelects
                                 countryCode={clubCountryCode}
@@ -439,9 +518,18 @@ function Signup() {
                                 customCity={clubCustomCity}
                                 setCustomCity={setClubCustomCity}
                                 labels={{
-                                    country: "País del club",
-                                    state: "Provincia / Estado del club",
-                                    city: "Ciudad / Localidad del club"
+                                    country:
+                                        isClub
+                                            ? "País del club"
+                                            : "País de la organización",
+                                    state:
+                                        isClub
+                                            ? "Provincia / Estado del club"
+                                            : "Provincia / Estado de la organización",
+                                    city:
+                                        isClub
+                                            ? "Ciudad / Localidad del club"
+                                            : "Ciudad / Localidad de la organización"
                                 }}
                             />
 
@@ -468,7 +556,11 @@ function Signup() {
                                 onChange={(event) =>
                                     setClubDescription(event.target.value)
                                 }
-                                placeholder="Contá brevemente qué tipo de organización es."
+                                placeholder={
+                                    isClub
+                                        ? "Contá brevemente la actividad del club."
+                                        : "Contá brevemente qué tipo de organización es y qué administra."
+                                }
                             />
                         </>
                     )}

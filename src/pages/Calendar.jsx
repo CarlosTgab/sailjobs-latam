@@ -2,12 +2,43 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
-    SAILING_CLASSES,
-    COUNTRIES
+    SAILING_CLASSES
 } from "../config/appConfig";
+
+import LocationFilterSelects from "../components/LocationFilterSelects";
 
 import staticEvents from "../data/events";
 import { getApprovedEvents } from "../utils/eventsStorage";
+
+function normalizeText(value) {
+    return String(value || "")
+        .trim()
+        .toLowerCase();
+}
+
+function getEventCityName(event) {
+    if (event.cityName) {
+        return event.cityName;
+    }
+
+    if (event.city && event.city.includes(",")) {
+        return event.city.split(",")[0].trim();
+    }
+
+    return event.city || "";
+}
+
+function getLocationLabel(event) {
+    const parts = [
+        getEventCityName(event),
+        event.state,
+        event.country
+    ].filter(Boolean);
+
+    return parts.length > 0
+        ? parts.join(", ")
+        : "Ubicación no informada";
+}
 
 function Calendar() {
 
@@ -15,7 +46,15 @@ function Calendar() {
 
     const [search, setSearch] = useState("");
     const [selectedClass, setSelectedClass] = useState("");
+    const [selectedSource, setSelectedSource] = useState("");
+
+    const [selectedCountryCode, setSelectedCountryCode] = useState("");
     const [selectedCountry, setSelectedCountry] = useState("");
+
+    const [selectedStateCode, setSelectedStateCode] = useState("");
+    const [selectedState, setSelectedState] = useState("");
+
+    const [selectedCity, setSelectedCity] = useState("");
 
     const events = getApprovedEvents(staticEvents)
         .sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
@@ -27,32 +66,81 @@ function Calendar() {
         ])
     ].filter(Boolean);
 
-    const countries = [
-        ...new Set([
-            ...COUNTRIES,
-            ...events.map(event => event.country)
-        ])
-    ].filter(Boolean);
+    const sources = [
+        ...new Set(
+            events
+                .map(event => event.source)
+                .filter(Boolean)
+        )
+    ].sort((a, b) => a.localeCompare(b, "es"));
+
+    function matchesCountry(event) {
+        if (!selectedCountry) return true;
+
+        return (
+            normalizeText(event.country) === normalizeText(selectedCountry) ||
+            normalizeText(event.countryCode) === normalizeText(selectedCountryCode)
+        );
+    }
+
+    function matchesState(event) {
+        if (!selectedState) return true;
+
+        return (
+            normalizeText(event.state) === normalizeText(selectedState) ||
+            normalizeText(event.stateCode) === normalizeText(selectedStateCode) ||
+            normalizeText(event.city).includes(normalizeText(selectedState))
+        );
+    }
+
+    function matchesCity(event) {
+        if (!selectedCity) return true;
+
+        return (
+            normalizeText(getEventCityName(event)) === normalizeText(selectedCity) ||
+            normalizeText(event.city).includes(normalizeText(selectedCity))
+        );
+    }
 
     const filteredEvents = events.filter((event) => {
         const searchText = search.toLowerCase();
 
+        const searchableText = [
+            event.title,
+            event.className,
+            event.city,
+            event.cityName,
+            event.state,
+            event.country,
+            event.source,
+            event.organizationName,
+            event.organizingClubName,
+            event.description
+        ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+
         const matchesSearch =
-            event.title.toLowerCase().includes(searchText) ||
-            event.className.toLowerCase().includes(searchText) ||
-            event.city.toLowerCase().includes(searchText) ||
-            event.country.toLowerCase().includes(searchText) ||
-            (event.source && event.source.toLowerCase().includes(searchText));
+            !searchText ||
+            searchableText.includes(searchText);
 
         const matchesClass =
             selectedClass === "" ||
             event.className === selectedClass;
 
-        const matchesCountry =
-            selectedCountry === "" ||
-            event.country === selectedCountry;
+        const matchesSource =
+            selectedSource === "" ||
+            event.source === selectedSource;
 
-        return matchesSearch && matchesClass && matchesCountry;
+        return (
+            matchesSearch &&
+            matchesClass &&
+            matchesSource &&
+            matchesCountry(event) &&
+            matchesState(event) &&
+            matchesCity(event)
+        );
     });
 
     function formatDate(date) {
@@ -73,7 +161,12 @@ function Calendar() {
     function clearFilters() {
         setSearch("");
         setSelectedClass("");
+        setSelectedSource("");
+        setSelectedCountryCode("");
         setSelectedCountry("");
+        setSelectedStateCode("");
+        setSelectedState("");
+        setSelectedCity("");
     }
 
     return (
@@ -96,7 +189,7 @@ function Calendar() {
 
                 <input
                     type="text"
-                    placeholder="Buscar evento, clase, ciudad, país o fuente..."
+                    placeholder="Buscar evento, clase, ciudad, país, fuente u organizador..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                 />
@@ -122,24 +215,35 @@ function Calendar() {
                 </select>
 
                 <select
-                    value={selectedCountry}
-                    onChange={(e) => setSelectedCountry(e.target.value)}
+                    value={selectedSource}
+                    onChange={(e) => setSelectedSource(e.target.value)}
                 >
                     <option value="">
-                        Todos los países
+                        Todas las fuentes
                     </option>
 
-                    {countries.map((country) => (
-
+                    {sources.map((source) => (
                         <option
-                            key={country}
-                            value={country}
+                            key={source}
+                            value={source}
                         >
-                            {country}
+                            {source}
                         </option>
-
                     ))}
                 </select>
+
+                <LocationFilterSelects
+                    countryCode={selectedCountryCode}
+                    setCountryCode={setSelectedCountryCode}
+                    country={selectedCountry}
+                    setCountry={setSelectedCountry}
+                    stateCode={selectedStateCode}
+                    setStateCode={setSelectedStateCode}
+                    state={selectedState}
+                    setState={setSelectedState}
+                    city={selectedCity}
+                    setCity={setSelectedCity}
+                />
 
                 <button
                     className="filter-clear-button"
@@ -170,7 +274,7 @@ function Calendar() {
 
                                 {event.isOfficial ? (
                                     <span className="event-official-badge">
-                                        Oficial
+                                        {event.source === "FAY" ? "Oficial FAY" : "Oficial"}
                                     </span>
                                 ) : (
                                     <span className="event-proposed-badge">
@@ -183,7 +287,7 @@ function Calendar() {
                             <h2>{event.title}</h2>
 
                             <p>
-                                📍 {event.city}, {event.country}
+                                📍 {getLocationLabel(event)}
                             </p>
 
                             <p>
@@ -193,6 +297,18 @@ function Calendar() {
                                 {" "}
                                 {formatDate(event.endDate)}
                             </p>
+
+                            {event.organizationName && (
+                                <p>
+                                    Organización: <strong>{event.organizationName}</strong>
+                                </p>
+                            )}
+
+                            {event.organizingClubName && (
+                                <p>
+                                    Organizador indicado: <strong>{event.organizingClubName}</strong>
+                                </p>
+                            )}
 
                             {event.source && (
                                 <p>
@@ -211,7 +327,7 @@ function Calendar() {
                         <h2>No se encontraron eventos</h2>
 
                         <p>
-                            Probá cambiar la clase, el país o el texto buscado.
+                            Probá cambiar la clase, fuente, ubicación o el texto buscado.
                         </p>
 
                         <button

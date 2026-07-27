@@ -40,6 +40,18 @@ function validatePassword(password) {
     return hasMinimumLength && hasLetter && hasNumber;
 }
 
+function normalizeEntityType(value, fallbackRole) {
+    if (value === "organization") {
+        return "organization";
+    }
+
+    if (fallbackRole === "organization_admin") {
+        return "organization";
+    }
+
+    return "club";
+}
+
 function mapProfessionalProfile(row) {
     if (!row) {
         return {
@@ -64,8 +76,51 @@ function mapProfessionalProfile(row) {
     };
 }
 
-function mapProfileToAppUser(profile, professionalProfile, club) {
+function mapEntityRowToStoredClub(entity, profile) {
+    if (!entity) {
+        return null;
+    }
+
+    const entityType = normalizeEntityType(
+        entity.entity_type,
+        profile?.role
+    );
+
     return {
+        id: entity.id,
+        ownerId: entity.owner_id,
+        name: entity.name,
+        entityType,
+        organizationType:
+            entity.organization_type ||
+            (
+                entityType === "club"
+                    ? "club"
+                    : "other"
+            ),
+        country: entity.country,
+        countryCode: entity.country_code || "",
+        state: entity.state || "",
+        stateCode: entity.state_code || "",
+        city: entity.city,
+        cityName: entity.city_name || "",
+        description: entity.description,
+        website: entity.website,
+        logo: entity.logo_url,
+        logoUrl: entity.logo_url,
+        status: entity.status,
+        createdAt: entity.created_at,
+        updatedAt: entity.updated_at
+    };
+}
+
+function mapProfileToAppUser(profile, professionalProfile, entity) {
+    const role = profile.role || "user";
+    const entityType = entity
+        ? normalizeEntityType(entity.entity_type, role)
+        : null;
+
+    const baseUser = {
         id: profile.id,
         email: profile.email,
         name: profile.name || "",
@@ -74,13 +129,61 @@ function mapProfileToAppUser(profile, professionalProfile, club) {
         country: profile.country || "",
         description: profile.description || "",
         profileImage: profile.profile_image_url || "",
-        role: profile.role || "user",
+        role,
         profiles: profile.profile_types || ["user"],
         permissions: profile.permissions || [],
         professionalProfile:
             mapProfessionalProfile(professionalProfile),
-        clubId: club?.id || null,
-        clubName: club?.name || ""
+        entityId: entity?.id || null,
+        entityName: entity?.name || "",
+        entityType,
+        organizationType:
+            entity?.organization_type ||
+            (
+                entityType === "club"
+                    ? "club"
+                    : entityType === "organization"
+                        ? "other"
+                        : ""
+            ),
+        organizationMemberships: entity
+            ? [
+                {
+                    organizationId: entity.id,
+                    clubId: entity.id,
+                    role: "owner",
+                    entityType
+                }
+            ]
+            : []
+    };
+
+    if (entityType === "club") {
+        return {
+            ...baseUser,
+            clubId: entity.id,
+            clubName: entity.name,
+            organizationId: null,
+            organizationName: ""
+        };
+    }
+
+    if (entityType === "organization") {
+        return {
+            ...baseUser,
+            clubId: null,
+            clubName: "",
+            organizationId: entity.id,
+            organizationName: entity.name
+        };
+    }
+
+    return {
+        ...baseUser,
+        clubId: null,
+        clubName: "",
+        organizationId: profile.organization_id || null,
+        organizationName: profile.organization_name || ""
     };
 }
 
@@ -103,71 +206,91 @@ export async function fetchSupabaseCurrentUser(userId) {
             .eq("user_id", userId)
             .maybeSingle();
 
-    const { data: club } =
+    const { data: entity } =
         await supabase
             .from("clubs")
             .select("*")
             .eq("owner_id", userId)
             .maybeSingle();
 
-    if (club) {
-        upsertStoredClub({
-            id: club.id,
-            ownerId: club.owner_id,
-            name: club.name,
-            country: club.country,
-            city: club.city,
-            description: club.description,
-            website: club.website,
-            logo: club.logo_url,
-            logoUrl: club.logo_url,
-            status: club.status,
-            createdAt: club.created_at,
-            updatedAt: club.updated_at
-        });
+    const storedEntity =
+        mapEntityRowToStoredClub(entity, profile);
+
+    if (storedEntity) {
+        upsertStoredClub(storedEntity);
     }
 
     return mapProfileToAppUser(
         profile,
         professionalProfile,
-        club
+        entity
     );
 }
 
 async function setupAccountInSupabase(userData) {
+    const baseParams = {
+        account_type_param:
+            userData.accountType || "user",
+        name_param:
+            userData.name?.trim() || "",
+        phone_param:
+            userData.phone?.trim() || "",
+        city_param:
+            userData.city?.trim() || "",
+        country_param:
+            userData.country || "",
+        professional_title_param:
+            userData.professionalTitle || "",
+        professional_summary_param:
+            userData.professionalSummary || "",
+        club_name_param:
+            userData.clubName || "",
+        club_city_param:
+            userData.clubCity || "",
+        club_country_param:
+            userData.clubCountry || "",
+        club_description_param:
+            userData.clubDescription || "",
+        club_website_param:
+            userData.clubWebsite || ""
+    };
+
+    const paramsWithEntityType = {
+        ...baseParams,
+        organization_type_param:
+            userData.organizationType || ""
+    };
+
     const { error } =
         await supabase.rpc(
             "setup_new_account",
-            {
-                account_type_param:
-                    userData.accountType || "user",
-                name_param:
-                    userData.name?.trim() || "",
-                phone_param:
-                    userData.phone?.trim() || "",
-                city_param:
-                    userData.city?.trim() || "",
-                country_param:
-                    userData.country || "",
-                professional_title_param:
-                    userData.professionalTitle || "",
-                professional_summary_param:
-                    userData.professionalSummary || "",
-                club_name_param:
-                    userData.clubName || "",
-                club_city_param:
-                    userData.clubCity || "",
-                club_country_param:
-                    userData.clubCountry || "",
-                club_description_param:
-                    userData.clubDescription || "",
-                club_website_param:
-                    userData.clubWebsite || ""
-            }
+            paramsWithEntityType
         );
 
-    if (error) {
-        throw error;
+    if (!error) {
+        return;
+    }
+
+    const accountType =
+        userData.accountType || "user";
+
+    const canFallbackToLegacyRpc =
+        accountType !== "organization";
+
+    if (!canFallbackToLegacyRpc) {
+        throw new Error(
+            "Falta actualizar la función setup_new_account en Supabase para soportar cuentas de organización. Ejecutá el SQL incluido en el fixpack."
+        );
+    }
+
+    const { error: legacyError } =
+        await supabase.rpc(
+            "setup_new_account",
+            baseParams
+        );
+
+    if (legacyError) {
+        throw legacyError;
     }
 }
 

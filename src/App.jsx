@@ -52,10 +52,10 @@ import OrganizationAdminDashboard from "./pages/OrganizationAdminDashboard";
 
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminEvents from "./pages/AdminEvents";
+import AdminFayImport from "./pages/AdminFayImport";
 import AdminJobs from "./pages/AdminJobs";
 import AdminClassifieds from "./pages/AdminClassifieds";
 import AdminMessages from "./pages/AdminMessages";
-import AdminRanking from "./pages/AdminRanking";
 
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -310,6 +310,23 @@ function App() {
           }
         />
 
+        <Route
+          path="/admin/import-fay"
+          element={
+
+            <RequireRole
+              roles={[
+                "superadmin",
+                "admin"
+              ]}
+            >
+
+              <AdminFayImport />
+
+            </RequireRole>
+
+          }
+        />
 
 
         <Route
@@ -360,24 +377,6 @@ function App() {
             >
 
               <AdminMessages />
-
-            </RequireRole>
-
-          }
-        />
-
-        <Route
-          path="/admin/ranking"
-          element={
-
-            <RequireRole
-              roles={[
-                "superadmin",
-                "admin"
-              ]}
-            >
-
-              <AdminRanking />
 
             </RequireRole>
 

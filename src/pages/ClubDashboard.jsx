@@ -1,7 +1,11 @@
 import { useNavigate, useParams } from "react-router-dom";
 
 import staticClubs from "../data/clubs";
-import { getAllClubs } from "../utils/clubsStorage";
+import {
+    getAllClubs,
+    getEntityTypeLabel,
+    isOrganizationEntity
+} from "../utils/clubsStorage";
 
 import {
     getCurrentUser
@@ -55,7 +59,9 @@ function ClubDashboard() {
                 description: currentUser.description || "",
                 website: "",
                 logo: currentUser.profileImage || "",
-                logoUrl: currentUser.profileImage || ""
+                logoUrl: currentUser.profileImage || "",
+                entityType: currentUser.entityType || "club",
+                organizationType: currentUser.organizationType || "club"
             }
             : null;
 
@@ -81,6 +87,12 @@ function ClubDashboard() {
             </div>
         );
     }
+
+    const entityIsOrganization =
+        isOrganizationEntity(club);
+
+    const entityLabel =
+        getEntityTypeLabel(club);
 
     const clubJobs = jobs.filter(
         job => sameId(job.clubId, clubId)
@@ -166,12 +178,17 @@ function ClubDashboard() {
                         <h1>{club.name}</h1>
 
                         <p>
-                            Panel de gestión para publicar oportunidades,
-                            convocatorias, eventos y revisar postulaciones.
+                            {entityIsOrganization
+                                ? "Panel de gestión de organización para publicar oportunidades, proponer eventos y revisar postulaciones."
+                                : "Panel de gestión del club para publicar oportunidades, convocatorias, eventos y revisar postulaciones."}
                         </p>
 
                         <p>
                             {club.city}, {club.country}
+                        </p>
+
+                        <p>
+                            {entityLabel}
                         </p>
                     </div>
                 </div>

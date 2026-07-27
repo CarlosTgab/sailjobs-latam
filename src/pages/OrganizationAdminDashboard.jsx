@@ -3,20 +3,54 @@ import { useNavigate } from "react-router-dom";
 import { getCurrentUser } from "../utils/authStorage";
 import { isOrganizationAdmin } from "../utils/permissions";
 
+import staticClubs from "../data/clubs";
+import {
+    getAllClubs,
+    getOrganizationTypeLabel
+} from "../utils/clubsStorage";
+
 import staticEvents from "../data/events";
 import { getAllEvents } from "../utils/eventsStorage";
 
+import staticJobs from "../data/jobs";
+import { getAllJobs } from "../utils/jobsStorage";
+
+import { getApplications } from "../utils/applicationsStorage";
+import { sameId, hasId, sortByNewest } from "../utils/idUtils";
+
 import rankings from "../data/rankings";
 
-function OrganizationAdminDashboard() {
+function getCityLabel(entity) {
+    if (entity?.cityName) {
+        return entity.cityName;
+    }
 
+    if (entity?.city && String(entity.city).includes(",")) {
+        return String(entity.city).split(",")[0].trim();
+    }
+
+    return entity?.city || "";
+}
+
+function getLocationLabel(entity) {
+    const parts = [
+        getCityLabel(entity),
+        entity?.state,
+        entity?.country
+    ].filter(Boolean);
+
+    return parts.length > 0
+        ? parts.join(", ")
+        : "Ubicación no informada";
+}
+
+function OrganizationAdminDashboard() {
     const navigate = useNavigate();
     const currentUser = getCurrentUser();
 
     if (!currentUser || !isOrganizationAdmin(currentUser)) {
         return (
             <div className="dashboard-page">
-
                 <h1>Acceso denegado</h1>
 
                 <p>
@@ -29,20 +63,59 @@ function OrganizationAdminDashboard() {
                 >
                     ← Volver al inicio
                 </button>
-
             </div>
         );
     }
+
+    const organizationId =
+        currentUser.organizationId ||
+        currentUser.entityId ||
+        null;
+
+    const allEntities = getAllClubs(staticClubs);
+    const organization = organizationId
+        ? allEntities.find(entity => sameId(entity.id, organizationId))
+        : null;
+
+    const organizationName =
+        organization?.name ||
+        currentUser.organizationName ||
+        currentUser.entityName ||
+        "Mi organización";
 
     const managedClasses = Array.isArray(currentUser.managedClasses)
         ? currentUser.managedClasses
         : [];
 
     const allEvents = getAllEvents(staticEvents);
+    const allJobs = getAllJobs(staticJobs);
+    const applications = getApplications();
 
-    const organizationEvents = allEvents.filter(
-        event => managedClasses.includes(event.className)
+    const organizationEvents = allEvents.filter(event => {
+        const belongsToOrganization =
+            organizationId && sameId(event.clubId, organizationId);
+
+        const belongsToManagedClass =
+            managedClasses.includes(event.className);
+
+        return belongsToOrganization || belongsToManagedClass;
+    });
+
+    const organizationJobs = allJobs.filter(job =>
+        organizationId && sameId(job.clubId, organizationId)
     );
+
+    const organizationJobIds = organizationJobs.map(job => job.id);
+
+    const organizationApplications = applications.filter(application => {
+        const belongsByOrganizationId =
+            organizationId && application.clubId && sameId(application.clubId, organizationId);
+
+        const belongsByJobId =
+            hasId(organizationJobIds, application.jobId);
+
+        return belongsByOrganizationId || belongsByJobId;
+    });
 
     const pendingEvents = organizationEvents.filter(
         event => event.status === "pending"
@@ -66,9 +139,8 @@ function OrganizationAdminDashboard() {
         )
         .slice(0, 5);
 
-    const organizationName =
-        currentUser.organizationName ||
-        `Organización ${currentUser.organizationId || ""}`;
+    const latestJobs = sortByNewest(organizationJobs)
+        .slice(0, 5);
 
     function formatDate(date) {
         if (!date) {
@@ -86,13 +158,9 @@ function OrganizationAdminDashboard() {
     }
 
     return (
-
         <div className="dashboard-page">
-
             <div className="dashboard-hero">
-
                 <div className="dashboard-hero-info">
-
                     <div className="dashboard-avatar">
                         ORG
                     </div>
@@ -105,13 +173,44 @@ function OrganizationAdminDashboard() {
                         </p>
 
                         <p>
-                            {currentUser.name} · {currentUser.email}
+                            {organization
+                                ? getOrganizationTypeLabel(organization)
+                                : "Organización náutica"}
+                        </p>
+
+                        <p>
+                            {organization
+                                ? getLocationLabel(organization)
+                                : `${currentUser.name} · ${currentUser.email}`}
                         </p>
                     </div>
-
                 </div>
 
                 <div className="dashboard-actions">
+                    {organizationId && (
+                        <>
+                            <button
+                                className="apply-button"
+                                onClick={() => navigate(`/club-dashboard/${organizationId}/new-job`)}
+                            >
+                                Publicar oportunidad
+                            </button>
+
+                            <button
+                                className="apply-button"
+                                onClick={() => navigate(`/club-dashboard/${organizationId}/new-event`)}
+                            >
+                                Proponer evento
+                            </button>
+
+                            <button
+                                className="apply-button"
+                                onClick={() => navigate(`/applications/${organizationId}`)}
+                            >
+                                Ver postulaciones
+                            </button>
+                        </>
+                    )}
 
                     <button
                         className="apply-button"
@@ -119,30 +218,18 @@ function OrganizationAdminDashboard() {
                     >
                         Ver calendario
                     </button>
-
-                    <button
-                        className="apply-button"
-                        onClick={() => navigate("/ranking")}
-                    >
-                        Ver rankings
-                    </button>
-
-                    <button
-                        className="apply-button"
-                        onClick={() => navigate("/clubs")}
-                    >
-                        Ver clubes
-                    </button>
-
                 </div>
-
             </div>
 
             <div className="dashboard-stats">
+                <div className="dashboard-stat-card">
+                    <h2>{organizationJobs.length}</h2>
+                    <p>Oportunidades publicadas</p>
+                </div>
 
                 <div className="dashboard-stat-card">
-                    <h2>{managedClasses.length}</h2>
-                    <p>Clases administradas</p>
+                    <h2>{organizationApplications.length}</h2>
+                    <p>Postulaciones recibidas</p>
                 </div>
 
                 <div className="dashboard-stat-card">
@@ -156,70 +243,72 @@ function OrganizationAdminDashboard() {
                 </div>
 
                 <div className="dashboard-stat-card">
-                    <h2>{organizationRankings.length}</h2>
-                    <p>Registros de ranking</p>
+                    <h2>{managedClasses.length}</h2>
+                    <p>Clases administradas</p>
                 </div>
-
             </div>
 
             <div className="dashboard-main-grid">
-
                 <div className="detail-card">
-
                     <div className="section-header">
-                        <h3>⛵ Clases administradas</h3>
+                        <h3>Oportunidades recientes</h3>
+
+                        {organizationId && (
+                            <button
+                                className="small-action-button"
+                                onClick={() => navigate(`/club-dashboard/${organizationId}/new-job`)}
+                            >
+                                Nueva oportunidad
+                            </button>
+                        )}
                     </div>
 
-                    {managedClasses.length > 0 ? (
-
+                    {latestJobs.length > 0 ? (
                         <div className="dashboard-list">
-
-                            {managedClasses.map(className => (
-
+                            {latestJobs.map(job => (
                                 <div
-                                    key={className}
+                                    key={job.id}
                                     className="dashboard-list-item"
-                                    onClick={() => navigate("/ranking")}
+                                    onClick={() => navigate(`/jobs/${job.id}`)}
                                 >
                                     <div>
-                                        <h4>{className}</h4>
+                                        <h4>{job.title}</h4>
 
                                         <p>
-                                            Eventos, rankings y contenido de la clase.
+                                            {job.category}
                                         </p>
                                     </div>
 
                                     <span>
-                                        Administrar
+                                        Ver
                                     </span>
                                 </div>
-
                             ))}
-
                         </div>
-
                     ) : (
-
                         <p>
-                            Esta cuenta todavía no tiene clases asignadas.
+                            Esta organización todavía no publicó oportunidades.
                         </p>
-
                     )}
-
                 </div>
 
                 <div className="detail-card">
-
                     <div className="section-header">
-                        <h3>📅 Próximos eventos</h3>
+                        <h3>Próximos eventos</h3>
+
+                        {organizationId && (
+                            <button
+                                className="small-action-button"
+                                onClick={() => navigate(`/club-dashboard/${organizationId}/new-event`)}
+                            >
+                                Proponer evento
+                            </button>
+                        )}
                     </div>
 
                     {upcomingEvents.length > 0 ? (
-
                         <div className="dashboard-list">
-
                             {upcomingEvents.map(event => (
-
                                 <div
                                     key={event.id}
                                     className="dashboard-list-item"
@@ -233,7 +322,7 @@ function OrganizationAdminDashboard() {
                                         </p>
 
                                         <p>
-                                            {event.city}, {event.country}
+                                            {getLocationLabel(event)}
                                         </p>
                                     </div>
 
@@ -241,36 +330,27 @@ function OrganizationAdminDashboard() {
                                         {formatDate(event.startDate)}
                                     </span>
                                 </div>
-
                             ))}
-
                         </div>
-
                     ) : (
-
                         <p>
-                            No hay próximos eventos para las clases asignadas.
+                            No hay próximos eventos vinculados a esta organización.
                         </p>
-
                     )}
-
                 </div>
 
                 <div className="detail-card">
-
                     <div className="section-header">
-                        <h3>🕒 Revisión pendiente</h3>
+                        <h3>Revisión pendiente</h3>
                     </div>
 
                     {pendingEvents.length > 0 ? (
-
                         <div className="dashboard-list">
-
                             {pendingEvents.map(event => (
-
                                 <div
                                     key={event.id}
                                     className="dashboard-list-item"
+                                    onClick={() => navigate(`/calendar/${event.id}`)}
                                 >
                                     <div>
                                         <h4>{event.title}</h4>
@@ -280,7 +360,7 @@ function OrganizationAdminDashboard() {
                                         </p>
 
                                         <p>
-                                            {event.city}, {event.country}
+                                            {getLocationLabel(event)}
                                         </p>
                                     </div>
 
@@ -288,48 +368,40 @@ function OrganizationAdminDashboard() {
                                         Pendiente
                                     </span>
                                 </div>
-
                             ))}
-
                         </div>
-
                     ) : (
-
                         <p>
                             No hay eventos pendientes para revisar.
                         </p>
-
                     )}
-
-                    <p className="dashboard-note">
-                        En la próxima etapa vamos a permitir aprobar o rechazar
-                        únicamente eventos de las clases asignadas.
-                    </p>
-
                 </div>
 
                 <div className="detail-card">
-
                     <div className="section-header">
-                        <h3>🔐 Alcance de esta cuenta</h3>
+                        <h3>Alcance de esta cuenta</h3>
                     </div>
 
                     <p>
-                        Esta cuenta puede administrar exclusivamente la organización
-                        y las clases que le fueron asignadas.
+                        Esta cuenta administra una organización, no un club náutico.
+                        Puede publicar oportunidades, proponer eventos y revisar
+                        postulaciones asociadas a esa organización.
                     </p>
 
                     <p>
-                        No tiene acceso a usuarios globales, configuraciones técnicas,
-                        mensajes generales ni otras organizaciones.
+                        No tiene acceso global a usuarios, mensajes generales ni
+                        moderación de toda la plataforma. Eso queda reservado al
+                        superadmin.
                     </p>
 
+                    {organizationRankings.length > 0 && (
+                        <p>
+                            También tiene rankings vinculados a sus clases asignadas.
+                        </p>
+                    )}
                 </div>
-
             </div>
-
         </div>
-
     );
 }
 

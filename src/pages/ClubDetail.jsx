@@ -1,7 +1,12 @@
 import { useParams, useNavigate } from "react-router-dom";
 
 import staticClubs from "../data/clubs";
-import { getAllClubs } from "../utils/clubsStorage";
+import {
+    getAllClubs,
+    getEntityTypeLabel,
+    getOrganizationTypeLabel,
+    isOrganizationEntity
+} from "../utils/clubsStorage";
 
 import staticJobs from "../data/jobs";
 import { getAllJobs } from "../utils/jobsStorage";
@@ -24,6 +29,30 @@ import {
     OPPORTUNITY_TYPE_LABELS,
     COMPENSATION_TYPE_LABELS
 } from "../config/appConfig";
+
+function getCityLabel(entity) {
+    if (entity?.cityName) {
+        return entity.cityName;
+    }
+
+    if (entity?.city && String(entity.city).includes(",")) {
+        return String(entity.city).split(",")[0].trim();
+    }
+
+    return entity?.city || "";
+}
+
+function getLocationLabel(entity) {
+    const parts = [
+        getCityLabel(entity),
+        entity?.state,
+        entity?.country
+    ].filter(Boolean);
+
+    return parts.length > 0
+        ? parts.join(", ")
+        : "Ubicación no informada";
+}
 
 function ClubDetail() {
     const { id } = useParams();
@@ -58,6 +87,17 @@ function ClubDetail() {
             </div>
         );
     }
+
+    const entityIsOrganization =
+        isOrganizationEntity(club);
+
+    const entityLabel =
+        getEntityTypeLabel(club);
+
+    const dashboardLabel =
+        entityIsOrganization
+            ? "Panel de organización"
+            : "Panel del club";
 
     const clubOpportunities = sortByNewest(
         jobs.filter(job => sameId(job.clubId, club.id))
@@ -140,12 +180,14 @@ function ClubDetail() {
                         <h1>{club.name}</h1>
 
                         <p>
-                            {club.city || "Ciudad no informada"},{" "}
-                            {club.country || "País no informado"}
+                            {getLocationLabel(club)}
                         </p>
 
                         <p>
-                            Club / organización náutica
+                            {entityLabel}
+                            {entityIsOrganization
+                                ? ` · ${getOrganizationTypeLabel(club)}`
+                                : ""}
                         </p>
                     </div>
                 </div>
@@ -186,7 +228,7 @@ function ClubDetail() {
                             className="apply-button"
                             onClick={() => navigate(`/club-dashboard/${club.id}`)}
                         >
-                            Panel de organización
+                            {dashboardLabel}
                         </button>
 
                         <button
@@ -258,8 +300,7 @@ function ClubDetail() {
 
                                 <p>
                                     <strong>Ubicación:</strong>{" "}
-                                    {job.city || "Ciudad no informada"},{" "}
-                                    {job.country || "País no informado"}
+                                    {getLocationLabel(job)}
                                 </p>
 
                                 <p>
@@ -334,7 +375,7 @@ function ClubDetail() {
 
                                 <p>
                                     <strong>Ubicación:</strong>{" "}
-                                    {event.city}, {event.country}
+                                    {getLocationLabel(event)}
                                 </p>
 
                                 <button

@@ -1,4 +1,8 @@
 import { sameId } from "./idUtils";
+import {
+    ENTITY_TYPE_LABELS,
+    ORGANIZATION_TYPE_LABELS
+} from "../config/appConfig";
 
 const CLUBS_STORAGE_KEY = "sailjobs_custom_clubs";
 
@@ -16,6 +20,43 @@ function readStorageArray(key) {
     }
 }
 
+export function normalizeEntityType(entityType) {
+    if (entityType === "organization") {
+        return "organization";
+    }
+
+    return "club";
+}
+
+export function getEntityType(entity) {
+    return normalizeEntityType(
+        entity?.entityType ||
+        entity?.entity_type ||
+        entity?.type
+    );
+}
+
+export function isClubEntity(entity) {
+    return getEntityType(entity) === "club";
+}
+
+export function isOrganizationEntity(entity) {
+    return getEntityType(entity) === "organization";
+}
+
+export function getEntityTypeLabel(entity) {
+    return ENTITY_TYPE_LABELS[getEntityType(entity)] || "Organización náutica";
+}
+
+export function getOrganizationTypeLabel(entity) {
+    const organizationType =
+        entity?.organizationType ||
+        entity?.organization_type ||
+        "";
+
+    return ORGANIZATION_TYPE_LABELS[organizationType] || "Organización náutica";
+}
+
 function normalizeClub(club) {
     if (!club) {
         return null;
@@ -23,51 +64,116 @@ function normalizeClub(club) {
 
     const id =
         club.id ||
-        club.clubId;
+        club.clubId ||
+        club.organizationId;
 
     if (!id) {
         return null;
     }
 
+    const entityType = normalizeEntityType(
+        club.entityType ||
+        club.entity_type ||
+        club.type ||
+        (
+            club.role === "organization_admin"
+                ? "organization"
+                : "club"
+        )
+    );
+
+    const organizationType =
+        club.organizationType ||
+        club.organization_type ||
+        (
+            entityType === "club"
+                ? "club"
+                : "other"
+        );
+
     return {
         id,
+
         ownerId:
             club.ownerId ||
             club.owner_id ||
             null,
+
         name:
             club.name ||
             club.clubName ||
-            "Club sin nombre",
+            club.organizationName ||
+            (
+                entityType === "club"
+                    ? "Club sin nombre"
+                    : "Organización sin nombre"
+            ),
+
+        entityType,
+        organizationType,
+
         country:
             club.country ||
             "",
+
+        countryCode:
+            club.countryCode ||
+            club.country_code ||
+            "",
+
+        state:
+            club.state ||
+            club.province ||
+            club.region ||
+            "",
+
+        stateCode:
+            club.stateCode ||
+            club.state_code ||
+            "",
+
         city:
             club.city ||
             "",
+
+        cityName:
+            club.cityName ||
+            club.city_name ||
+            (
+                club.city && String(club.city).includes(",")
+                    ? String(club.city).split(",")[0].trim()
+                    : club.city || ""
+            ),
+
         description:
             club.description ||
             "",
+
         website:
             club.website ||
             "",
+
         logo:
             club.logo ||
             club.logoUrl ||
             club.logo_url ||
             "/logos/default-club.svg",
+
         logoUrl:
             club.logoUrl ||
             club.logo_url ||
             club.logo ||
             "/logos/default-club.svg",
+
         status:
             club.status ||
             "active",
+
         createdAt:
             club.createdAt ||
             club.created_at ||
             new Date().toISOString(),
+
         updatedAt:
             club.updatedAt ||
             club.updated_at ||
@@ -82,7 +188,10 @@ function getClubLikeArraysFromStorage() {
         const lowerKey =
             key.toLowerCase();
 
-        if (!lowerKey.includes("club")) {
+        if (
+            !lowerKey.includes("club") &&
+            !lowerKey.includes("organization")
+        ) {
             return;
         }
 
@@ -265,14 +374,7 @@ export function updateStoredClub(clubId, updatedData) {
 
     saveStoredClubs(updatedClubs);
 
-    return getStoredClubById(clubId);
-}
-
-export function deleteStoredClub(clubId) {
-    const updatedClubs =
-        getStoredClubs().filter(club =>
-            !sameId(club.id, clubId)
-        );
-
-    saveStoredClubs(updatedClubs);
+    return updatedClubs.find(club =>
+        sameId(club.id, clubId)
+    ) || null;
 }

@@ -58,6 +58,13 @@ export function canManageClub(user, clubId) {
     }
 
     if (
+        isOrganizationAdmin(user) &&
+        sameId(user.organizationId, clubId)
+    ) {
+        return true;
+    }
+
+    if (
         Array.isArray(user.organizationMemberships) &&
         user.organizationMemberships.some(membership =>
             sameId(membership.clubId, clubId) ||

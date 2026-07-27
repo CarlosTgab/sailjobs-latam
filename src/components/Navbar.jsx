@@ -162,7 +162,7 @@ function Navbar() {
                         to={`/club-dashboard/${currentUser.clubId}`}
                         onClick={closeMenu}
                     >
-                        Mi organización
+                        Mi club
                     </Link>
                 )}
 

@@ -2,11 +2,18 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
-    COUNTRIES
+    COUNTRIES,
+    ENTITY_TYPE_LABELS
 } from "../config/appConfig";
 
 import staticClubs from "../data/clubs";
-import { getAllClubs } from "../utils/clubsStorage";
+import {
+    getAllClubs,
+    getEntityType,
+    getEntityTypeLabel,
+    getOrganizationTypeLabel,
+    isOrganizationEntity
+} from "../utils/clubsStorage";
 
 import staticJobs from "../data/jobs";
 import { getAllJobs } from "../utils/jobsStorage";
@@ -14,6 +21,30 @@ import { getAllJobs } from "../utils/jobsStorage";
 import staticEvents from "../data/events";
 import { getAllEvents } from "../utils/eventsStorage";
 import { sameId } from "../utils/idUtils";
+
+function getCityLabel(entity) {
+    if (entity.cityName) {
+        return entity.cityName;
+    }
+
+    if (entity.city && String(entity.city).includes(",")) {
+        return String(entity.city).split(",")[0].trim();
+    }
+
+    return entity.city || "";
+}
+
+function getLocationLabel(entity) {
+    const parts = [
+        getCityLabel(entity),
+        entity.state,
+        entity.country
+    ].filter(Boolean);
+
+    return parts.length > 0
+        ? parts.join(", ")
+        : "Ubicación no informada";
+}
 
 function Clubs() {
     const navigate = useNavigate();
@@ -24,6 +55,7 @@ function Clubs() {
 
     const [search, setSearch] = useState("");
     const [selectedCountry, setSelectedCountry] = useState("");
+    const [selectedEntityType, setSelectedEntityType] = useState("");
 
     const countries = [
         ...new Set([
@@ -32,14 +64,26 @@ function Clubs() {
         ])
     ].filter(Boolean);
 
+    const clubCount = clubs.filter(
+        entity => getEntityType(entity) === "club"
+    ).length;
+
+    const organizationCount = clubs.filter(
+        entity => getEntityType(entity) === "organization"
+    ).length;
+
     const filteredClubs = clubs
         .filter(club => {
             const searchableText = [
                 club.name,
                 club.city,
+                club.cityName,
+                club.state,
                 club.country,
                 club.description,
-                club.website
+                club.website,
+                getEntityTypeLabel(club),
+                getOrganizationTypeLabel(club)
             ]
                 .filter(Boolean)
                 .join(" ")
@@ -53,7 +97,11 @@ function Clubs() {
                 !selectedCountry ||
                 club.country === selectedCountry;
 
-            return matchesSearch && matchesCountry;
+            const matchesEntityType =
+                !selectedEntityType ||
+                getEntityType(club) === selectedEntityType;
+
+            return matchesSearch && matchesCountry && matchesEntityType;
         })
         .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -72,6 +120,7 @@ function Clubs() {
     function clearFilters() {
         setSearch("");
         setSelectedCountry("");
+        setSelectedEntityType("");
     }
 
     return (
@@ -81,9 +130,9 @@ function Clubs() {
                     <h1>Clubes y organizaciones</h1>
 
                     <p>
-                        Explorá clubes, asociaciones, clases y organizaciones
-                        que publican eventos, oportunidades y convocatorias
-                        dentro de la comunidad náutica.
+                        Explorá clubes, federaciones, asociaciones de clase,
+                        organizadores de eventos y entidades que publican
+                        actividad náutica en SailJobs LATAM.
                     </p>
                 </div>
             </div>
@@ -91,10 +140,27 @@ function Clubs() {
             <div className="calendar-filters">
                 <input
                     type="text"
-                    placeholder="Buscar por nombre, ciudad o país"
+                    placeholder="Buscar por nombre, ciudad, país o tipo"
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
                 />
+
+                <select
+                    value={selectedEntityType}
+                    onChange={(event) => setSelectedEntityType(event.target.value)}
+                >
+                    <option value="">
+                        Todos los tipos
+                    </option>
+
+                    {Object.entries(ENTITY_TYPE_LABELS).map(
+                        ([value, label]) => (
+                            <option key={value} value={value}>
+                                {label}
+                            </option>
+                        )
+                    )}
+                </select>
 
                 <select
                     value={selectedCountry}
@@ -129,8 +195,13 @@ function Clubs() {
                 </div>
 
                 <div className="dashboard-stat-card">
-                    <h2>{clubs.length}</h2>
-                    <p>Organizaciones registradas</p>
+                    <h2>{clubCount}</h2>
+                    <p>Clubes náuticos</p>
+                </div>
+
+                <div className="dashboard-stat-card">
+                    <h2>{organizationCount}</h2>
+                    <p>Organizaciones</p>
                 </div>
             </div>
 
@@ -139,12 +210,25 @@ function Clubs() {
                     {filteredClubs.map(club => {
                         const clubOpportunities = getClubOpportunities(club.id);
                         const clubEvents = getClubEvents(club.id);
+                        const entityIsOrganization = isOrganizationEntity(club);
 
                         return (
                             <div
                                 key={club.id}
                                 className="dashboard-card"
                             >
+                                <div className="event-card-top">
+                                    <span className="sidebar-tag">
+                                        {getEntityTypeLabel(club)}
+                                    </span>
+
+                                    {entityIsOrganization && (
+                                        <span className="status-pill pending">
+                                            {getOrganizationTypeLabel(club)}
+                                        </span>
+                                    )}
+                                </div>
+
                                 <div className="dashboard-hero-info">
                                     <img
                                         src={club.logo || "/logos/default-club.svg"}
@@ -156,13 +240,13 @@ function Clubs() {
                                         <h2>{club.name}</h2>
 
                                         <p>
-                                            {club.city}, {club.country}
+                                            {getLocationLabel(club)}
                                         </p>
                                     </div>
                                 </div>
 
                                 <p>
-                                    {club.description || "Organización náutica registrada en SailJobs LATAM."}
+                                    {club.description || "Entidad náutica registrada en SailJobs LATAM."}
                                 </p>
 
                                 <p>
@@ -179,7 +263,9 @@ function Clubs() {
                                     className="apply-button"
                                     onClick={() => navigate(`/clubs/${club.id}`)}
                                 >
-                                    Ver organización
+                                    {entityIsOrganization
+                                        ? "Ver organización"
+                                        : "Ver club"}
                                 </button>
                             </div>
                         );
@@ -187,7 +273,7 @@ function Clubs() {
                 </div>
             ) : (
                 <div className="detail-card">
-                    <h2>No encontramos organizaciones</h2>
+                    <h2>No encontramos entidades</h2>
 
                     <p>
                         Probá cambiar los filtros o revisar nuevamente más adelante.
