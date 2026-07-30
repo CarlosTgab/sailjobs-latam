@@ -1,3 +1,4 @@
+import { supabase } from "../lib/supabaseClient";
 import { sameId } from "./idUtils";
 
 const JOBS_STORAGE_KEY = "storedJobs";
@@ -19,38 +20,147 @@ function writeStorageArray(key, items) {
     );
 }
 
-function normalizeJob(job) {
+function safeDispatchJobsChanged() {
+    try {
+        window.dispatchEvent(
+            new Event("jobsChanged")
+        );
+    } catch {
+        // No-op outside browser contexts.
+    }
+}
+
+function isUuid(value) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i.test(
+        String(value || "")
+    );
+}
+
+function toUuidOrNull(value) {
+    return isUuid(value) ? String(value) : null;
+}
+
+function getCityName(job) {
+    if (job?.cityName || job?.city_name) {
+        return job.cityName || job.city_name;
+    }
+
+    if (job?.city && String(job.city).includes(",")) {
+        return String(job.city).split(",")[0].trim();
+    }
+
+    return job?.city || "";
+}
+
+function getLegacyId(job) {
+    if (!job) return "";
+
+    return (
+        job.legacyId ||
+        job.legacy_id ||
+        (!isUuid(job.id) ? job.id : "") ||
+        ""
+    );
+}
+
+function normalizeRequirements(job) {
+    if (Array.isArray(job?.requirements)) {
+        return job.requirements;
+    }
+
+    if (typeof job?.requirements === "string") {
+        return job.requirements
+            .split("\n")
+            .map(item => item.trim())
+            .filter(Boolean);
+    }
+
+    return [];
+}
+
+function normalizeEligibleProfiles(job) {
+    if (Array.isArray(job?.eligibleProfiles)) {
+        return job.eligibleProfiles;
+    }
+
+    if (Array.isArray(job?.eligible_profiles)) {
+        return job.eligible_profiles;
+    }
+
+    return ["professional"];
+}
+
+export function normalizeJob(job) {
     if (!job) return null;
 
     const id =
         job.id ||
         crypto.randomUUID?.() ||
-        Date.now();
+        String(Date.now());
+
+    const legacyId = getLegacyId(job);
 
     const clubName =
         job.clubName ||
         job.club_name ||
         job.organizationName ||
         job.organization_name ||
+        job.ownerName ||
+        job.owner_name ||
         "";
 
-    const cityName =
-        job.cityName ||
-        job.city_name ||
-        job.city ||
+    const cityName = getCityName(job);
+
+    const ownerType =
+        job.ownerType ||
+        job.owner_type ||
+        job.entityType ||
+        job.entity_type ||
+        "club";
+
+    const ownerId =
+        job.ownerId ||
+        job.owner_id ||
+        job.organizationId ||
+        job.organization_id ||
+        job.clubId ||
+        job.club_id ||
+        "";
+
+    const ownerName =
+        job.ownerName ||
+        job.owner_name ||
+        clubName ||
+        "";
+
+    const organizationId =
+        job.organizationId ||
+        job.organization_id ||
+        (ownerType === "organization" ? ownerId : "");
+
+    const organizationName =
+        job.organizationName ||
+        job.organization_name ||
+        (ownerType === "organization" ? ownerName : clubName) ||
         "";
 
     return {
         id,
+        legacyId,
 
         title: job.title || "Oportunidad sin título",
         category: job.category || "Coach",
 
-        clubId: job.clubId || job.club_id || "",
+        clubId: job.clubId || job.club_id || ownerId || "",
         clubName,
-        organizationName: clubName,
+        organizationId,
+        organizationName,
+        ownerType,
+        ownerId,
+        ownerName,
 
         createdBy: job.createdBy || job.created_by || null,
+        updatedBy: job.updatedBy || job.updated_by || null,
 
         opportunityType:
             job.opportunityType ||
@@ -84,7 +194,6 @@ function normalizeJob(job) {
         cityName,
 
         duration: job.duration || "",
-
         openings: Number(job.openings) || 1,
 
         applicationDeadline:
@@ -97,24 +206,24 @@ function normalizeJob(job) {
             job.event_id ||
             "",
 
-        eligibleProfiles: Array.isArray(job.eligibleProfiles)
-            ? job.eligibleProfiles
-            : Array.isArray(job.eligible_profiles)
-                ? job.eligible_profiles
-                : ["professional"],
-
+        eligibleProfiles: normalizeEligibleProfiles(job),
         description: job.description || "",
+        requirements: normalizeRequirements(job),
 
-        requirements: Array.isArray(job.requirements)
-            ? job.requirements
-            : [],
-
-        applyLink: job.applyLink || "#",
+        applyLink: job.applyLink || job.apply_link || "#",
         website: job.website || "#",
 
         status: job.status || "active",
-        moderationReason: job.moderationReason || "",
-        moderatedAt: job.moderatedAt || job.moderated_at || null,
+        moderationReason:
+            job.moderationReason ||
+            job.moderation_reason ||
+            "",
+        moderatedAt:
+            job.moderatedAt ||
+            job.moderated_at ||
+            null,
+
+        metadata: job.metadata || {},
 
         createdAt:
             job.createdAt ||
@@ -128,6 +237,14 @@ function normalizeJob(job) {
     };
 }
 
+function areSameLegacyJob(firstJob, secondJob) {
+    return Boolean(
+        (firstJob.legacyId && secondJob.legacyId && sameId(firstJob.legacyId, secondJob.legacyId)) ||
+        (firstJob.legacyId && secondJob.id && sameId(firstJob.legacyId, secondJob.id)) ||
+        (firstJob.id && secondJob.legacyId && sameId(firstJob.id, secondJob.legacyId))
+    );
+}
+
 function uniqueJobs(jobs) {
     const result = [];
 
@@ -137,7 +254,8 @@ function uniqueJobs(jobs) {
         if (!normalizedJob) return;
 
         const alreadyExists = result.some(existingJob =>
-            sameId(existingJob.id, normalizedJob.id)
+            sameId(existingJob.id, normalizedJob.id) ||
+            areSameLegacyJob(existingJob, normalizedJob)
         );
 
         if (!alreadyExists) {
@@ -150,6 +268,173 @@ function uniqueJobs(jobs) {
 
 function isVisibleJob(job) {
     return job.status !== "hidden";
+}
+
+function saveJobsToLocalCache(jobs) {
+    const normalizedJobs = uniqueJobs(jobs);
+
+    writeStorageArray(
+        JOBS_STORAGE_KEY,
+        normalizedJobs
+    );
+
+    safeDispatchJobsChanged();
+
+    return normalizedJobs;
+}
+
+function mapSupabaseJob(row) {
+    if (!row) return null;
+
+    return normalizeJob({
+        id: row.id,
+        legacyId: row.legacy_id,
+        title: row.title,
+        category: row.category,
+        clubId: row.club_id,
+        clubName: row.club_name,
+        organizationId: row.organization_id,
+        organizationName: row.organization_name,
+        ownerType: row.owner_type,
+        ownerId: row.owner_id,
+        ownerName: row.owner_name,
+        createdBy: row.created_by,
+        updatedBy: row.updated_by,
+        opportunityType: row.opportunity_type,
+        compensationType: row.compensation_type,
+        compensationDetails: row.compensation_details,
+        salary: row.salary,
+        country: row.country,
+        countryCode: row.country_code,
+        state: row.state,
+        stateCode: row.state_code,
+        city: row.city,
+        cityName: row.city_name,
+        duration: row.duration,
+        openings: row.openings,
+        applicationDeadline: row.application_deadline,
+        eventId: row.event_id,
+        eligibleProfiles: row.eligible_profiles,
+        description: row.description,
+        requirements: row.requirements,
+        applyLink: row.apply_link,
+        website: row.website,
+        status: row.status,
+        moderationReason: row.moderation_reason,
+        moderatedAt: row.moderated_at,
+        metadata: row.metadata,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+    });
+}
+
+function jobToSupabaseRow(job) {
+    const normalized = normalizeJob(job);
+    const idIsUuid = isUuid(normalized.id);
+
+    const row = {
+        legacy_id: normalized.legacyId || (!idIsUuid ? String(normalized.id) : null),
+        title: normalized.title,
+        category: normalized.category,
+        club_id: toUuidOrNull(normalized.clubId),
+        club_name: normalized.clubName || null,
+        organization_id: toUuidOrNull(normalized.organizationId),
+        organization_name: normalized.organizationName || null,
+        owner_type: normalized.ownerType || null,
+        owner_id: toUuidOrNull(normalized.ownerId),
+        owner_name: normalized.ownerName || null,
+        created_by: toUuidOrNull(normalized.createdBy),
+        updated_by: toUuidOrNull(normalized.updatedBy),
+        opportunity_type: normalized.opportunityType || null,
+        compensation_type: normalized.compensationType || null,
+        compensation_details: normalized.compensationDetails || null,
+        salary: normalized.salary || null,
+        country: normalized.country || null,
+        country_code: normalized.countryCode || null,
+        state: normalized.state || null,
+        state_code: normalized.stateCode || null,
+        city: normalized.city || null,
+        city_name: normalized.cityName || null,
+        duration: normalized.duration || null,
+        openings: normalized.openings || 1,
+        application_deadline: normalized.applicationDeadline || null,
+        event_id: toUuidOrNull(normalized.eventId),
+        eligible_profiles: normalized.eligibleProfiles || ["professional"],
+        description: normalized.description || null,
+        requirements: normalized.requirements || [],
+        apply_link: normalized.applyLink || null,
+        website: normalized.website || null,
+        status: normalized.status || "active",
+        moderation_reason: normalized.moderationReason || null,
+        moderated_at: normalized.moderatedAt || null,
+        metadata: normalized.metadata || {},
+        updated_at: new Date().toISOString()
+    };
+
+    if (idIsUuid) {
+        row.id = normalized.id;
+    }
+
+    return row;
+}
+
+async function findSupabaseJob(job) {
+    const normalized = normalizeJob(job);
+
+    if (isUuid(normalized.id)) {
+        const { data, error } = await supabase
+            .from("opportunities")
+            .select("*")
+            .eq("id", normalized.id)
+            .maybeSingle();
+
+        if (error) throw error;
+        if (data) return data;
+    }
+
+    const legacyId = normalized.legacyId || (!isUuid(normalized.id) ? String(normalized.id) : "");
+
+    if (legacyId) {
+        const { data, error } = await supabase
+            .from("opportunities")
+            .select("*")
+            .eq("legacy_id", legacyId)
+            .maybeSingle();
+
+        if (error) throw error;
+        if (data) return data;
+    }
+
+    return null;
+}
+
+async function upsertSupabaseJob(job) {
+    const row = jobToSupabaseRow(job);
+    const existingRow = await findSupabaseJob(job);
+
+    if (existingRow?.id) {
+        const { data, error } = await supabase
+            .from("opportunities")
+            .update({
+                ...row,
+                id: existingRow.id
+            })
+            .eq("id", existingRow.id)
+            .select("*")
+            .single();
+
+        if (error) throw error;
+        return mapSupabaseJob(data);
+    }
+
+    const { data, error } = await supabase
+        .from("opportunities")
+        .insert(row)
+        .select("*")
+        .single();
+
+    if (error) throw error;
+    return mapSupabaseJob(data);
 }
 
 export function getHiddenJobIds() {
@@ -166,10 +451,7 @@ function saveHiddenJobIds(ids) {
     });
 
     writeStorageArray(HIDDEN_JOBS_STORAGE_KEY, uniqueIds);
-
-    window.dispatchEvent(
-        new Event("jobsChanged")
-    );
+    safeDispatchJobsChanged();
 
     return uniqueIds;
 }
@@ -187,96 +469,162 @@ export function getStoredJobs() {
 }
 
 export function saveStoredJobs(jobs) {
-    const normalizedJobs =
-        uniqueJobs(jobs);
-
-    localStorage.setItem(
-        JOBS_STORAGE_KEY,
-        JSON.stringify(normalizedJobs)
-    );
-
-    window.dispatchEvent(
-        new Event("jobsChanged")
-    );
-
-    return normalizedJobs;
+    return saveJobsToLocalCache(jobs);
 }
 
-export function createStoredJob(jobData) {
-    const jobs =
-        getStoredJobs();
+export async function fetchSupabaseJobs() {
+    const { data, error } = await supabase
+        .from("opportunities")
+        .select("*")
+        .order("created_at", { ascending: false, nullsFirst: false });
 
-    const newJob =
-        normalizeJob({
-            ...jobData,
-            id:
-                jobData.id ||
-                crypto.randomUUID?.() ||
-                Date.now(),
-            createdAt:
-                jobData.createdAt ||
-                new Date().toISOString(),
-            updatedAt: null,
-            status:
-                jobData.status ||
-                "active"
-        });
+    if (error) throw error;
 
-    const updatedJobs = [
-        ...jobs,
-        newJob
-    ];
-
-    saveStoredJobs(updatedJobs);
-
-    return newJob;
+    return uniqueJobs((data || []).map(mapSupabaseJob));
 }
 
-export function updateStoredJob(jobId, updatedData) {
-    const jobs =
-        getStoredJobs();
+export async function syncJobsFromSupabase(staticJobs = []) {
+    const remoteJobs = await fetchSupabaseJobs();
+    const cachedJobs = getStoredJobs();
 
-    const updatedJobs =
-        jobs.map(job => {
-            if (sameId(job.id, jobId)) {
-                return normalizeJob({
-                    ...job,
-                    ...updatedData,
-                    id: job.id,
-                    updatedAt: new Date().toISOString()
-                });
-            }
+    const mergedStoredJobs = saveJobsToLocalCache([
+        ...remoteJobs,
+        ...cachedJobs
+    ]);
 
-            return job;
-        });
-
-    saveStoredJobs(updatedJobs);
-
-    return updatedJobs.find(job =>
-        sameId(job.id, jobId)
-    );
+    return uniqueJobs([
+        ...mergedStoredJobs,
+        ...staticJobs
+    ]);
 }
 
-export function hideStoredJob(jobId, reason = "") {
-    const storedJob = getStoredJobs().find(job =>
-        sameId(job.id, jobId)
+export async function createStoredJob(jobData) {
+    const jobs = getStoredJobs();
+
+    const newJob = normalizeJob({
+        ...jobData,
+        id: jobData.id || crypto.randomUUID?.() || String(Date.now()),
+        createdAt: jobData.createdAt || new Date().toISOString(),
+        updatedAt: null,
+        status: jobData.status || "active"
+    });
+
+    saveJobsToLocalCache([
+        newJob,
+        ...jobs
+    ]);
+
+    try {
+        const savedJob = await upsertSupabaseJob(newJob);
+
+        saveJobsToLocalCache([
+            savedJob,
+            ...getStoredJobs()
+        ]);
+
+        return savedJob;
+    } catch (error) {
+        console.warn("No se pudo guardar la oportunidad en Supabase. Se conservó localmente.", error);
+        return newJob;
+    }
+}
+
+export async function updateStoredJob(jobId, updatedData) {
+    const currentJobs = getStoredJobs();
+
+    const previousStoredJob =
+        currentJobs.find(job =>
+            sameId(job.id, jobId) ||
+            sameId(job.legacyId, jobId)
+        ) ||
+        normalizeJob({ ...updatedData, id: jobId });
+
+    const updatedJob = normalizeJob({
+        ...previousStoredJob,
+        ...updatedData,
+        id: previousStoredJob?.id || jobId,
+        legacyId:
+            previousStoredJob?.legacyId ||
+            updatedData.legacyId ||
+            (!isUuid(jobId) ? String(jobId) : ""),
+        createdAt:
+            previousStoredJob?.createdAt ||
+            updatedData.createdAt ||
+            new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+    });
+
+    const keptJobs = currentJobs.filter(job =>
+        !sameId(job.id, jobId) &&
+        !sameId(job.legacyId, jobId)
     );
 
+    saveJobsToLocalCache([
+        updatedJob,
+        ...keptJobs
+    ]);
+
+    try {
+        const savedJob = await upsertSupabaseJob(updatedJob);
+
+        saveJobsToLocalCache([
+            savedJob,
+            ...getStoredJobs()
+        ]);
+
+        return savedJob;
+    } catch (error) {
+        console.warn("No se pudo actualizar la oportunidad en Supabase. Se conservó localmente.", error);
+        return updatedJob;
+    }
+}
+
+export async function hideStoredJob(jobId, reason = "", jobData = null) {
     saveHiddenJobIds([
         ...getHiddenJobIds(),
         jobId
     ]);
 
-    if (storedJob) {
-        updateStoredJob(jobId, {
-            status: "hidden",
-            moderationReason: reason,
-            moderatedAt: new Date().toISOString()
-        });
+    const storedJob = getStoredJobs().find(job =>
+        sameId(job.id, jobId) ||
+        sameId(job.legacyId, jobId)
+    );
+
+    const hiddenJob = normalizeJob({
+        ...(jobData || {}),
+        ...(storedJob || {}),
+        id: storedJob?.id || jobData?.id || jobId,
+        legacyId:
+            storedJob?.legacyId ||
+            jobData?.legacyId ||
+            (!isUuid(jobId) ? String(jobId) : ""),
+        status: "hidden",
+        moderationReason: reason,
+        moderatedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+    });
+
+    saveJobsToLocalCache([
+        hiddenJob,
+        ...getStoredJobs()
+    ]);
+
+    try {
+        const savedJob = await upsertSupabaseJob(hiddenJob);
+
+        saveJobsToLocalCache([
+            savedJob,
+            ...getStoredJobs()
+        ]);
+
+        return savedJob;
+    } catch (error) {
+        console.warn("No se pudo dar de baja la oportunidad en Supabase. Se conservó localmente.", error);
+        return hiddenJob;
     }
 }
 
-export function restoreStoredJob(jobId) {
+export async function restoreStoredJob(jobId, jobData = null) {
     saveHiddenJobIds(
         getHiddenJobIds().filter(id =>
             !sameId(id, jobId)
@@ -284,36 +632,87 @@ export function restoreStoredJob(jobId) {
     );
 
     const storedJob = getStoredJobs().find(job =>
-        sameId(job.id, jobId)
+        sameId(job.id, jobId) ||
+        sameId(job.legacyId, jobId)
     );
 
-    if (storedJob) {
-        updateStoredJob(jobId, {
-            status: "active",
-            moderationReason: "",
-            moderatedAt: new Date().toISOString()
-        });
+    if (!storedJob && !jobData) {
+        return null;
+    }
+
+    const restoredJob = normalizeJob({
+        ...(jobData || {}),
+        ...(storedJob || {}),
+        id: storedJob?.id || jobData?.id || jobId,
+        legacyId:
+            storedJob?.legacyId ||
+            jobData?.legacyId ||
+            (!isUuid(jobId) ? String(jobId) : ""),
+        status: "active",
+        moderationReason: "",
+        moderatedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+    });
+
+    saveJobsToLocalCache([
+        restoredJob,
+        ...getStoredJobs()
+    ]);
+
+    try {
+        const savedJob = await upsertSupabaseJob(restoredJob);
+
+        saveJobsToLocalCache([
+            savedJob,
+            ...getStoredJobs()
+        ]);
+
+        return savedJob;
+    } catch (error) {
+        console.warn("No se pudo restaurar la oportunidad en Supabase. Se conservó localmente.", error);
+        return restoredJob;
     }
 }
 
-export function deleteStoredJob(jobId) {
-    const jobs =
-        getStoredJobs();
+export async function deleteStoredJob(jobId) {
+    const jobs = getStoredJobs();
 
-    const updatedJobs =
-        jobs.filter(job =>
-            !sameId(job.id, jobId)
-        );
+    const jobToDelete = jobs.find(job =>
+        sameId(job.id, jobId) ||
+        sameId(job.legacyId, jobId)
+    );
 
-    saveStoredJobs(updatedJobs);
+    const updatedJobs = jobs.filter(job =>
+        !sameId(job.id, jobId) &&
+        !sameId(job.legacyId, jobId)
+    );
+
+    saveJobsToLocalCache(updatedJobs);
+
+    try {
+        if (jobToDelete) {
+            const existingRow = await findSupabaseJob(jobToDelete);
+
+            if (existingRow?.id) {
+                const { error } = await supabase
+                    .from("opportunities")
+                    .delete()
+                    .eq("id", existingRow.id);
+
+                if (error) throw error;
+            }
+        }
+    } catch (error) {
+        console.warn("No se pudo eliminar la oportunidad en Supabase. Se eliminó solo localmente.", error);
+    }
 }
 
 export function isStoredJob(jobId) {
-    const jobs =
-        getStoredJobs();
+    const jobs = getStoredJobs();
 
     return jobs.some(job =>
-        sameId(job.id, jobId)
+        sameId(job.id, jobId) ||
+        sameId(job.legacyId, jobId)
     );
 }
 
@@ -321,10 +720,15 @@ export function getAllJobsForAdmin(staticJobs = []) {
     const hiddenIds = getHiddenJobIds();
 
     return uniqueJobs([
-        ...staticJobs,
-        ...getStoredJobs()
+        ...getStoredJobs(),
+        ...staticJobs
     ]).map(job => {
-        if (hiddenIds.some(id => sameId(id, job.id))) {
+        if (
+            hiddenIds.some(id =>
+                sameId(id, job.id) ||
+                sameId(id, job.legacyId)
+            )
+        ) {
             return {
                 ...job,
                 status: "hidden"

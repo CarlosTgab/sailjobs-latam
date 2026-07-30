@@ -1,9 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { getCurrentUser } from "../utils/authStorage";
 import { isSuperadmin } from "../utils/permissions";
-import { upsertStoredEvents, getImportedEventsBySource } from "../utils/eventsStorage";
+import { upsertStoredEvents, getImportedEventsBySource, syncEventsFromSupabase } from "../utils/eventsStorage";
 import {
     FAY_CALENDAR_URL,
     FAY_AGENDA_URL,
@@ -60,6 +60,30 @@ function AdminFayImport() {
 
     const parsedEvents = parsedResult.events;
 
+    useEffect(() => {
+        let isMounted = true;
+
+        async function loadImportedEvents() {
+            try {
+                await syncEventsFromSupabase();
+
+                if (isMounted) {
+                    setImportedEvents(getImportedEventsBySource("fay"));
+                }
+            } catch {
+                if (isMounted) {
+                    setImportedEvents(getImportedEventsBySource("fay"));
+                }
+            }
+        }
+
+        loadImportedEvents();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
     if (!currentUser || !isSuperadmin(currentUser)) {
         return (
             <div className="dashboard-page">
@@ -95,7 +119,7 @@ function AdminFayImport() {
         setSelectedEventIds([]);
     }
 
-    function handleImportSelected() {
+    async function handleImportSelected() {
         const eventsToImport = parsedEvents.filter(event =>
             selectedEventIds.includes(event.id)
         );
@@ -105,9 +129,9 @@ function AdminFayImport() {
             return;
         }
 
-        const imported = upsertStoredEvents(eventsToImport);
+        const imported = await upsertStoredEvents(eventsToImport);
         setImportedEvents(getImportedEventsBySource("fay"));
-        setMessage(`Se importaron / actualizaron ${imported.length} eventos FAY.`);
+        setMessage(`Se importaron / actualizaron ${imported.length} eventos FAY. Ya quedan disponibles online para los testers.`);
     }
 
     function handleOpenFayCalendar() {

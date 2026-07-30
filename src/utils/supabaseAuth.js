@@ -115,10 +115,24 @@ function mapEntityRowToStoredClub(entity, profile) {
 }
 
 function mapProfileToAppUser(profile, professionalProfile, entity) {
-    const role = profile.role || "user";
+    const databaseRole = profile.role || "user";
     const entityType = entity
-        ? normalizeEntityType(entity.entity_type, role)
+        ? normalizeEntityType(entity.entity_type, databaseRole)
         : null;
+
+    const role =
+        databaseRole === "user" && entityType === "organization"
+            ? "organization_admin"
+            : databaseRole === "user" && entityType === "club"
+                ? "club"
+                : databaseRole;
+
+    const permissions = [
+        ...new Set([
+            ...(profile.permissions || []),
+            ...(role === "organization_admin" ? ["organization_admin"] : [])
+        ])
+    ];
 
     const baseUser = {
         id: profile.id,
@@ -131,7 +145,7 @@ function mapProfileToAppUser(profile, professionalProfile, entity) {
         profileImage: profile.profile_image_url || "",
         role,
         profiles: profile.profile_types || ["user"],
-        permissions: profile.permissions || [],
+        permissions,
         professionalProfile:
             mapProfessionalProfile(professionalProfile),
         entityId: entity?.id || null,

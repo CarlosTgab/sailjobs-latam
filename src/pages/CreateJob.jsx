@@ -345,7 +345,7 @@ function CreateJob() {
         return true;
     }
 
-    function handleSubmit(event) {
+    async function handleSubmit(event) {
         event.preventDefault();
 
         setFormMessage("");
@@ -374,10 +374,23 @@ function CreateJob() {
 
         const requirements = parseRequirements();
 
-        const createdJob = createStoredJob({
+        const ownerType =
+            club?.entityType ||
+            currentUser?.entityType ||
+            (currentUser?.role === "organization_admin" ? "organization" : "club");
+
+        try {
+            const createdJob = await createStoredJob({
             clubId: resolvedClubId,
             clubName: resolvedClubName,
+            organizationId:
+                ownerType === "organization"
+                    ? resolvedClubId
+                    : "",
             organizationName: resolvedClubName,
+            ownerType,
+            ownerId: resolvedClubId,
+            ownerName: resolvedClubName,
             createdBy: currentUser?.id || null,
 
             title: title.trim(),
@@ -403,13 +416,18 @@ function CreateJob() {
             requirements,
             eventId,
             createdAt: new Date().toISOString()
-        });
+            });
 
-        alert(
-            "Oportunidad publicada correctamente."
-        );
+            alert(
+                "Oportunidad publicada correctamente."
+            );
 
-        navigate(`/jobs/${createdJob.id}`);
+            navigate(`/jobs/${createdJob.id}`);
+        } catch {
+            setFormMessage(
+                "No se pudo publicar la oportunidad. Revisá la conexión e intentá nuevamente."
+            );
+        }
     }
 
     return (

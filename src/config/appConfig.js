@@ -53,15 +53,27 @@ export const ORGANIZATION_TYPE_LABELS = {
 };
 
 export const EVENT_STATUS = {
+    DRAFT: "draft",
     PENDING: "pending",
+    PENDING_REVIEW: "pending_review",
+    CHANGES_REQUESTED: "changes_requested",
     APPROVED: "approved",
-    REJECTED: "rejected"
+    PUBLISHED: "published",
+    REJECTED: "rejected",
+    CANCELLED: "cancelled",
+    ARCHIVED: "archived"
 };
 
 export const EVENT_STATUS_LABELS = {
-    pending: "Pendiente",
-    approved: "Aprobado",
-    rejected: "Rechazado"
+    draft: "Borrador",
+    pending: "Pendiente de revisión",
+    pending_review: "Pendiente de revisión",
+    changes_requested: "Cambios solicitados",
+    approved: "Publicado",
+    published: "Publicado",
+    rejected: "Rechazado",
+    cancelled: "Cancelado",
+    archived: "Archivado"
 };
 
 export const APPLICATION_STATUS = {

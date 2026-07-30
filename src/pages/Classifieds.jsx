@@ -8,6 +8,10 @@ import {
 
 import { getCurrentUser } from "../utils/authStorage";
 import { isSuperadmin } from "../utils/permissions";
+import {
+    getPrimaryDashboardPath,
+    isInstitutionalExperience
+} from "../config/roleExperience";
 import { getAllClassifieds } from "../utils/classifiedsStorage";
 
 function Classifieds() {
@@ -16,6 +20,7 @@ function Classifieds() {
 
     const currentUser = getCurrentUser();
     const currentUserIsSuperadmin = isSuperadmin(currentUser);
+    const currentUserIsInstitutional = isInstitutionalExperience(currentUser);
 
     const [search, setSearch] = useState("");
     const [selectedCategory, setSelectedCategory] = useState("");
@@ -66,6 +71,12 @@ function Classifieds() {
             return;
         }
 
+        if (currentUserIsInstitutional) {
+            alert("Los clasificados son una sección comunitaria para usuarios y profesionales. Las cuentas institucionales gestionan oportunidades, eventos y postulaciones desde su panel.");
+            navigate(getPrimaryDashboardPath(currentUser));
+            return;
+        }
+
         navigate("/classifieds/new");
     }
 
@@ -108,7 +119,9 @@ function Classifieds() {
                 >
                     {currentUserIsSuperadmin
                         ? "Panel de moderación"
-                        : "Publicar clasificado"}
+                        : currentUserIsInstitutional
+                            ? "Ir al panel institucional"
+                            : "Publicar clasificado"}
                 </button>
 
             </div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { sameId } from "../utils/idUtils";
 import {
     useParams,
@@ -15,7 +15,8 @@ import {
     getAllJobs,
     deleteStoredJob,
     hideStoredJob,
-    isStoredJob
+    isStoredJob,
+    syncJobsFromSupabase
 } from "../utils/jobsStorage";
 
 import staticClubs from "../data/clubs";
@@ -98,15 +99,49 @@ function JobDetail() {
     const professionalProfile =
         currentUser?.professionalProfile || {};
 
-    const jobs =
-        getAllJobs(staticJobs);
+    const [jobs, setJobs] = useState(() => getAllJobs(staticJobs));
+
+    const [isLoadingJob, setIsLoadingJob] = useState(true);
 
     const clubs =
         getAllClubs(staticClubs);
 
+    useEffect(() => {
+        let isMounted = true;
+
+        async function loadJobs() {
+            try {
+                const syncedJobs = await syncJobsFromSupabase(staticJobs);
+
+                if (isMounted) {
+                    setJobs(syncedJobs);
+                    setIsLoadingJob(false);
+                }
+            } catch {
+                if (isMounted) {
+                    setJobs(getAllJobs(staticJobs));
+                    setIsLoadingJob(false);
+                }
+            }
+        }
+
+        function refreshFromLocalCache() {
+            setJobs(getAllJobs(staticJobs));
+        }
+
+        loadJobs();
+        window.addEventListener("jobsChanged", refreshFromLocalCache);
+
+        return () => {
+            isMounted = false;
+            window.removeEventListener("jobsChanged", refreshFromLocalCache);
+        };
+    }, []);
+
     const job = jobs.find(
         item =>
-            sameId(item.id, id)
+            sameId(item.id, id) ||
+            sameId(item.legacyId, id)
     );
 
     const club = job
@@ -201,6 +236,14 @@ function JobDetail() {
         formMessage,
         setFormMessage
     ] = useState("");
+
+    if (!job && isLoadingJob) {
+        return (
+            <div className="dashboard-page">
+                <h1>Cargando oportunidad...</h1>
+            </div>
+        );
+    }
 
     if (!job) {
         return (
@@ -527,7 +570,7 @@ function JobDetail() {
         );
     }
 
-    function handleDeleteJob() {
+    async function handleDeleteJob() {
 
         const confirmDelete =
             window.confirm(
@@ -538,7 +581,7 @@ function JobDetail() {
             return;
         }
 
-        deleteStoredJob(
+        await deleteStoredJob(
             job.id
         );
 
@@ -555,7 +598,7 @@ function JobDetail() {
         }
     }
 
-    function handleHideJob() {
+    async function handleHideJob() {
 
         const confirmModeration =
             window.confirm(
@@ -566,7 +609,7 @@ function JobDetail() {
             return;
         }
 
-        hideStoredJob(job.id);
+        await hideStoredJob(job.id, "Moderada por superadmin", job);
 
         navigate("/admin/jobs");
     }

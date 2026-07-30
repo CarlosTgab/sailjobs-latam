@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import staticClubs from "../data/clubs";
@@ -18,7 +19,10 @@ import {
 } from "../utils/idUtils";
 
 import staticJobs from "../data/jobs";
-import { getAllJobs } from "../utils/jobsStorage";
+import {
+    getAllJobs,
+    syncJobsFromSupabase
+} from "../utils/jobsStorage";
 
 import staticEvents from "../data/events";
 import { getAllEvents } from "../utils/eventsStorage";
@@ -35,7 +39,37 @@ function ClubDashboard() {
     const navigate = useNavigate();
 
     const clubs = getAllClubs(staticClubs);
-    const jobs = getAllJobs(staticJobs);
+    const [jobs, setJobs] = useState(() => getAllJobs(staticJobs));
+
+    useEffect(() => {
+        let isMounted = true;
+
+        async function loadJobs() {
+            try {
+                const syncedJobs = await syncJobsFromSupabase(staticJobs);
+
+                if (isMounted) {
+                    setJobs(syncedJobs);
+                }
+            } catch {
+                if (isMounted) {
+                    setJobs(getAllJobs(staticJobs));
+                }
+            }
+        }
+
+        function refreshFromLocalCache() {
+            setJobs(getAllJobs(staticJobs));
+        }
+
+        loadJobs();
+        window.addEventListener("jobsChanged", refreshFromLocalCache);
+
+        return () => {
+            isMounted = false;
+            window.removeEventListener("jobsChanged", refreshFromLocalCache);
+        };
+    }, []);
     const events = getAllEvents(staticEvents);
     const applications = getApplications();
 
@@ -158,6 +192,31 @@ function ClubDashboard() {
         );
     }
 
+
+    function getCityLabel(entity) {
+        if (entity?.cityName) {
+            return entity.cityName;
+        }
+
+        if (entity?.city && String(entity.city).includes(",")) {
+            return String(entity.city).split(",")[0].trim();
+        }
+
+        return entity?.city || "";
+    }
+
+    function getLocationLabel(entity) {
+        const parts = [
+            getCityLabel(entity),
+            entity?.state,
+            entity?.country
+        ].filter(Boolean);
+
+        return parts.length > 0
+            ? parts.join(", ")
+            : "Ubicación no informada";
+    }
+
     function getApplicationJob(application) {
         return clubJobs.find(
             job => sameId(job.id, application.jobId)
@@ -184,7 +243,7 @@ function ClubDashboard() {
                         </p>
 
                         <p>
-                            {club.city}, {club.country}
+                            {getLocationLabel(club)}
                         </p>
 
                         <p>
@@ -196,30 +255,131 @@ function ClubDashboard() {
                 <div className="dashboard-actions">
                     <button
                         className="apply-button"
-                        onClick={() =>
-                            navigate(`/club-dashboard/${clubId}/new-job`)
-                        }
+                        onClick={() => navigate(`/clubs/${clubId}`)}
                     >
-                        Publicar oportunidad
+                        Ver perfil público
                     </button>
 
                     <button
-                        className="apply-button"
-                        onClick={() =>
-                            navigate(`/club-dashboard/${clubId}/new-event`)
-                        }
+                        className="small-action-button"
+                        onClick={() => navigate("/contact")}
                     >
-                        Proponer evento
+                        Enviar feedback
                     </button>
+                </div>
+            </div>
 
-                    <button
-                        className="apply-button"
-                        onClick={() =>
-                            navigate(`/applications/${clubId}`)
-                        }
-                    >
-                        Ver postulaciones
-                    </button>
+
+            <div className="detail-card">
+                <div className="section-header">
+                    <div>
+                        <h2>Centro de gestión del club</h2>
+                        <p>
+                            Accesos principales para administrar oportunidades, postulaciones,
+                            propuestas de eventos y canales de soporte.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="dashboard-grid">
+                    <div className="dashboard-card">
+                        <span className="sidebar-tag">Convocatorias</span>
+                        <h3>Publicar oportunidad</h3>
+                        <p>
+                            Cargá búsquedas para coaches, instructores, oficiales, jurados,
+                            medidores, voluntarios u otros perfiles náuticos.
+                        </p>
+                        <button
+                            className="apply-button"
+                            onClick={() => navigate(`/club-dashboard/${clubId}/new-job`)}
+                        >
+                            Nueva oportunidad
+                        </button>
+                    </div>
+
+                    <div className="dashboard-card">
+                        <span className="sidebar-tag">Calendario</span>
+                        <h3>Proponer evento</h3>
+                        <p>
+                            Enviá una propuesta de evento para que una organización revisora
+                            la apruebe antes de publicarla.
+                        </p>
+                        <button
+                            className="apply-button"
+                            onClick={() => navigate(`/club-dashboard/${clubId}/new-event`)}
+                        >
+                            Proponer evento
+                        </button>
+                    </div>
+
+                    <div className="dashboard-card">
+                        <span className="sidebar-tag">Postulaciones</span>
+                        <h3>Postulaciones recibidas</h3>
+                        <p>
+                            Revisá candidatos y profesionales que aplicaron a oportunidades
+                            publicadas por el club.
+                        </p>
+                        <button
+                            className="apply-button"
+                            onClick={() => navigate(`/applications/${clubId}`)}
+                        >
+                            Ver postulaciones
+                        </button>
+                    </div>
+
+                    <div className="dashboard-card">
+                        <span className="sidebar-tag">Público</span>
+                        <h3>Perfil público del club</h3>
+                        <p>
+                            Mirá cómo ven el club los visitantes, profesionales y otras
+                            instituciones dentro de SailJobs LATAM.
+                        </p>
+                        <button
+                            className="apply-button"
+                            onClick={() => navigate(`/clubs/${clubId}`)}
+                        >
+                            Ver perfil público
+                        </button>
+                    </div>
+
+                    <div className="dashboard-card">
+                        <span className="sidebar-tag">Agenda</span>
+                        <h3>Calendario</h3>
+                        <p>
+                            Revisá eventos publicados, eventos pendientes y actividad
+                            vinculada al calendario náutico.
+                        </p>
+                        <button
+                            className="apply-button"
+                            onClick={() => navigate("/calendar")}
+                        >
+                            Ver calendario
+                        </button>
+                    </div>
+
+                    <div className="dashboard-card">
+                        <span className="sidebar-tag">Soporte</span>
+                        <h3>Feedback y sobre SailJobs</h3>
+                        <p>
+                            Consultá información del proyecto o mandá sugerencias para
+                            mejorar la experiencia de clubes.
+                        </p>
+                        <div className="dashboard-actions">
+                            <button
+                                className="small-action-button"
+                                onClick={() => navigate("/about")}
+                            >
+                                Sobre nosotros
+                            </button>
+
+                            <button
+                                className="small-action-button"
+                                onClick={() => navigate("/contact")}
+                            >
+                                Feedback
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -285,7 +445,7 @@ function ClubDashboard() {
 
                                 <p>
                                     <strong>Ubicación:</strong>{" "}
-                                    {job.city}, {job.country}
+                                    {getLocationLabel(job)}
                                 </p>
 
                                 <p>
@@ -430,7 +590,7 @@ function ClubDashboard() {
 
                                 <p>
                                     <strong>Ubicación:</strong>{" "}
-                                    {event.city}, {event.country}
+                                    {getLocationLabel(event)}
                                 </p>
 
                                 <button

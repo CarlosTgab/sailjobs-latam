@@ -6,10 +6,12 @@ import {
 } from "react-router-dom";
 
 import ScrollToTop from "./components/ScrollToTop";
+import RoleRedirect from "./components/RoleRedirect";
 
 import BetaBanner from "./components/BetaBanner";
-import Profile from "./pages/Profile";
 import AuthSync from "./components/AuthSync";
+import EventsSync from "./components/EventsSync";
+import JobsSync from "./components/JobsSync";
 
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
@@ -18,7 +20,6 @@ import PageBackground from "./components/PageBackground";
 import {
   RequireAuth,
   RequireRole,
-  RequireProfile,
   RequireClubAccess
 } from "./components/RouteGuards";
 
@@ -28,6 +29,7 @@ import Contact from "./pages/Contact";
 
 import Calendar from "./pages/Calendar";
 import EventDetail from "./pages/EventDetail";
+import EditEvent from "./pages/EditEvent";
 
 import Jobs from "./pages/Jobs";
 import JobDetail from "./pages/JobDetail";
@@ -45,9 +47,6 @@ import CreateJob from "./pages/CreateJob";
 import CreateEvent from "./pages/CreateEvent";
 import Applications from "./pages/Applications";
 
-import CoachDashboard from "./pages/CoachDashboard";
-import UserDashboard from "./pages/UserDashboard";
-
 import OrganizationAdminDashboard from "./pages/OrganizationAdminDashboard";
 
 import AdminDashboard from "./pages/AdminDashboard";
@@ -59,6 +58,7 @@ import AdminMessages from "./pages/AdminMessages";
 
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import Profile from "./pages/Profile";
 
 import Ranking from "./pages/Ranking";
 
@@ -68,34 +68,30 @@ import NotFound from "./pages/NotFound";
 import "./App.css";
 
 function App() {
-
   return (
-
     <BrowserRouter>
-
       <AuthSync />
+      <EventsSync />
+      <JobsSync />
       <ScrollToTop />
 
       <PageBackground />
-
       <Navbar />
-
       <BetaBanner />
 
       <Routes>
-
-        <Route
-          path="/profile"
-          element={
-            <RequireAuth>
-              <Profile />
-            </RequireAuth>
-          }
-        />
-
         <Route
           path="/"
           element={<Home />}
+        />
+
+        <Route
+          path="/dashboard"
+          element={
+            <RequireAuth>
+              <RoleRedirect />
+            </RequireAuth>
+          }
         />
 
         <Route
@@ -109,6 +105,15 @@ function App() {
         />
 
         <Route
+          path="/profile"
+          element={
+            <RequireAuth>
+              <Profile />
+            </RequireAuth>
+          }
+        />
+
+        <Route
           path="/calendar"
           element={<Calendar />}
         />
@@ -116,6 +121,15 @@ function App() {
         <Route
           path="/calendar/:id"
           element={<EventDetail />}
+        />
+
+        <Route
+          path="/calendar/:id/edit"
+          element={
+            <RequireAuth>
+              <EditEvent />
+            </RequireAuth>
+          }
         />
 
         <Route
@@ -131,13 +145,9 @@ function App() {
         <Route
           path="/jobs/:id/edit"
           element={
-
             <RequireAuth>
-
               <EditJob />
-
             </RequireAuth>
-
           }
         />
 
@@ -149,13 +159,9 @@ function App() {
         <Route
           path="/classifieds/new"
           element={
-
             <RequireAuth>
-
               <CreateClassified />
-
             </RequireAuth>
-
           }
         />
 
@@ -167,13 +173,9 @@ function App() {
         <Route
           path="/classifieds/:id/edit"
           element={
-
             <RequireAuth>
-
               <EditClassified />
-
             </RequireAuth>
-
           }
         />
 
@@ -190,52 +192,36 @@ function App() {
         <Route
           path="/club-dashboard/:clubId"
           element={
-
             <RequireClubAccess>
-
               <ClubDashboard />
-
             </RequireClubAccess>
-
           }
         />
 
         <Route
           path="/club-dashboard/:clubId/new-job"
           element={
-
             <RequireClubAccess>
-
               <CreateJob />
-
             </RequireClubAccess>
-
           }
         />
 
         <Route
           path="/club-dashboard/:clubId/new-event"
           element={
-
             <RequireClubAccess>
-
               <CreateEvent />
-
             </RequireClubAccess>
-
           }
         />
 
         <Route
           path="/applications/:clubId"
           element={
-
             <RequireClubAccess>
-
               <Applications />
-
             </RequireClubAccess>
-
           }
         />
 
@@ -252,134 +238,77 @@ function App() {
         <Route
           path="/organization-admin"
           element={
-
             <RequireRole roles="organization_admin">
-
               <OrganizationAdminDashboard />
-
             </RequireRole>
+          }
+        />
 
+        <Route
+          path="/organization-admin/new-event"
+          element={
+            <RequireRole roles="organization_admin">
+              <CreateEvent />
+            </RequireRole>
           }
         />
 
         <Route
           path="/superadmin"
           element={
-
-            <RequireRole
-              roles={[
-                "superadmin",
-                "admin"
-              ]}
-            >
-
+            <RequireRole roles={["superadmin", "admin"]}>
               <AdminDashboard />
-
             </RequireRole>
-
           }
         />
 
         <Route
           path="/admin"
-          element={
-
-            <Navigate
-              to="/superadmin"
-              replace
-            />
-
-          }
+          element={<Navigate to="/superadmin" replace />}
         />
 
         <Route
           path="/admin/events"
           element={
-
-            <RequireRole
-              roles={[
-                "superadmin",
-                "admin"
-              ]}
-            >
-
+            <RequireRole roles={["superadmin", "admin"]}>
               <AdminEvents />
-
             </RequireRole>
-
           }
         />
 
         <Route
           path="/admin/import-fay"
           element={
-
-            <RequireRole
-              roles={[
-                "superadmin",
-                "admin"
-              ]}
-            >
-
+            <RequireRole roles={["superadmin", "admin"]}>
               <AdminFayImport />
-
             </RequireRole>
-
           }
         />
-
 
         <Route
           path="/admin/jobs"
           element={
-
-            <RequireRole
-              roles={[
-                "superadmin",
-                "admin"
-              ]}
-            >
-
+            <RequireRole roles={["superadmin", "admin"]}>
               <AdminJobs />
-
             </RequireRole>
-
           }
         />
 
         <Route
           path="/admin/classifieds"
           element={
-
-            <RequireRole
-              roles={[
-                "superadmin",
-                "admin"
-              ]}
-            >
-
+            <RequireRole roles={["superadmin", "admin"]}>
               <AdminClassifieds />
-
             </RequireRole>
-
           }
         />
 
         <Route
           path="/admin/messages"
           element={
-
-            <RequireRole
-              roles={[
-                "superadmin",
-                "admin"
-              ]}
-            >
-
+            <RequireRole roles={["superadmin", "admin"]}>
               <AdminMessages />
-
             </RequireRole>
-
           }
         />
 
@@ -401,13 +330,9 @@ function App() {
         <Route
           path="/applicant/:id"
           element={
-
             <RequireAuth>
-
               <ApplicantDetail />
-
             </RequireAuth>
-
           }
         />
 
@@ -415,13 +340,10 @@ function App() {
           path="*"
           element={<NotFound />}
         />
-
       </Routes>
 
       <Footer />
-
     </BrowserRouter>
-
   );
 }
 

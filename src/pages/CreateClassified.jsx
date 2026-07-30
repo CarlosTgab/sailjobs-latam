@@ -7,6 +7,10 @@ import {
 
 import { getCurrentUser } from "../utils/authStorage";
 import { isSuperadmin } from "../utils/permissions";
+import {
+    getPrimaryDashboardPath,
+    isInstitutionalExperience
+} from "../config/roleExperience";
 import { createStoredClassified } from "../utils/classifiedsStorage";
 
 function CreateClassified() {
@@ -15,6 +19,7 @@ function CreateClassified() {
 
     const currentUser = getCurrentUser();
     const currentUserIsSuperadmin = isSuperadmin(currentUser);
+    const currentUserIsInstitutional = isInstitutionalExperience(currentUser);
 
     const [title, setTitle] = useState("");
     const [category, setCategory] = useState("");
@@ -63,6 +68,29 @@ function CreateClassified() {
                     onClick={() => navigate("/admin/classifieds")}
                 >
                     Ir a moderación de clasificados
+                </button>
+
+            </div>
+        );
+    }
+
+    if (currentUserIsInstitutional) {
+        return (
+            <div className="dashboard-page">
+
+                <h1>Clasificados comunitarios</h1>
+
+                <p>
+                    Las cuentas de club u organización no publican clasificados personales.
+                    Desde tu panel institucional podés publicar oportunidades, proponer
+                    eventos y revisar postulaciones.
+                </p>
+
+                <button
+                    className="apply-button"
+                    onClick={() => navigate(getPrimaryDashboardPath(currentUser))}
+                >
+                    Ir al panel institucional
                 </button>
 
             </div>

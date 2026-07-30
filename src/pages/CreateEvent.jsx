@@ -2,14 +2,23 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
 import staticClubs from "../data/clubs";
-import { getAllClubs } from "../utils/clubsStorage";
+import {
+    getAllClubs,
+    getEntityType,
+    isOrganizationEntity
+} from "../utils/clubsStorage";
 
 import { getCurrentUser } from "../utils/authStorage";
-import { canManageClub } from "../utils/permissions";
+import {
+    canManageClub,
+    canManageOrganization,
+    isOrganizationAdmin
+} from "../utils/permissions";
 import { sameId } from "../utils/idUtils";
 
 import {
-    SAILING_CLASSES
+    SAILING_CLASSES,
+    EVENT_STATUS
 } from "../config/appConfig";
 
 import LocationSelects, {
@@ -33,31 +42,87 @@ function getResolvedCity(cityValue, customCityValue, stateValue) {
         : resolvedCity;
 }
 
+function getCurrentUserEntity(currentUser) {
+    if (!currentUser?.entityId && !currentUser?.organizationId && !currentUser?.clubId) {
+        return null;
+    }
+
+    const entityType =
+        currentUser.entityType ||
+        (currentUser.organizationId ? "organization" : "club");
+
+    return {
+        id:
+            currentUser.entityId ||
+            currentUser.organizationId ||
+            currentUser.clubId,
+        name:
+            currentUser.entityName ||
+            currentUser.organizationName ||
+            currentUser.clubName ||
+            currentUser.name ||
+            "Mi entidad",
+        entityType,
+        organizationType: currentUser.organizationType || "other",
+        country: currentUser.country || "",
+        city: currentUser.city || ""
+    };
+}
+
+function uniqueById(entities) {
+    const result = [];
+
+    entities.forEach(entity => {
+        if (!entity?.id) return;
+
+        if (!result.some(item => sameId(item.id, entity.id))) {
+            result.push(entity);
+        }
+    });
+
+    return result;
+}
+
 function CreateEvent() {
     const { clubId } = useParams();
     const navigate = useNavigate();
 
     const currentUser = getCurrentUser();
+    const currentUserIsOrganization = isOrganizationAdmin(currentUser);
 
-    const clubs = getAllClubs(staticClubs);
+    const entities = getAllClubs(staticClubs);
+    const currentUserEntity = getCurrentUserEntity(currentUser);
 
-    const clubFromLocalData = clubs.find(
-        club => sameId(club.id, clubId)
+    const entitiesWithCurrentUser = uniqueById([
+        ...entities,
+        currentUserEntity
+    ].filter(Boolean));
+
+    const routeEntity = clubId
+        ? entitiesWithCurrentUser.find(entity => sameId(entity.id, clubId))
+        : null;
+
+    const targetEntity = routeEntity || (
+        currentUserIsOrganization
+            ? currentUserEntity
+            : null
     );
 
-    const clubFromCurrentUser =
-        currentUser && sameId(currentUser.clubId, clubId)
-            ? {
-                id: currentUser.clubId,
-                name: currentUser.clubName || currentUser.name || "Mi organización",
-                country: currentUser.country || "",
-                city: currentUser.city || ""
-            }
-            : null;
+    const targetEntityType = getEntityType(targetEntity);
+    const targetIsOrganization = targetEntityType === "organization";
+    const targetIsClub = targetEntityType === "club";
 
-    const club =
-        clubFromLocalData ||
-        clubFromCurrentUser;
+    const organizationOptions = entitiesWithCurrentUser
+        .filter(entity => isOrganizationEntity(entity))
+        .sort((a, b) => a.name.localeCompare(b.name, "es"));
+
+    const defaultReviewingOrganizationId =
+        organizationOptions.find(entity =>
+            entity.name.toLowerCase().includes("federación argentina") ||
+            entity.name.toLowerCase().includes("fay")
+        )?.id ||
+        organizationOptions[0]?.id ||
+        "";
 
     const [title, setTitle] = useState("");
     const [className, setClassName] = useState("");
@@ -74,51 +139,50 @@ function CreateEvent() {
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [website, setWebsite] = useState("");
+    const [description, setDescription] = useState("");
+    const [reviewingOrganizationId, setReviewingOrganizationId] = useState(defaultReviewingOrganizationId);
     const [message, setMessage] = useState("");
 
-    if (!canManageClub(currentUser, clubId)) {
+    const userCanAccess =
+        targetEntity &&
+        (
+            targetIsOrganization
+                ? canManageOrganization(currentUser, targetEntity.id)
+                : canManageClub(currentUser, targetEntity.id)
+        );
+
+    if (!targetEntity || !userCanAccess) {
         return (
             <div className="dashboard-page">
                 <h1>Acceso denegado</h1>
 
                 <p>
-                    No tenés permiso para proponer eventos para este club.
+                    No tenés permiso para crear eventos desde esta cuenta.
                 </p>
 
                 <button
                     className="back-button"
-                    onClick={() => navigate("/clubs")}
+                    onClick={() => navigate("/calendar")}
                 >
-                    ← Volver a clubes
+                    ← Volver al calendario
                 </button>
             </div>
         );
     }
 
-    if (!club) {
-        return (
-            <div className="dashboard-page">
-                <h1>Club no encontrado</h1>
-
-                <button
-                    className="back-button"
-                    onClick={() => navigate("/clubs")}
-                >
-                    ← Volver a clubes
-                </button>
-            </div>
-        );
-    }
-
-    function handleSubmit(event) {
+    async function handleSubmit(event) {
         event.preventDefault();
 
-        const resolvedCity =
-            getResolvedCity(
-                city,
-                customCity,
-                state
-            );
+        const resolvedCity = getResolvedCity(city, customCity, state);
+
+        const resolvedCityName =
+            city === CUSTOM_CITY_VALUE || !city
+                ? customCity.trim()
+                : city.trim();
+
+        const reviewingOrganization = organizationOptions.find(entity =>
+            sameId(entity.id, reviewingOrganizationId)
+        );
 
         if (
             !title.trim() ||
@@ -133,14 +197,18 @@ function CreateEvent() {
             return;
         }
 
+        if (targetIsClub && !reviewingOrganization) {
+            setMessage("Seleccioná la organización que debe revisar la propuesta.");
+            return;
+        }
+
         if (new Date(endDate) < new Date(startDate)) {
             setMessage("La fecha de finalización no puede ser anterior a la fecha de inicio.");
             return;
         }
 
-        createStoredEvent({
+        const baseEventData = {
             title: title.trim(),
-            clubId: club.id,
             className,
 
             country,
@@ -148,38 +216,86 @@ function CreateEvent() {
             state,
             stateCode,
             city: resolvedCity,
-            cityName:
-                city === CUSTOM_CITY_VALUE || !city
-                    ? customCity.trim()
-                    : city.trim(),
+            cityName: resolvedCityName,
 
             startDate,
             endDate,
             website: website.trim(),
-            source: "Club",
-            sourceUrl: "",
-            status: "pending",
+            description: description.trim(),
+            sourceUrl: ""
+        };
+
+        if (targetIsOrganization) {
+            await createStoredEvent({
+                ...baseEventData,
+                clubId: "",
+                organizerType: "organization",
+                proposedByType: "organization",
+                proposedById: targetEntity.id,
+                proposedByName: targetEntity.name,
+                ownerType: "organization",
+                ownerId: targetEntity.id,
+                ownerName: targetEntity.name,
+                organizationId: targetEntity.id,
+                organizationName: targetEntity.name,
+                reviewingOrganizationId: targetEntity.id,
+                reviewingOrganizationName: targetEntity.name,
+                organizingClubName: "",
+                source: targetEntity.name,
+                status: EVENT_STATUS.APPROVED,
+                isOfficial: true,
+                reviewedBy: currentUser?.name || currentUser?.email || "Organización",
+                reviewedAt: new Date().toISOString()
+            });
+
+            navigate("/organization-admin");
+            return;
+        }
+
+        await createStoredEvent({
+            ...baseEventData,
+            clubId: targetEntity.id,
+            organizerType: "club",
+            proposedByType: "club",
+            proposedById: targetEntity.id,
+            proposedByName: targetEntity.name,
+            organizingClubName: targetEntity.name,
+            reviewingOrganizationId: reviewingOrganization.id,
+            reviewingOrganizationName: reviewingOrganization.name,
+            ownerType: "organization",
+            ownerId: reviewingOrganization.id,
+            ownerName: reviewingOrganization.name,
+            organizationId: reviewingOrganization.id,
+            organizationName: reviewingOrganization.name,
+            source: "Propuesta de club",
+            status: EVENT_STATUS.PENDING,
             isOfficial: false
         });
 
-        navigate(`/club-dashboard/${club.id}`);
+        navigate(`/club-dashboard/${targetEntity.id}`);
     }
 
     return (
         <div className="dashboard-page">
             <button
                 className="back-button"
-                onClick={() => navigate(`/club-dashboard/${club.id}`)}
+                onClick={() => navigate(targetIsOrganization ? "/organization-admin" : `/club-dashboard/${targetEntity.id}`)}
             >
                 ← Volver al panel
             </button>
 
             <div className="dashboard-hero">
                 <div>
-                    <h1>Proponer evento</h1>
+                    <h1>
+                        {targetIsOrganization
+                            ? "Publicar evento"
+                            : "Proponer evento"}
+                    </h1>
 
                     <p>
-                        Cargá un evento para {club.name}. El evento quedará pendiente hasta ser aprobado.
+                        {targetIsOrganization
+                            ? `Cargá un evento desde ${targetEntity.name}. Al ser publicado por una organización, aparecerá directamente en el calendario.`
+                            : `Cargá una propuesta para ${targetEntity.name}. La organización revisora deberá aprobarla antes de que aparezca en el calendario.`}
                     </p>
                 </div>
             </div>
@@ -197,7 +313,7 @@ function CreateEvent() {
                         type="text"
                         placeholder="Ej: Campeonato Argentino ILCA"
                         value={title}
-                        onChange={(event) => setTitle(event.target.value)}
+                        onChange={(inputEvent) => setTitle(inputEvent.target.value)}
                     />
 
                     <label>
@@ -206,7 +322,7 @@ function CreateEvent() {
 
                     <select
                         value={className}
-                        onChange={(event) => setClassName(event.target.value)}
+                        onChange={(inputEvent) => setClassName(inputEvent.target.value)}
                     >
                         <option value="">
                             Seleccionar clase *
@@ -221,6 +337,32 @@ function CreateEvent() {
                             </option>
                         ))}
                     </select>
+
+                    {targetIsClub && (
+                        <>
+                            <label>
+                                Organización revisora *
+                            </label>
+
+                            <select
+                                value={reviewingOrganizationId}
+                                onChange={(inputEvent) => setReviewingOrganizationId(inputEvent.target.value)}
+                            >
+                                <option value="">
+                                    Seleccionar organización
+                                </option>
+
+                                {organizationOptions.map(organization => (
+                                    <option
+                                        key={organization.id}
+                                        value={organization.id}
+                                    >
+                                        {organization.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </>
+                    )}
 
                     <LocationSelects
                         countryCode={countryCode}
@@ -242,7 +384,7 @@ function CreateEvent() {
                     <input
                         type="date"
                         value={startDate}
-                        onChange={(event) => setStartDate(event.target.value)}
+                        onChange={(inputEvent) => setStartDate(inputEvent.target.value)}
                     />
 
                     <label>
@@ -252,7 +394,7 @@ function CreateEvent() {
                     <input
                         type="date"
                         value={endDate}
-                        onChange={(event) => setEndDate(event.target.value)}
+                        onChange={(inputEvent) => setEndDate(inputEvent.target.value)}
                     />
 
                     <label>
@@ -263,7 +405,18 @@ function CreateEvent() {
                         type="url"
                         placeholder="https://..."
                         value={website}
-                        onChange={(event) => setWebsite(event.target.value)}
+                        onChange={(inputEvent) => setWebsite(inputEvent.target.value)}
+                    />
+
+                    <label>
+                        Descripción
+                    </label>
+
+                    <textarea
+                        rows="5"
+                        placeholder="Información relevante del evento, sede, formato, inscripción, etc."
+                        value={description}
+                        onChange={(inputEvent) => setDescription(inputEvent.target.value)}
                     />
 
                     {message && (
@@ -276,7 +429,7 @@ function CreateEvent() {
                         <button
                             type="button"
                             className="reject-button"
-                            onClick={() => navigate(`/club-dashboard/${club.id}`)}
+                            onClick={() => navigate(targetIsOrganization ? "/organization-admin" : `/club-dashboard/${targetEntity.id}`)}
                         >
                             Cancelar
                         </button>
@@ -285,7 +438,9 @@ function CreateEvent() {
                             className="accept-button"
                             type="submit"
                         >
-                            Enviar evento a revisión
+                            {targetIsOrganization
+                                ? "Publicar evento"
+                                : "Enviar evento a revisión"}
                         </button>
                     </div>
                 </form>

@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
-    COUNTRIES
+    COUNTRIES,
+    APPLICATION_STATUS
 } from "../config/appConfig";
 
 import {
@@ -21,11 +22,17 @@ import {
     getApplications
 } from "../utils/applicationsStorage";
 
+import {
+    isInstitutionalExperience,
+    getPrimaryDashboardPath
+} from "../config/roleExperience";
+
+import { sameId } from "../utils/idUtils";
+
 function UserDashboard() {
     const navigate = useNavigate();
 
     const [currentUser, setCurrentUser] = useState(getCurrentUser());
-
     const [editMode, setEditMode] = useState(false);
 
     const [name, setName] = useState(currentUser?.name || "");
@@ -39,19 +46,43 @@ function UserDashboard() {
     if (!currentUser || !hasProfile(currentUser, "user")) {
         return (
             <div className="dashboard-page">
-                <h1>Perfil personal no disponible</h1>
+                <div className="detail-card">
+                    <h1>Perfil personal no disponible</h1>
 
-                <p>
-                    Para acceder a esta sección necesitás iniciar sesión con una
-                    cuenta personal.
-                </p>
+                    <p>
+                        Para acceder a esta sección necesitás iniciar sesión con una
+                        cuenta personal.
+                    </p>
 
-                <button
-                    className="apply-button"
-                    onClick={() => navigate("/login")}
-                >
-                    Iniciar sesión
-                </button>
+                    <button
+                        className="apply-button"
+                        onClick={() => navigate("/login")}
+                    >
+                        Iniciar sesión
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    if (isInstitutionalExperience(currentUser)) {
+        return (
+            <div className="dashboard-page">
+                <div className="detail-card">
+                    <h1>Cuenta institucional</h1>
+
+                    <p>
+                        Esta cuenta se administra desde su panel institucional,
+                        no desde el perfil personal.
+                    </p>
+
+                    <button
+                        className="apply-button"
+                        onClick={() => navigate(getPrimaryDashboardPath(currentUser))}
+                    >
+                        Ir al panel correspondiente
+                    </button>
+                </div>
             </div>
         );
     }
@@ -64,10 +95,12 @@ function UserDashboard() {
     const applications = getApplications()
         .filter(application => sameId(application.userId, currentUser.id));
 
+    const pendingApplications = applications.filter(
+        application => application.status === APPLICATION_STATUS.PENDING
+    );
+
     function getInitials(userName) {
-        if (!userName) {
-            return "U";
-        }
+        if (!userName) return "U";
 
         return userName
             .split(" ")
@@ -80,9 +113,7 @@ function UserDashboard() {
     function handleProfileImageChange(event) {
         const file = event.target.files[0];
 
-        if (!file) {
-            return;
-        }
+        if (!file) return;
 
         const reader = new FileReader();
 
@@ -122,17 +153,14 @@ function UserDashboard() {
             "Vas a activar tu perfil profesional náutico dentro de esta misma cuenta. No perdés tu perfil personal, clasificados ni historial. ¿Continuar?"
         );
 
-        if (!confirmActivation) {
-            return;
-        }
+        if (!confirmActivation) return;
 
         activateProfessionalProfile();
 
         const updatedUser = getCurrentUser();
 
         setCurrentUser(updatedUser);
-
-        navigate("/coach-dashboard");
+        navigate("/profile");
     }
 
     return (
@@ -154,14 +182,13 @@ function UserDashboard() {
                     </div>
 
                     <div>
-                        <h1>Perfil personal</h1>
+                        <h1>Mi perfil</h1>
 
                         <p>{currentUser.name}</p>
 
                         <p>
-                            Desde acá administrás tu cuenta personal,
-                            clasificados, participación en voluntariados y tu
-                            perfil profesional náutico.
+                            Administrá tus datos personales, clasificados,
+                            postulaciones y perfil profesional náutico.
                         </p>
                     </div>
                 </div>
@@ -177,9 +204,9 @@ function UserDashboard() {
                     {professionalIsActive ? (
                         <button
                             className="apply-button"
-                            onClick={() => navigate("/coach-dashboard")}
+                            onClick={() => navigate("/profile")}
                         >
-                            Perfil profesional
+                            Ver perfil profesional
                         </button>
                     ) : (
                         <button
@@ -216,8 +243,8 @@ function UserDashboard() {
                 </div>
 
                 <div className="dashboard-stat-card">
-                    <h2>{currentUser.profiles?.length || 1}</h2>
-                    <p>Perfiles en tu cuenta</p>
+                    <h2>{pendingApplications.length}</h2>
+                    <p>Postulaciones pendientes</p>
                 </div>
             </div>
 
@@ -365,16 +392,14 @@ function UserDashboard() {
                     <>
                         <p>
                             Tu perfil profesional está activo. Podés usarlo para
-                            postularte a trabajos profesionales, cargos técnicos
-                            de campeonato y otras oportunidades que requieran
-                            experiencia náutica.
+                            postularte a oportunidades de clubes y organizaciones.
                         </p>
 
                         <button
                             className="apply-button"
-                            onClick={() => navigate("/coach-dashboard")}
+                            onClick={() => navigate("/profile")}
                         >
-                            Ir a mi perfil profesional
+                            Editar perfil profesional
                         </button>
                     </>
                 ) : (
@@ -423,7 +448,7 @@ function UserDashboard() {
 
                                 <p>
                                     <strong>Ubicación:</strong>{" "}
-                                    {item.city}, {item.country}
+                                    {[item.city, item.country].filter(Boolean).join(", ") || "No informada"}
                                 </p>
 
                                 <button

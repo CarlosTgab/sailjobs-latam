@@ -17,9 +17,9 @@ import {
 } from "../utils/supabaseAuth";
 
 import {
-    isSuperadmin,
-    normalizeUserRole
-} from "../utils/permissions";
+    getExperienceLabel,
+    getNavbarLinksForUser
+} from "../config/roleExperience";
 
 function Navbar() {
 
@@ -28,11 +28,8 @@ function Navbar() {
     const [currentUser, setCurrentUser] = useState(getCurrentUser());
     const [menuOpen, setMenuOpen] = useState(false);
 
-    const normalizedRole = normalizeUserRole(currentUser);
-
-    const isAdmin = isSuperadmin(currentUser);
-    const isClub = normalizedRole === "club";
-    const isOrganizationAdmin = normalizedRole === "organization_admin";
+    const navLinks = getNavbarLinksForUser(currentUser);
+    const experienceLabel = getExperienceLabel(currentUser);
 
     useEffect(() => {
         function syncUser() {
@@ -56,29 +53,9 @@ function Navbar() {
         await logoutWithSupabase();
 
         setCurrentUser(null);
-
-        navigate("/");
-    }
-
-    function handleUserNavigation() {
         closeMenu();
 
-        if (isAdmin) {
-            navigate("/superadmin");
-            return;
-        }
-
-        if (isClub && currentUser.clubId) {
-            navigate(`/club-dashboard/${currentUser.clubId}`);
-            return;
-        }
-
-        if (isOrganizationAdmin) {
-            navigate("/organization-admin");
-            return;
-        }
-
-        navigate("/profile");
+        navigate("/");
     }
 
     return (
@@ -104,37 +81,15 @@ function Navbar() {
 
             <div className={`nav-links ${menuOpen ? "open" : ""}`}>
 
-                <Link to="/" onClick={closeMenu}>
-                    Inicio
-                </Link>
-
-                <Link to="/calendar" onClick={closeMenu}>
-                    Calendario
-                </Link>
-
-                <Link to="/jobs" onClick={closeMenu}>
-                    Oportunidades
-                </Link>
-
-                <Link to="/classifieds" onClick={closeMenu}>
-                    Clasificados
-                </Link>
-
-                <Link to="/clubs" onClick={closeMenu}>
-                    Clubes
-                </Link>
-
-                <Link to="/ranking" onClick={closeMenu}>
-                    Ranking
-                </Link>
-
-                <Link to="/about" onClick={closeMenu}>
-                    Sobre nosotros
-                </Link>
-
-                <Link to="/contact" onClick={closeMenu}>
-                    Contacto
-                </Link>
+                {navLinks.map(link => (
+                    <Link
+                        key={`${link.to}-${link.label}`}
+                        to={link.to}
+                        onClick={closeMenu}
+                    >
+                        {link.label}
+                    </Link>
+                ))}
 
                 {!currentUser && (
                     <>
@@ -148,47 +103,13 @@ function Navbar() {
                     </>
                 )}
 
-                {currentUser && isAdmin && (
-                    <Link
-                        to="/superadmin"
-                        onClick={closeMenu}
-                    >
-                        Panel admin
-                    </Link>
-                )}
-
-                {currentUser && !isAdmin && isClub && (
-                    <Link
-                        to={`/club-dashboard/${currentUser.clubId}`}
-                        onClick={closeMenu}
-                    >
-                        Mi club
-                    </Link>
-                )}
-
-                {currentUser && !isAdmin && isOrganizationAdmin && (
-                    <Link
-                        to="/organization-admin"
-                        onClick={closeMenu}
-                    >
-                        Mi organización
-                    </Link>
-                )}
-
-                {currentUser && !isAdmin && !isClub && !isOrganizationAdmin && (
-                    <Link to="/profile" onClick={closeMenu}>
-                        Mi perfil
-                    </Link>
-                )}
-
                 {currentUser && (
                     <>
                         <span
                             className="navbar-user"
-                            onClick={handleUserNavigation}
-                            style={{ cursor: "pointer" }}
+                            title={experienceLabel}
                         >
-                            {currentUser.name}
+                            {currentUser.name || experienceLabel}
                         </span>
 
                         <button

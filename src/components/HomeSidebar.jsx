@@ -12,15 +12,24 @@ import { getAllClassifieds } from "../utils/classifiedsStorage";
 import { sortByNewest } from "../utils/idUtils";
 
 import {
-    getCurrentUser,
-    hasProfessionalProfile
+    getCurrentUser
 } from "../utils/authStorage";
+
+import {
+    getExperienceLabel,
+    getHomeActionsForUser,
+    getHomeExperienceCopy,
+    shouldFeatureClassifieds
+} from "../config/roleExperience";
 
 function HomeSidebar() {
 
     const navigate = useNavigate();
 
     const currentUser = getCurrentUser();
+    const roleCopy = getHomeExperienceCopy(currentUser);
+    const roleActions = getHomeActionsForUser(currentUser);
+    const showClassifieds = shouldFeatureClassifieds(currentUser);
 
     const jobs = getAllJobs(staticJobs);
 
@@ -44,15 +53,17 @@ function HomeSidebar() {
         )
         .slice(0, 2);
 
-    const latestClassifieds = [
-        ...classifieds
-    ]
-        .sort(
-            (a, b) =>
-                new Date(b.createdAt) -
-                new Date(a.createdAt)
-        )
-        .slice(0, 2);
+    const latestClassifieds = showClassifieds
+        ? [
+            ...classifieds
+        ]
+            .sort(
+                (a, b) =>
+                    new Date(b.createdAt) -
+                    new Date(a.createdAt)
+            )
+            .slice(0, 2)
+        : [];
 
     const news = [
 
@@ -112,153 +123,10 @@ function HomeSidebar() {
 
     ].slice(0, 5);
 
-    function getRoleCard() {
-
-        if (!currentUser) {
-
-            return {
-
-                title:
-                    "Entrá a la comunidad",
-
-                text:
-                    "Creá una cuenta para publicar clasificados, participar en la comunidad o activar tu perfil profesional.",
-
-                button:
-                    "Crear cuenta",
-
-                action: () =>
-                    navigate("/signup")
-
-            };
-
-        }
-
-        if (
-            currentUser.role ===
-                "superadmin" ||
-            currentUser.role ===
-                "admin"
-        ) {
-
-            return {
-
-                title:
-                    "Administración global",
-
-                text:
-                    "Gestioná usuarios, organizaciones, eventos, mensajes y actividad general de SailJobs LATAM.",
-
-                button:
-                    "Ir al superadmin",
-
-                action: () =>
-                    navigate(
-                        "/superadmin"
-                    )
-
-            };
-
-        }
-
-        if (
-            currentUser.role ===
-            "organization_admin"
-        ) {
-
-            return {
-
-                title:
-                    "Tu organización",
-
-                text:
-                    "Administrá las clases, eventos, rankings y contenido asignado a tu organización.",
-
-                button:
-                    "Ir a mi organización",
-
-                action: () =>
-                    navigate(
-                        "/organization-admin"
-                    )
-
-            };
-
-        }
-
-        if (
-            currentUser.role ===
-            "club"
-        ) {
-
-            return {
-
-                title:
-                    "Panel de tu organización",
-
-                text:
-                    "Publicá oportunidades, revisá postulaciones y proponé eventos para el calendario.",
-
-                button:
-                    "Ir a mi organización",
-
-                action: () =>
-                    navigate(
-                        `/club-dashboard/${currentUser.clubId}`
-                    )
-
-            };
-
-        }
-
-        if (
-            hasProfessionalProfile(
-                currentUser
-            )
-        ) {
-
-            return {
-
-                title:
-                    "Tu perfil profesional",
-
-                text:
-                    "Actualizá tu experiencia y CV, revisá tus postulaciones y buscá oportunidades náuticas.",
-
-                button:
-                    "Ir a mi perfil profesional",
-
-                action: () =>
-                    navigate(
-                        "/coach-dashboard"
-                    )
-
-            };
-
-        }
-
-        return {
-
-            title:
-                "Tu espacio personal",
-
-            text:
-                "Publicá clasificados, consultá eventos y activá tu perfil profesional cuando quieras.",
-
-            button:
-                "Ir a mi perfil",
-
-            action: () =>
-                navigate(
-                    "/user-dashboard"
-                )
-
-        };
-
-    }
-
-    const roleCard =
-        getRoleCard();
+    const primaryAction = roleActions[0] || {
+        label: "Ir al inicio",
+        to: "/"
+    };
 
     return (
 
@@ -271,26 +139,24 @@ function HomeSidebar() {
             >
 
                 <span className="sidebar-tag">
-                    Para vos
+                    {getExperienceLabel(currentUser)}
                 </span>
 
                 <h3>
-                    {roleCard.title}
+                    {roleCopy.tag}
                 </h3>
 
                 <p>
-                    {roleCard.text}
+                    {roleCopy.description}
                 </p>
 
                 <button
                     className={
                         "small-action-button"
                     }
-                    onClick={
-                        roleCard.action
-                    }
+                    onClick={() => navigate(primaryAction.to)}
                 >
-                    {roleCard.button}
+                    {primaryAction.label}
                 </button>
 
             </div>

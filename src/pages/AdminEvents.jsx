@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { isSuperadmin } from "../utils/permissions";
@@ -10,6 +10,7 @@ import {
 
 import {
     getStoredEvents,
+    syncEventsFromSupabase,
     updateStoredEventStatus,
     deleteStoredEvent
 } from "../utils/eventsStorage";
@@ -51,6 +52,33 @@ function AdminEvents() {
     const currentUser = getCurrentUser();
 
     const [storedEvents, setStoredEvents] = useState(getStoredEvents());
+    const [eventsMessage, setEventsMessage] = useState("");
+
+    useEffect(() => {
+        let isMounted = true;
+
+        async function loadEvents() {
+            try {
+                const syncedEvents = await syncEventsFromSupabase();
+
+                if (isMounted) {
+                    setStoredEvents(syncedEvents);
+                    setEventsMessage("");
+                }
+            } catch {
+                if (isMounted) {
+                    setStoredEvents(getStoredEvents());
+                    setEventsMessage("No se pudo sincronizar con Supabase. Mostrando datos locales.");
+                }
+            }
+        }
+
+        loadEvents();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
 
     const clubs = getAllClubs(staticClubs);
 
@@ -75,29 +103,36 @@ function AdminEvents() {
         );
     }
 
-    function refreshEvents() {
-        setStoredEvents(getStoredEvents());
+    async function refreshEvents() {
+        try {
+            const syncedEvents = await syncEventsFromSupabase();
+            setStoredEvents(syncedEvents);
+            setEventsMessage("");
+        } catch {
+            setStoredEvents(getStoredEvents());
+            setEventsMessage("No se pudo sincronizar con Supabase. Mostrando datos locales.");
+        }
     }
 
-    function handleApprove(eventId) {
-        updateStoredEventStatus(eventId, EVENT_STATUS.APPROVED);
-        refreshEvents();
+    async function handleApprove(eventId) {
+        await updateStoredEventStatus(eventId, EVENT_STATUS.APPROVED);
+        await refreshEvents();
     }
 
-    function handleReject(eventId) {
-        updateStoredEventStatus(eventId, EVENT_STATUS.REJECTED);
-        refreshEvents();
+    async function handleReject(eventId) {
+        await updateStoredEventStatus(eventId, EVENT_STATUS.REJECTED);
+        await refreshEvents();
     }
 
-    function handleDelete(eventId) {
+    async function handleDelete(eventId) {
         const confirmed = window.confirm(
             "¿Seguro que querés eliminar este evento importado o propuesto?"
         );
 
         if (!confirmed) return;
 
-        deleteStoredEvent(eventId);
-        refreshEvents();
+        await deleteStoredEvent(eventId);
+        await refreshEvents();
     }
 
     function getClub(clubId) {
@@ -294,6 +329,13 @@ function AdminEvents() {
                         </button>
                     )}
 
+                    <button
+                        className="small-action-button"
+                        onClick={() => navigate(`/calendar/${event.id}/edit`)}
+                    >
+                        Editar
+                    </button>
+
                     {event.status === EVENT_STATUS.APPROVED && (
                         <button
                             className="small-action-button"
@@ -355,6 +397,14 @@ function AdminEvents() {
                 </div>
 
             </div>
+
+            {eventsMessage && (
+                <div className="detail-card">
+                    <p style={{ color: "#b42318" }}>
+                        {eventsMessage}
+                    </p>
+                </div>
+            )}
 
             <div className="dashboard-stats">
 

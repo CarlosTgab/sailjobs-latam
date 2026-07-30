@@ -57,6 +57,7 @@ function Profile() {
     const isSuperadmin = hasSuperadminPermission(currentUser);
     const isOrganizationAdmin = normalizedRole === "organization_admin";
     const isClub = normalizedRole === "club";
+    const isManagedEntityAccount = isClub || isOrganizationAdmin;
 
     const professionalIsActive = hasProfessionalProfile(currentUser);
 
@@ -247,6 +248,130 @@ function Profile() {
             </div>
         );
     }
+
+    if (isOrganizationAdmin) {
+        const organizationId =
+            currentUser.organizationId ||
+            currentUser.entityId ||
+            null;
+
+        const organizationName =
+            currentUser.organizationName ||
+            currentUser.entityName ||
+            currentUser.name ||
+            "Mi organización";
+
+        return (
+            <div className="dashboard-page">
+                <div className="dashboard-hero">
+                    <div className="dashboard-hero-info">
+                        <div className="dashboard-avatar">
+                            ORG
+                        </div>
+
+                        <div>
+                            <h1>Cuenta organización</h1>
+
+                            <p>
+                                {organizationName}
+                            </p>
+
+                            <p>
+                                Administrá eventos, oportunidades, postulaciones
+                                y datos institucionales de tu organización náutica.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="dashboard-actions">
+                        <button
+                            className="apply-button"
+                            onClick={() => navigate("/organization-admin")}
+                        >
+                            Panel de organización
+                        </button>
+
+                        {organizationId && (
+                            <>
+                                <button
+                                    className="apply-button"
+                                    onClick={() => navigate(`/club-dashboard/${organizationId}/new-job`)}
+                                >
+                                    Publicar oportunidad
+                                </button>
+
+                                <button
+                                    className="apply-button"
+                                    onClick={() => navigate("/organization-admin/new-event")}
+                                >
+                                    Publicar evento
+                                </button>
+                            </>
+                        )}
+                    </div>
+                </div>
+
+                <div className="dashboard-stats">
+                    <div className="dashboard-stat-card">
+                        <h2>ORG</h2>
+                        <p>Tipo de cuenta</p>
+                    </div>
+
+                    <div className="dashboard-stat-card">
+                        <h2>{currentUser.permissions?.length || 0}</h2>
+                        <p>Permisos institucionales</p>
+                    </div>
+
+                    <div className="dashboard-stat-card">
+                        <h2>{organizationId ? "Sí" : "No"}</h2>
+                        <p>Organización vinculada</p>
+                    </div>
+                </div>
+
+                <div className="detail-card">
+                    <div className="section-header">
+                        <h2>Datos de la cuenta organización</h2>
+                    </div>
+
+                    <p>
+                        <strong>Organización:</strong>{" "}
+                        {organizationName}
+                    </p>
+
+                    <p>
+                        <strong>Usuario administrador:</strong>{" "}
+                        {currentUser.name}
+                    </p>
+
+                    <p>
+                        <strong>Email:</strong>{" "}
+                        {currentUser.email}
+                    </p>
+
+                    <p>
+                        <strong>Ubicación:</strong>{" "}
+                        {
+                            [currentUser.city, currentUser.country]
+                                .filter(Boolean)
+                                .join(", ") ||
+                            "No informada"
+                        }
+                    </p>
+
+                    <p>
+                        <strong>Rol interno:</strong>{" "}
+                        {currentUser.role || "organization_admin"}
+                    </p>
+
+                    <p>
+                        <strong>Permisos:</strong>{" "}
+                        {currentUser.permissions?.join(", ") || "organization_admin"}
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
 
     function getInitials(userName) {
         if (!userName) {
@@ -476,7 +601,7 @@ function Profile() {
                         {editPersonalMode ? "Cerrar edición" : "Editar perfil"}
                     </button>
 
-                    {!professionalIsActive && !isClub && (
+                    {!professionalIsActive && !isManagedEntityAccount && (
                         <button
                             className="apply-button"
                             onClick={handleActivateProfessionalProfile}
@@ -485,7 +610,7 @@ function Profile() {
                         </button>
                     )}
 
-                    {professionalIsActive && !isClub && (
+                    {professionalIsActive && !isManagedEntityAccount && (
                         <button
                             className="apply-button"
                             onClick={() => setEditProfessionalMode(!editProfessionalMode)}
@@ -523,7 +648,7 @@ function Profile() {
                         </button>
                     )}
 
-                    {!isClub && (
+                    {!isManagedEntityAccount && (
                         <button
                             className="apply-button"
                             onClick={() => navigate("/classifieds/new")}
@@ -708,7 +833,7 @@ function Profile() {
 
             </div>
 
-            {!isClub && (
+            {!isManagedEntityAccount && (
                 <div className="detail-card">
 
                     <div className="section-header">
@@ -1062,7 +1187,7 @@ function Profile() {
 
                     <h2>Mis clasificados</h2>
 
-                    {!isClub && (
+                    {!isManagedEntityAccount && (
                         <button
                             className="small-action-button"
                             onClick={() => navigate("/classifieds/new")}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -10,7 +10,10 @@ import {
 import LocationFilterSelects from "../components/LocationFilterSelects";
 
 import staticJobs from "../data/jobs";
-import { getAllJobs } from "../utils/jobsStorage";
+import {
+    getAllJobs,
+    syncJobsFromSupabase
+} from "../utils/jobsStorage";
 
 import staticClubs from "../data/clubs";
 import { getAllClubs } from "../utils/clubsStorage";
@@ -51,8 +54,38 @@ function getLocationLabel(job) {
 function Jobs() {
     const navigate = useNavigate();
 
-    const jobs = getAllJobs(staticJobs);
+    const [jobs, setJobs] = useState(() => getAllJobs(staticJobs));
     const clubs = getAllClubs(staticClubs);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        async function loadJobs() {
+            try {
+                const syncedJobs = await syncJobsFromSupabase(staticJobs);
+
+                if (isMounted) {
+                    setJobs(syncedJobs);
+                }
+            } catch {
+                if (isMounted) {
+                    setJobs(getAllJobs(staticJobs));
+                }
+            }
+        }
+
+        function refreshFromLocalCache() {
+            setJobs(getAllJobs(staticJobs));
+        }
+
+        loadJobs();
+        window.addEventListener("jobsChanged", refreshFromLocalCache);
+
+        return () => {
+            isMounted = false;
+            window.removeEventListener("jobsChanged", refreshFromLocalCache);
+        };
+    }, []);
 
     const [search, setSearch] = useState("");
     const [selectedCategory, setSelectedCategory] = useState("");

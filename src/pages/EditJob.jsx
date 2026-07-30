@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
 import {
@@ -20,7 +20,8 @@ import staticJobs from "../data/jobs";
 import {
     getAllJobs,
     updateStoredJob,
-    isStoredJob
+    isStoredJob,
+    syncJobsFromSupabase
 } from "../utils/jobsStorage";
 
 import staticClubs from "../data/clubs";
@@ -80,12 +81,48 @@ function EditJob() {
 
     const currentUser = getCurrentUser();
 
-    const jobs = getAllJobs(staticJobs);
+    const [jobs, setJobs] = useState(() => getAllJobs(staticJobs));
+    const [isLoadingJob, setIsLoadingJob] = useState(true);
+
     const clubs = getAllClubs(staticClubs);
     const allEvents = getAllEvents(staticEvents);
 
+    useEffect(() => {
+        let isMounted = true;
+
+        async function loadJobs() {
+            try {
+                const syncedJobs = await syncJobsFromSupabase(staticJobs);
+
+                if (isMounted) {
+                    setJobs(syncedJobs);
+                    setIsLoadingJob(false);
+                }
+            } catch {
+                if (isMounted) {
+                    setJobs(getAllJobs(staticJobs));
+                    setIsLoadingJob(false);
+                }
+            }
+        }
+
+        function refreshFromLocalCache() {
+            setJobs(getAllJobs(staticJobs));
+        }
+
+        loadJobs();
+        window.addEventListener("jobsChanged", refreshFromLocalCache);
+
+        return () => {
+            isMounted = false;
+            window.removeEventListener("jobsChanged", refreshFromLocalCache);
+        };
+    }, []);
+
     const job = jobs.find(
-        item => sameId(item.id, id)
+        item =>
+            sameId(item.id, id) ||
+            sameId(item.legacyId, id)
     );
 
     const club = job
@@ -155,6 +192,45 @@ function EditJob() {
     );
 
     const [formMessage, setFormMessage] = useState("");
+
+    useEffect(() => {
+        if (!job) return;
+
+        setTitle(job.title || "");
+        setCategory(job.category || "Coach");
+        setOpportunityType(job.opportunityType || OPPORTUNITY_TYPES.EMPLOYMENT);
+        setCompensationType(job.compensationType || COMPENSATION_TYPES.TO_CONFIRM);
+        setCompensationDetails(job.compensationDetails || job.salary || "");
+        setDuration(job.duration || "");
+        setOpenings(job.openings || 1);
+        setApplicationDeadline(job.applicationDeadline || "");
+        setEventId(job.eventId || "");
+        setEligibleProfiles(
+            Array.isArray(job.eligibleProfiles)
+                ? job.eligibleProfiles
+                : [ELIGIBLE_PROFILE_TYPES.PROFESSIONAL]
+        );
+        setCountry(job.country || club?.country || "");
+        setCountryCode(job.countryCode || "");
+        setState(job.state || "");
+        setStateCode(job.stateCode || "");
+        setCity(getInitialCityName(job));
+        setCustomCity("");
+        setDescription(job.description || "");
+        setRequirementsText(
+            Array.isArray(job.requirements)
+                ? job.requirements.join("\n")
+                : ""
+        );
+    }, [job?.id]);
+
+    if (!job && isLoadingJob) {
+        return (
+            <div className="dashboard-page">
+                <h1>Cargando oportunidad...</h1>
+            </div>
+        );
+    }
 
     if (!job) {
         return (
@@ -313,7 +389,7 @@ function EditJob() {
         return true;
     }
 
-    function handleSubmit(event) {
+    async function handleSubmit(event) {
         event.preventDefault();
 
         setFormMessage("");
@@ -329,11 +405,17 @@ function EditJob() {
             return;
         }
 
-        updateStoredJob(job.id, {
+        try {
+            const updatedJob = await updateStoredJob(job.id, {
             clubId: job.clubId,
             clubName: job.clubName || club?.name || currentUser?.clubName || "Mi organización",
+            organizationId: job.organizationId || (job.ownerType === "organization" ? job.clubId : ""),
             organizationName: job.organizationName || job.clubName || club?.name || currentUser?.clubName || "Mi organización",
+            ownerType: job.ownerType || club?.entityType || currentUser?.entityType || (currentUser?.role === "organization_admin" ? "organization" : "club"),
+            ownerId: job.ownerId || job.clubId,
+            ownerName: job.ownerName || job.organizationName || job.clubName || club?.name || currentUser?.clubName || "Mi organización",
             createdBy: job.createdBy || currentUser?.id || null,
+            updatedBy: currentUser?.id || null,
 
             title: title.trim(),
             category,
@@ -362,11 +444,14 @@ function EditJob() {
 
             description: description.trim(),
             requirements: parseRequirements()
-        });
+            });
 
-        alert("Oportunidad actualizada correctamente.");
+            alert("Oportunidad actualizada correctamente.");
 
-        navigate(`/jobs/${job.id}`);
+            navigate(`/jobs/${updatedJob.id}`);
+        } catch {
+            setFormMessage("No se pudo actualizar la oportunidad. Revisá la conexión e intentá nuevamente.");
+        }
     }
 
     return (

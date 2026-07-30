@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -8,7 +8,11 @@ import {
 import LocationFilterSelects from "../components/LocationFilterSelects";
 
 import staticEvents from "../data/events";
-import { getApprovedEvents } from "../utils/eventsStorage";
+import { getApprovedEvents, syncEventsFromSupabase } from "../utils/eventsStorage";
+import { getCurrentUser } from "../utils/authStorage";
+import {
+    canManageEvent
+} from "../utils/permissions";
 
 function normalizeText(value) {
     return String(value || "")
@@ -40,9 +44,11 @@ function getLocationLabel(event) {
         : "Ubicación no informada";
 }
 
+
 function Calendar() {
 
     const navigate = useNavigate();
+    const currentUser = getCurrentUser();
 
     const [search, setSearch] = useState("");
     const [selectedClass, setSelectedClass] = useState("");
@@ -56,8 +62,64 @@ function Calendar() {
 
     const [selectedCity, setSelectedCity] = useState("");
 
-    const events = getApprovedEvents(staticEvents)
-        .sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+    const [events, setEvents] = useState(() =>
+        getApprovedEvents(staticEvents)
+            .sort((a, b) => new Date(a.startDate) - new Date(b.startDate))
+    );
+
+    const [eventsLoading, setEventsLoading] = useState(true);
+    const [eventsError, setEventsError] = useState("");
+
+    useEffect(() => {
+        let isMounted = true;
+
+        async function loadEvents() {
+            try {
+                setEventsLoading(true);
+
+                const syncedEvents = await syncEventsFromSupabase(staticEvents);
+
+                if (!isMounted) return;
+
+                setEvents(
+                    syncedEvents
+                        .filter(event =>
+                            event.status === "approved" ||
+                            event.status === "published" ||
+                            event.status === undefined
+                        )
+                        .sort((a, b) => new Date(a.startDate) - new Date(b.startDate))
+                );
+
+                setEventsError("");
+            } catch (error) {
+                if (!isMounted) return;
+
+                setEventsError(
+                    "No se pudo sincronizar el calendario online. Mostrando datos guardados localmente."
+                );
+            } finally {
+                if (isMounted) {
+                    setEventsLoading(false);
+                }
+            }
+        }
+
+        function refreshFromLocalCache() {
+            setEvents(
+                getApprovedEvents(staticEvents)
+                    .sort((a, b) => new Date(a.startDate) - new Date(b.startDate))
+            );
+        }
+
+        loadEvents();
+        window.addEventListener("eventsChanged", refreshFromLocalCache);
+
+        return () => {
+            isMounted = false;
+            window.removeEventListener("eventsChanged", refreshFromLocalCache);
+        };
+    }, []);
 
     const classes = [
         ...new Set([
@@ -254,6 +316,20 @@ function Calendar() {
 
             </div>
 
+            {eventsLoading && (
+                <div className="detail-card">
+                    <p>Sincronizando calendario online...</p>
+                </div>
+            )}
+
+            {eventsError && (
+                <div className="detail-card">
+                    <p style={{ color: "#b42318" }}>
+                        {eventsError}
+                    </p>
+                </div>
+            )}
+
             <div className="event-grid">
 
                 {filteredEvents.length > 0 ? (
@@ -314,6 +390,20 @@ function Calendar() {
                                 <p>
                                     Fuente: <strong>{event.source}</strong>
                                 </p>
+                            )}
+
+                            {canManageEvent(currentUser, event) && (
+                                <button
+                                    type="button"
+                                    className="small-action-button"
+                                    onClick={(clickEvent) => {
+                                        clickEvent.preventDefault();
+                                        clickEvent.stopPropagation();
+                                        navigate(`/calendar/${event.id}/edit`);
+                                    }}
+                                >
+                                    Editar evento
+                                </button>
                             )}
 
                         </div>

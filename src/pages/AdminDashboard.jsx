@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -9,14 +10,18 @@ import staticClubs from "../data/clubs";
 import { getAllClubs } from "../utils/clubsStorage";
 
 import staticJobs from "../data/jobs";
-import { getAllJobsForAdmin } from "../utils/jobsStorage";
+import {
+    getAllJobsForAdmin,
+    syncJobsFromSupabase
+} from "../utils/jobsStorage";
 
 import { getAllClassifiedsForAdmin } from "../utils/classifiedsStorage";
 
 import staticEvents from "../data/events";
 import {
     getAllEvents,
-    getImportedEventsBySource
+    getImportedEventsBySource,
+    syncEventsFromSupabase
 } from "../utils/eventsStorage";
 
 import { getApplications } from "../utils/applicationsStorage";
@@ -33,10 +38,47 @@ function AdminDashboard() {
 
     const users = getUsers();
     const clubs = getAllClubs(staticClubs);
-    const jobs = getAllJobsForAdmin(staticJobs);
+    const [jobs, setJobs] = useState(() => getAllJobsForAdmin(staticJobs));
     const classifieds = getAllClassifiedsForAdmin();
-    const events = getAllEvents(staticEvents);
-    const fayEvents = getImportedEventsBySource("fay");
+    const [events, setEvents] = useState(() => getAllEvents(staticEvents));
+    const [fayEvents, setFayEvents] = useState(() => getImportedEventsBySource("fay"));
+
+    useEffect(() => {
+        let isMounted = true;
+
+        async function loadData() {
+            try {
+                const [syncedEvents, syncedJobs] = await Promise.all([
+                    syncEventsFromSupabase(staticEvents),
+                    syncJobsFromSupabase(staticJobs)
+                ]);
+
+                if (isMounted) {
+                    setEvents(syncedEvents);
+                    setJobs(syncedJobs);
+                    setFayEvents(getImportedEventsBySource("fay"));
+                }
+            } catch {
+                if (isMounted) {
+                    setEvents(getAllEvents(staticEvents));
+                    setJobs(getAllJobsForAdmin(staticJobs));
+                    setFayEvents(getImportedEventsBySource("fay"));
+                }
+            }
+        }
+
+        function refreshJobsFromLocalCache() {
+            setJobs(getAllJobsForAdmin(staticJobs));
+        }
+
+        loadData();
+        window.addEventListener("jobsChanged", refreshJobsFromLocalCache);
+
+        return () => {
+            isMounted = false;
+            window.removeEventListener("jobsChanged", refreshJobsFromLocalCache);
+        };
+    }, []);
     const applications = getApplications();
 
     const professionalUsers = users.filter(

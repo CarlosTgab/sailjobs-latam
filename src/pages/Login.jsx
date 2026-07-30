@@ -9,28 +9,8 @@ import {
 } from "../utils/supabaseAuth";
 
 import {
-    isSuperadmin,
-    normalizeUserRole
-} from "../utils/permissions";
-
-function getRedirectPath(user) {
-    const role =
-        normalizeUserRole(user);
-
-    if (isSuperadmin(user)) {
-        return "/superadmin";
-    }
-
-    if (role === "club" && user.clubId) {
-        return `/club-dashboard/${user.clubId}`;
-    }
-
-    if (role === "organization_admin") {
-        return "/organization-admin";
-    }
-
-    return "/profile";
-}
+    getPrimaryDashboardPath
+} from "../config/roleExperience";
 
 function Login() {
     const navigate =
@@ -70,7 +50,7 @@ function Login() {
                 );
 
             navigate(
-                getRedirectPath(user)
+                getPrimaryDashboardPath(user)
             );
         } catch (error) {
             setFormMessage(

@@ -1,7 +1,8 @@
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
 import staticEvents from "../data/events";
-import { getAllEvents } from "../utils/eventsStorage";
+import { getAllEvents, syncEventsFromSupabase } from "../utils/eventsStorage";
 
 import staticClubs from "../data/clubs";
 import { getAllClubs } from "../utils/clubsStorage";
@@ -9,6 +10,10 @@ import { getAllClubs } from "../utils/clubsStorage";
 import staticJobs from "../data/jobs";
 import { getAllJobs } from "../utils/jobsStorage";
 import { sameId } from "../utils/idUtils";
+import { getCurrentUser } from "../utils/authStorage";
+import {
+    canManageEvent
+} from "../utils/permissions";
 
 import {
     OPPORTUNITY_TYPE_LABELS,
@@ -103,22 +108,63 @@ function getEventOrganizerLabel(event, club) {
     return "Organizador";
 }
 
+
 function EventDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
 
-    const events = getAllEvents(staticEvents);
+    const currentUser = getCurrentUser();
+
+    const [events, setEvents] = useState(() => getAllEvents(staticEvents));
+    const [isLoadingOnlineEvent, setIsLoadingOnlineEvent] = useState(true);
+
     const clubs = getAllClubs(staticClubs);
     const jobs = getAllJobs(staticJobs);
 
+    useEffect(() => {
+        let isMounted = true;
+
+        async function loadEvents() {
+            try {
+                const syncedEvents = await syncEventsFromSupabase(staticEvents);
+
+                if (isMounted) {
+                    setEvents(syncedEvents);
+                }
+            } catch {
+                if (isMounted) {
+                    setEvents(getAllEvents(staticEvents));
+                }
+            } finally {
+                if (isMounted) {
+                    setIsLoadingOnlineEvent(false);
+                }
+            }
+        }
+
+        function refreshFromLocalCache() {
+            setEvents(getAllEvents(staticEvents));
+        }
+
+        loadEvents();
+        window.addEventListener("eventsChanged", refreshFromLocalCache);
+
+        return () => {
+            isMounted = false;
+            window.removeEventListener("eventsChanged", refreshFromLocalCache);
+        };
+    }, []);
+
     const event = events.find(
-        item => sameId(item.id, id)
+        item =>
+            sameId(item.id, id) ||
+            sameId(item.legacyId, id)
     );
 
     if (!event) {
         return (
             <div className="dashboard-page">
-                <h1>Evento no encontrado</h1>
+                <h1>{isLoadingOnlineEvent ? "Buscando evento..." : "Evento no encontrado"}</h1>
 
                 <button
                     className="back-button"
@@ -136,6 +182,7 @@ function EventDetail() {
 
     const organizerName = getEventOrganizerName(event, club);
     const organizerLabel = getEventOrganizerLabel(event, club);
+    const userCanEditEvent = canManageEvent(currentUser, event);
 
     const linkedOpportunities = jobs.filter(
         job => sameId(job.eventId, event.id)
@@ -208,7 +255,18 @@ function EventDetail() {
             </div>
 
             <div className="detail-card">
-                <h2>Información del evento</h2>
+                <div className="section-header">
+                    <h2>Información del evento</h2>
+
+                    {userCanEditEvent && (
+                        <button
+                            className="small-action-button"
+                            onClick={() => navigate(`/calendar/${event.id}/edit`)}
+                        >
+                            Editar evento
+                        </button>
+                    )}
+                </div>
 
                 <p>
                     <strong>Clase:</strong>{" "}

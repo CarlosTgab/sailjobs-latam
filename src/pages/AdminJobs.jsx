@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import staticJobs from "../data/jobs";
@@ -7,7 +7,8 @@ import staticClubs from "../data/clubs";
 import {
     getAllJobsForAdmin,
     hideStoredJob,
-    restoreStoredJob
+    restoreStoredJob,
+    syncJobsFromSupabase
 } from "../utils/jobsStorage";
 
 import { getAllClubs } from "../utils/clubsStorage";
@@ -31,8 +32,8 @@ function getJobCityName(job) {
         return job.cityName;
     }
 
-    if (job.city && job.city.includes(",")) {
-        return job.city.split(",")[0].trim();
+    if (job.city && String(job.city).includes(",")) {
+        return String(job.city).split(",")[0].trim();
     }
 
     return job.city || "";
@@ -54,12 +55,44 @@ function AdminJobs() {
     const navigate = useNavigate();
     const currentUser = getCurrentUser();
 
-    const [refreshKey, setRefreshKey] = useState(0);
+    const [jobs, setJobs] = useState(() => getAllJobsForAdmin(staticJobs));
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
+    const [syncMessage, setSyncMessage] = useState("");
 
-    const jobs = getAllJobsForAdmin(staticJobs);
     const clubs = getAllClubs(staticClubs);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        async function loadJobs() {
+            try {
+                const syncedJobs = await syncJobsFromSupabase(staticJobs);
+
+                if (isMounted) {
+                    setJobs(syncedJobs);
+                    setSyncMessage("");
+                }
+            } catch {
+                if (isMounted) {
+                    setJobs(getAllJobsForAdmin(staticJobs));
+                    setSyncMessage("No se pudo sincronizar con Supabase. Mostrando datos locales.");
+                }
+            }
+        }
+
+        function refreshFromLocalCache() {
+            setJobs(getAllJobsForAdmin(staticJobs));
+        }
+
+        loadJobs();
+        window.addEventListener("jobsChanged", refreshFromLocalCache);
+
+        return () => {
+            isMounted = false;
+            window.removeEventListener("jobsChanged", refreshFromLocalCache);
+        };
+    }, []);
 
     if (!currentUser || !isSuperadmin(currentUser)) {
         return (
@@ -78,10 +111,6 @@ function AdminJobs() {
                 </button>
             </div>
         );
-    }
-
-    function refresh() {
-        setRefreshKey(refreshKey + 1);
     }
 
     function getClub(clubId) {
@@ -122,7 +151,7 @@ function AdminJobs() {
         return "status-pill approved";
     }
 
-    function handleHide(jobId) {
+    async function handleHide(job) {
         const confirmed = window.confirm(
             "¿Seguro que querés dar de baja esta oportunidad? No se verá en la página pública."
         );
@@ -131,11 +160,11 @@ function AdminJobs() {
             return;
         }
 
-        hideStoredJob(jobId);
-        refresh();
+        await hideStoredJob(job.id, "Moderada por superadmin", job);
+        setJobs(getAllJobsForAdmin(staticJobs));
     }
 
-    function handleRestore(jobId) {
+    async function handleRestore(job) {
         const confirmed = window.confirm(
             "¿Querés restaurar esta oportunidad y volver a mostrarla públicamente?"
         );
@@ -144,8 +173,8 @@ function AdminJobs() {
             return;
         }
 
-        restoreStoredJob(jobId);
-        refresh();
+        await restoreStoredJob(job.id, job);
+        setJobs(getAllJobsForAdmin(staticJobs));
     }
 
     const activeJobs = jobs.filter(job => job.status !== "hidden");
@@ -164,7 +193,8 @@ function AdminJobs() {
                 job.description,
                 club?.name,
                 job.clubName,
-                job.organizationName
+                job.organizationName,
+                job.ownerName
             ]
                 .filter(Boolean)
                 .join(" ")
@@ -210,6 +240,12 @@ function AdminJobs() {
                     </button>
                 </div>
             </div>
+
+            {syncMessage && (
+                <div className="detail-card">
+                    <p>{syncMessage}</p>
+                </div>
+            )}
 
             <div className="dashboard-stats">
                 <div className="dashboard-stat-card">
@@ -281,7 +317,7 @@ function AdminJobs() {
 
                                 <p>
                                     <strong>Club / organización:</strong>{" "}
-                                    {club?.name || job.clubName || job.organizationName || "No informado"}
+                                    {club?.name || job.clubName || job.organizationName || job.ownerName || "No informado"}
                                 </p>
 
                                 <p>
@@ -312,14 +348,14 @@ function AdminJobs() {
                                     {!isHidden ? (
                                         <button
                                             className="reject-button"
-                                            onClick={() => handleHide(job.id)}
+                                            onClick={() => handleHide(job)}
                                         >
                                             Dar de baja
                                         </button>
                                     ) : (
                                         <button
                                             className="accept-button"
-                                            onClick={() => handleRestore(job.id)}
+                                            onClick={() => handleRestore(job)}
                                         >
                                             Restaurar
                                         </button>
