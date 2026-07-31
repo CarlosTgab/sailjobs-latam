@@ -14,7 +14,7 @@ import { getAllJobs } from "../utils/jobsStorage";
 import staticEvents from "../data/events";
 import { getAllEvents } from "../utils/eventsStorage";
 
-import { getApplications } from "../utils/applicationsStorage";
+import useApplications from "../hooks/useApplications";
 
 import { getCurrentUser } from "../utils/authStorage";
 import { canManageClub } from "../utils/permissions";
@@ -55,6 +55,7 @@ function getLocationLabel(entity) {
 }
 
 function ClubDetail() {
+    const { applications } = useApplications();
     const { id } = useParams();
     const navigate = useNavigate();
 
@@ -63,7 +64,6 @@ function ClubDetail() {
     const clubs = getAllClubs(staticClubs);
     const jobs = getAllJobs(staticJobs);
     const events = getAllEvents(staticEvents);
-    const applications = getApplications();
 
     const club = clubs.find(
         item => sameId(item.id, id)

@@ -33,7 +33,7 @@ import {
     isPublishedEvent
 } from "../utils/eventsStorage";
 
-import { getApplications } from "../utils/applicationsStorage";
+import useApplications from "../hooks/useApplications";
 import { getAllClassifieds } from "../utils/classifiedsStorage";
 import { sameId, hasId, sortByNewest } from "../utils/idUtils";
 
@@ -152,6 +152,8 @@ function jobBelongsToEntity(job, entityId, entityName) {
 function Home() {
     const navigate = useNavigate();
 
+    const { applications } = useApplications();
+
     const currentUser = getCurrentUser();
     const experienceType = getExperienceType(currentUser);
     const homeCopy = getHomeExperienceCopy(currentUser);
@@ -192,7 +194,6 @@ function Home() {
     }, []);
     const clubs = getAllClubs(staticClubs);
     const events = getAllEvents(staticEvents);
-    const applications = getApplications();
     const classifieds = getAllClassifieds();
 
     const professionals = users.filter(user =>

@@ -22,9 +22,7 @@ import {
     normalizeUserRole
 } from "../utils/permissions";
 
-import {
-    getApplications
-} from "../utils/applicationsStorage";
+import useApplications from "../hooks/useApplications";
 
 import {
     getAllClassifieds
@@ -46,6 +44,10 @@ function Profile() {
     const navigate = useNavigate();
 
     const [currentUser, setCurrentUser] = useState(getCurrentUser());
+
+    const {
+        applications: allApplications
+    } = useApplications();
 
     const [editPersonalMode, setEditPersonalMode] = useState(false);
     const [editProfessionalMode, setEditProfessionalMode] = useState(false);
@@ -130,7 +132,7 @@ function Profile() {
     const clubs = getAllClubs(staticClubs);
 
     const applications = currentUser
-        ? getApplications()
+        ? allApplications
             .filter(application =>
                 sameId(application.userId, currentUser.id))
             .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))

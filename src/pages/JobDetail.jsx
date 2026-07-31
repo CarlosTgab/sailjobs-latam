@@ -36,9 +36,10 @@ import {
 } from "../utils/permissions";
 
 import {
-    getApplications,
     saveApplication
 } from "../utils/applicationsStorage";
+
+import useApplications from "../hooks/useApplications";
 
 
 function getJobCityName(job) {
@@ -95,6 +96,9 @@ function JobDetail() {
 
     const currentUserIsSuperadmin =
         isSuperadmin(currentUser);
+
+    const { applications } =
+        useApplications();
 
     const professionalProfile =
         currentUser?.professionalProfile || {};
@@ -237,6 +241,11 @@ function JobDetail() {
         setFormMessage
     ] = useState("");
 
+    const [
+        isSubmittingApplication,
+        setIsSubmittingApplication
+    ] = useState(false);
+
     if (!job && isLoadingJob) {
         return (
             <div className="dashboard-page">
@@ -282,9 +291,6 @@ function JobDetail() {
         canManageThisJob &&
         jobWasCreatedInApp &&
         !currentUserIsSuperadmin;
-
-    const applications =
-        getApplications();
 
     const alreadyApplied =
         currentUser &&
@@ -374,7 +380,7 @@ function JobDetail() {
         setShowApplyModal(true);
     }
 
-    function handleSubmitApplication(
+    async function handleSubmitApplication(
         event
     ) {
 
@@ -439,9 +445,11 @@ function JobDetail() {
                 : currentProfile.cvFileName ||
                 "";
 
-        saveApplication({
+        setIsSubmittingApplication(true);
+        setFormMessage("");
 
-            id: Date.now(),
+        try {
+            await saveApplication({
 
             userId:
                 currentUser.id,
@@ -451,6 +459,18 @@ function JobDetail() {
 
             clubId:
                 job.clubId,
+
+            organizationId:
+                job.organizationId ||
+                (
+                    job.ownerType === "organization"
+                        ? job.ownerId
+                        : null
+                ),
+
+            ownerType:
+                job.ownerType ||
+                "club",
 
             name:
                 name.trim(),
@@ -555,19 +575,24 @@ function JobDetail() {
             createdAt:
                 new Date().toISOString()
 
-        });
+            });
 
-        setShowApplyModal(false);
+            setShowApplyModal(false);
+            setFormMessage("");
+            setMessage("");
+            setCv(null);
 
-        setFormMessage("");
-
-        setMessage("");
-
-        setCv(null);
-
-        alert(
-            "Postulación enviada correctamente."
-        );
+            alert(
+                "Postulación enviada correctamente."
+            );
+        } catch (error) {
+            setFormMessage(
+                error?.message ||
+                "No se pudo enviar la postulación. Probá nuevamente."
+            );
+        } finally {
+            setIsSubmittingApplication(false);
+        }
     }
 
     async function handleDeleteJob() {
@@ -1178,13 +1203,18 @@ function JobDetail() {
                                 <button
                                     type="button"
                                     className="accept-button"
+                                    disabled={isSubmittingApplication}
                                     onClick={(event) => {
                                         event.preventDefault();
                                         event.stopPropagation();
                                         handleSubmitApplication(event);
                                     }}
                                 >
-                                    Enviar postulación
+                                    {
+                                        isSubmittingApplication
+                                            ? "Enviando..."
+                                            : "Enviar postulación"
+                                    }
                                 </button>
 
                             </div>

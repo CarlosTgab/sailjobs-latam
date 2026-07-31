@@ -27,7 +27,7 @@ import {
 import staticEvents from "../data/events";
 import { getAllEvents } from "../utils/eventsStorage";
 
-import { getApplications } from "../utils/applicationsStorage";
+import useApplications from "../hooks/useApplications";
 
 import {
     OPPORTUNITY_TYPE_LABELS,
@@ -37,6 +37,8 @@ import {
 function ClubDashboard() {
     const { clubId } = useParams();
     const navigate = useNavigate();
+
+    const { applications } = useApplications();
 
     const clubs = getAllClubs(staticClubs);
     const [jobs, setJobs] = useState(() => getAllJobs(staticJobs));
@@ -71,7 +73,6 @@ function ClubDashboard() {
         };
     }, []);
     const events = getAllEvents(staticEvents);
-    const applications = getApplications();
 
     const currentUser =
         getCurrentUser();

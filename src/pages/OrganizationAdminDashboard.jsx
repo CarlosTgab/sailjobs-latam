@@ -28,7 +28,7 @@ import {
     syncJobsFromSupabase
 } from "../utils/jobsStorage";
 
-import { getApplications } from "../utils/applicationsStorage";
+import useApplications from "../hooks/useApplications";
 import { sameId, hasId, sortByNewest } from "../utils/idUtils";
 
 import {
@@ -74,6 +74,8 @@ function getStatusLabel(status) {
 
 function OrganizationAdminDashboard() {
     const navigate = useNavigate();
+
+    const { applications } = useApplications();
     const currentUser = getCurrentUser();
 
     const [allEvents, setAllEvents] = useState(() => getAllEvents(staticEvents));
@@ -176,7 +178,6 @@ function OrganizationAdminDashboard() {
         ? currentUser.managedClasses
         : [];
 
-    const applications = getApplications();
 
     async function refreshEvents() {
         try {
