@@ -6,9 +6,7 @@ import {
 import { sameId } from "../utils/idUtils";
 
 
-import {
-    getApplications
-} from "../utils/applicationsStorage";
+import useApplications from "../hooks/useApplications";
 
 import {
     getCurrentUser,
@@ -38,8 +36,11 @@ function ApplicantDetail() {
     const currentUser =
         getCurrentUser();
 
-    const applications =
-        getApplications();
+    const {
+        applications,
+        isLoadingApplications,
+        applicationsError
+    } = useApplications();
 
     const jobs =
         getAllJobs(staticJobs);
@@ -49,6 +50,14 @@ function ApplicantDetail() {
             item =>
                 sameId(item.id, id)
         );
+
+    if (!application && isLoadingApplications) {
+        return (
+            <div className="dashboard-page">
+                <h1>Cargando postulación...</h1>
+            </div>
+        );
+    }
 
     if (!application) {
         return (
@@ -60,8 +69,10 @@ function ApplicantDetail() {
                 </h1>
 
                 <p>
-                    La postulación solicitada no existe
-                    o fue eliminada.
+                    {
+                        applicationsError ||
+                        "La postulación solicitada no existe o fue eliminada."
+                    }
                 </p>
 
                 <button
@@ -257,7 +268,7 @@ function ApplicantDetail() {
         if (isOwnApplication) {
 
             navigate(
-                "/coach-dashboard"
+                "/profile"
             );
 
             return;

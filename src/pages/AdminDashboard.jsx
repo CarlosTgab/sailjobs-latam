@@ -24,7 +24,7 @@ import {
     syncEventsFromSupabase
 } from "../utils/eventsStorage";
 
-import { getApplications } from "../utils/applicationsStorage";
+import useApplications from "../hooks/useApplications";
 import { sameId, sortByNewest } from "../utils/idUtils";
 
 import {
@@ -35,6 +35,8 @@ import {
 
 function AdminDashboard() {
     const navigate = useNavigate();
+
+    const { applications } = useApplications();
 
     const users = getUsers();
     const clubs = getAllClubs(staticClubs);
@@ -79,7 +81,6 @@ function AdminDashboard() {
             window.removeEventListener("jobsChanged", refreshJobsFromLocalCache);
         };
     }, []);
-    const applications = getApplications();
 
     const professionalUsers = users.filter(
         user => hasProfessionalProfile(user)

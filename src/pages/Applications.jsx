@@ -22,13 +22,15 @@ import {
 import staticClubs from "../data/clubs";
 
 import {
-    getAllClubs
+    getAllClubs,
+    isOrganizationEntity
 } from "../utils/clubsStorage";
 
 import {
-    getApplications,
     updateApplicationStatus
 } from "../utils/applicationsStorage";
+
+import useApplications from "../hooks/useApplications";
 
 import {
     getUserById
@@ -42,12 +44,12 @@ function Applications() {
     const navigate =
         useNavigate();
 
-    const [
+    const {
         applications,
-        setApplications
-    ] = useState(
-        getApplications()
-    );
+        isLoadingApplications,
+        applicationsError,
+        refreshApplications
+    } = useApplications();
 
     const [
         selectedStatus,
@@ -75,6 +77,9 @@ function Applications() {
             item =>
                 sameId(item.id, clubId)
         );
+
+    const organizationAccount =
+        isOrganizationEntity(club);
 
     const clubJobs =
         jobs.filter(
@@ -201,14 +206,6 @@ function Applications() {
                     new Date(a.createdAt)
             );
 
-    function refreshApplications() {
-
-        setApplications(
-            getApplications()
-        );
-
-    }
-
     function getJob(jobId) {
 
         return jobs.find(
@@ -236,21 +233,28 @@ function getProfessionalProfile(
 
 }
 
-function handleStatusChange(
+async function handleStatusChange(
     applicationId,
     newStatus
 ) {
 
-    updateApplicationStatus(
-        applicationId,
-        newStatus
-    );
+    try {
+        await updateApplicationStatus(
+            applicationId,
+            newStatus
+        );
 
-    refreshApplications();
+        refreshApplications();
+    } catch (error) {
+        alert(
+            error?.message ||
+            "No se pudo actualizar la postulación."
+        );
+    }
 
 }
 
-function handleAccept(
+async function handleAccept(
     applicationId
 ) {
 
@@ -263,14 +267,14 @@ function handleAccept(
         return;
     }
 
-    handleStatusChange(
+    await handleStatusChange(
         applicationId,
         APPLICATION_STATUS.ACCEPTED
     );
 
 }
 
-function handleReject(
+async function handleReject(
     applicationId
 ) {
 
@@ -283,18 +287,18 @@ function handleReject(
         return;
     }
 
-    handleStatusChange(
+    await handleStatusChange(
         applicationId,
         APPLICATION_STATUS.REJECTED
     );
 
 }
 
-function handleReturnToPending(
+async function handleReturnToPending(
     applicationId
 ) {
 
-    handleStatusChange(
+    await handleStatusChange(
         applicationId,
         APPLICATION_STATUS.PENDING
     );
@@ -387,7 +391,9 @@ return (
             className="back-button"
             onClick={() =>
                 navigate(
-                    `/club-dashboard/${clubId}`
+                    organizationAccount
+                        ? "/organization-admin"
+                        : `/club-dashboard/${clubId}`
                 )
             }
         >
@@ -436,6 +442,20 @@ return (
             </div>
 
         </div>
+
+        {applicationsError && (
+            <div className="detail-card">
+                <p style={{ color: "#b42318" }}>
+                    {applicationsError}
+                </p>
+            </div>
+        )}
+
+        {isLoadingApplications && applications.length === 0 && (
+            <div className="detail-card">
+                <p>Cargando postulaciones...</p>
+            </div>
+        )}
 
         <div className="dashboard-stats">
 
