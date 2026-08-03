@@ -165,6 +165,26 @@ export const JOB_CATEGORIES = [
     "Otro"
 ];
 
+export const NAUTICAL_PROFILE_ROLES = [
+    "Regatista",
+    "Entrenador/a",
+    "Instructor/a",
+    "Oficial de regata",
+    "Juez/a o jurado",
+    "Medidor/a",
+    "Organizador/a de eventos",
+    "Personal de apoyo náutico",
+    "Voluntario/a",
+    "Otro rol náutico"
+];
+
+export const PROFESSIONAL_AVAILABILITY_OPTIONS = [
+    "Disponible para propuestas",
+    "Disponible para trabajos ocasionales",
+    "Consultar disponibilidad",
+    "No busco trabajo actualmente"
+];
+
 export const OPPORTUNITY_TYPES = {
     EMPLOYMENT: "employment",
     EVENT_ROLE: "event_role",

@@ -62,7 +62,7 @@ function Signup() {
     const [
         accountType,
         setAccountType
-    ] = useState("professional");
+    ] = useState("user");
 
     const [
         name,
@@ -208,6 +208,18 @@ function Signup() {
         setLoading(true);
 
         try {
+            if (
+                isProfessional &&
+                (
+                    !professionalTitle.trim() ||
+                    !professionalSummary.trim()
+                )
+            ) {
+                throw new Error(
+                    "Completá tu presentación principal y el resumen náutico."
+                );
+            }
+
             const resolvedCity =
                 getResolvedCity(
                     city,
@@ -263,32 +275,12 @@ function Signup() {
                 <h1>Crear cuenta</h1>
 
                 <p>
-                    Elegí cómo querés usar SailJobs LATAM.
+                    Toda cuenta es personal. Si además querés recibir
+                    propuestas o postularte a trabajos, podés sumar un
+                    perfil profesional en la misma cuenta.
                 </p>
 
                 <div className="account-type-grid">
-                    <button
-                        type="button"
-                        className={
-                            accountType === "professional"
-                                ? "account-type-card selected"
-                                : "account-type-card"
-                        }
-                        onClick={() =>
-                            setAccountType("professional")
-                        }
-                    >
-                        <strong>
-                            Perfil profesional náutico
-                        </strong>
-
-                        <span>
-                            Para entrenadores, oficiales,
-                            jurados, medidores, instructores
-                            y otros perfiles técnicos.
-                        </span>
-                    </button>
-
                     <button
                         type="button"
                         className={
@@ -305,9 +297,31 @@ function Signup() {
                         </strong>
 
                         <span>
-                            Para navegar oportunidades,
-                            clasificados, eventos y activar
-                            un perfil profesional más adelante.
+                            Para regatistas y cualquier integrante de la
+                            comunidad. Incluye calendario, ranking,
+                            clasificados y eventos.
+                        </span>
+                    </button>
+
+                    <button
+                        type="button"
+                        className={
+                            accountType === "professional"
+                                ? "account-type-card selected"
+                                : "account-type-card"
+                        }
+                        onClick={() =>
+                            setAccountType("professional")
+                        }
+                    >
+                        <strong>
+                            Cuenta personal + perfil profesional
+                        </strong>
+
+                        <span>
+                            Para regatistas que también trabajan como
+                            coaches, instructores, oficiales, medidores u
+                            otros roles náuticos, aunque sea ocasionalmente.
                         </span>
                     </button>
 
@@ -428,30 +442,43 @@ function Signup() {
                     {isProfessional && (
                         <>
                             <label>
-                                Título profesional
+                                Presentación principal *
                             </label>
 
                             <input
                                 type="text"
+                                required
                                 value={professionalTitle}
                                 onChange={(event) =>
                                     setProfessionalTitle(event.target.value)
                                 }
-                                placeholder="Ej: Coach ILCA / Race Officer / Instructor"
+                                placeholder="Ej: Regatista ILCA y entrenador de vela"
                             />
 
+                            <p className="password-help">
+                                No tiene que ser una credencial ni un cargo
+                                formal: escribí cómo te presentás hoy en la
+                                comunidad náutica.
+                            </p>
+
                             <label>
-                                Resumen profesional
+                                Resumen náutico *
                             </label>
 
                             <textarea
                                 rows="5"
+                                required
                                 value={professionalSummary}
                                 onChange={(event) =>
                                     setProfessionalSummary(event.target.value)
                                 }
-                                placeholder="Contá brevemente tu experiencia náutica."
+                                placeholder="Contá tu experiencia como regatista, profesional o colaborador y qué tipo de oportunidades te interesan."
                             />
+
+                            <p className="password-help">
+                                Después de crear la cuenta vas a poder elegir
+                                varios roles y aclarar si estás disponible para trabajar.
+                            </p>
                         </>
                     )}
 
