@@ -369,6 +369,67 @@ export async function registerWithSupabase(userData) {
     return appUser;
 }
 
+export async function saveProfessionalProfileWithSupabase(
+    profileData
+) {
+    const { data: authData, error: authError } =
+        await supabase.auth.getUser();
+
+    if (authError) {
+        throw authError;
+    }
+
+    if (!authData.user) {
+        throw new Error(
+            "Tenés que iniciar sesión para guardar el perfil profesional."
+        );
+    }
+
+    const { error } =
+        await supabase.rpc(
+            "save_my_professional_profile",
+            {
+                title_param:
+                    profileData.title?.trim() || "",
+                summary_param:
+                    profileData.summary?.trim() || "",
+                specialties_param:
+                    profileData.specialties || [],
+                certifications_param:
+                    profileData.certifications || [],
+                experience_param:
+                    profileData.experience || [],
+                languages_param:
+                    profileData.languages || [],
+                availability_param:
+                    profileData.availability || "",
+                phone_param:
+                    profileData.phone?.trim() || "",
+                city_param:
+                    profileData.city?.trim() || "",
+                country_param:
+                    profileData.country || "",
+                cv_file_name_param:
+                    profileData.cvFileName || "",
+                cv_url_param:
+                    profileData.cvUrl?.trim() || ""
+            }
+        );
+
+    if (error) {
+        throw error;
+    }
+
+    const appUser =
+        await fetchSupabaseCurrentUser(
+            authData.user.id
+        );
+
+    setCurrentUser(appUser);
+
+    return appUser;
+}
+
 export async function loginWithSupabase(email, password) {
     const { data, error } =
         await supabase.auth.signInWithPassword({

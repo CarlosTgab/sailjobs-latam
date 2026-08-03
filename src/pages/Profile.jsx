@@ -6,16 +6,20 @@ import {
     COUNTRIES,
     APPLICATION_STATUS,
     OPPORTUNITY_TYPE_LABELS,
-    COMPENSATION_TYPE_LABELS
+    COMPENSATION_TYPE_LABELS,
+    NAUTICAL_PROFILE_ROLES,
+    PROFESSIONAL_AVAILABILITY_OPTIONS
 } from "../config/appConfig";
 
 import {
     getCurrentUser,
     updateCurrentUserProfile,
-    activateProfessionalProfile,
-    updateProfessionalProfile,
     hasProfessionalProfile
 } from "../utils/authStorage";
+
+import {
+    saveProfessionalProfileWithSupabase
+} from "../utils/supabaseAuth";
 
 import {
     isSuperadmin as hasSuperadminPermission,
@@ -51,6 +55,8 @@ function Profile() {
 
     const [editPersonalMode, setEditPersonalMode] = useState(false);
     const [editProfessionalMode, setEditProfessionalMode] = useState(false);
+    const [isStartingProfessionalProfile, setIsStartingProfessionalProfile] =
+        useState(false);
 
     const professionalProfile = currentUser?.professionalProfile || {};
 
@@ -74,14 +80,27 @@ function Profile() {
         professionalProfile.title || ""
     );
 
+    const initialProfessionalSpecialties =
+        Array.isArray(professionalProfile.specialties)
+            ? professionalProfile.specialties
+            : [];
+
+    const [selectedNauticalRoles, setSelectedNauticalRoles] = useState(
+        initialProfessionalSpecialties.filter(item =>
+            NAUTICAL_PROFILE_ROLES.includes(item)
+        )
+    );
+
     const [summary, setSummary] = useState(
         professionalProfile.summary || ""
     );
 
     const [specialtiesText, setSpecialtiesText] = useState(
-        Array.isArray(professionalProfile.specialties)
-            ? professionalProfile.specialties.join(", ")
-            : ""
+        initialProfessionalSpecialties
+            .filter(item =>
+                !NAUTICAL_PROFILE_ROLES.includes(item)
+            )
+            .join(", ")
     );
 
     const [certificationsText, setCertificationsText] = useState(
@@ -128,6 +147,9 @@ function Profile() {
 
     const [formMessage, setFormMessage] = useState("");
 
+    const [isSavingProfessional, setIsSavingProfessional] =
+        useState(false);
+
     const jobs = getAllJobs(staticJobs);
     const clubs = getAllClubs(staticClubs);
 
@@ -143,14 +165,6 @@ function Profile() {
             .filter(item =>
                 sameId(item.userId, currentUser.id))
         : [];
-
-    const pendingApplications = applications.filter(
-        application => application.status === APPLICATION_STATUS.PENDING
-    );
-
-    const acceptedApplications = applications.filter(
-        application => application.status === APPLICATION_STATUS.ACCEPTED
-    );
 
     if (!currentUser) {
         return (
@@ -509,51 +523,79 @@ function Profile() {
 
     function handleActivateProfessionalProfile() {
         const confirmActivation = window.confirm(
-            "Vas a activar tu perfil profesional náutico dentro de esta misma cuenta. No perdés tu perfil personal, clasificados ni historial. ¿Continuar?"
+            "Vas a sumar un perfil profesional a tu cuenta personal. Podés seguir siendo regatista y elegir varios roles náuticos sin perder tu historial. ¿Continuar?"
         );
 
         if (!confirmActivation) {
             return;
         }
 
-        activateProfessionalProfile();
-
-        const updatedUser = getCurrentUser();
-
-        setCurrentUser(updatedUser);
+        setIsStartingProfessionalProfile(true);
         setEditProfessionalMode(true);
     }
 
-    function handleSaveProfessionalProfile(event) {
+    function handleToggleNauticalRole(role) {
+        setSelectedNauticalRoles(currentRoles =>
+            currentRoles.includes(role)
+                ? currentRoles.filter(item => item !== role)
+                : [...currentRoles, role]
+        );
+    }
+
+    async function handleSaveProfessionalProfile(event) {
         event.preventDefault();
 
         if (!professionalTitle.trim() || !summary.trim()) {
             setFormMessage(
-                "Completá título profesional y resumen."
+                "Completá tu presentación principal y el resumen náutico."
             );
             return;
         }
 
-        updateProfessionalProfile({
-            title: professionalTitle.trim(),
-            summary: summary.trim(),
-            specialties: splitCommaList(specialtiesText),
-            certifications: splitCommaList(certificationsText),
-            experience: splitLineList(experienceText),
-            languages: splitCommaList(languagesText),
-            availability: availability.trim(),
-            phone: professionalPhone.trim(),
-            city: professionalCity.trim(),
-            country: professionalCountry,
-            cvFileName,
-            cvUrl: cvUrl.trim()
-        });
+        if (selectedNauticalRoles.length === 0) {
+            setFormMessage(
+                "Elegí al menos un rol dentro de la comunidad náutica."
+            );
+            return;
+        }
 
-        const updatedUser = getCurrentUser();
+        setIsSavingProfessional(true);
+        setFormMessage("");
 
-        setCurrentUser(updatedUser);
-        setFormMessage("Perfil profesional actualizado correctamente.");
-        setEditProfessionalMode(false);
+        try {
+            const updatedUser =
+                await saveProfessionalProfileWithSupabase({
+                    title: professionalTitle.trim(),
+                    summary: summary.trim(),
+                    specialties: [
+                        ...selectedNauticalRoles,
+                        ...splitCommaList(specialtiesText)
+                    ],
+                    certifications: splitCommaList(certificationsText),
+                    experience: splitLineList(experienceText),
+                    languages: splitCommaList(languagesText),
+                    availability: availability.trim(),
+                    phone: professionalPhone.trim(),
+                    city: professionalCity.trim(),
+                    country: professionalCountry,
+                    cvFileName,
+                    cvUrl: cvUrl.trim()
+                });
+
+            setCurrentUser(updatedUser);
+            setFormMessage(
+                "Perfil profesional actualizado correctamente."
+            );
+            setIsStartingProfessionalProfile(false);
+            setEditProfessionalMode(false);
+        } catch (error) {
+            setFormMessage(
+                error?.message ||
+                "No se pudo guardar el perfil profesional. Probá nuevamente."
+            );
+        } finally {
+            setIsSavingProfessional(false);
+        }
     }
 
     return (
@@ -842,12 +884,14 @@ function Profile() {
                         <h2>Perfil profesional náutico</h2>
                     </div>
 
-                    {!professionalIsActive ? (
+                    {!professionalIsActive &&
+                    !isStartingProfessionalProfile ? (
                         <>
                             <p>
-                                Podés activar un perfil profesional dentro de esta
-                                misma cuenta. Vas a seguir teniendo tu perfil
-                                personal, clasificados e historial.
+                                Tu cuenta personal ya te permite participar como
+                                regatista y seguir el calendario. Si también querés
+                                recibir propuestas o postularte a trabajos, podés
+                                sumar varios roles profesionales sin crear otra cuenta.
                             </p>
 
                             <button
@@ -862,33 +906,58 @@ function Profile() {
                             {editProfessionalMode && (
                                 <form onSubmit={handleSaveProfessionalProfile}>
 
-                                    <label>Título profesional *</label>
+                                    <label>Presentación principal *</label>
 
                                     <input
                                         type="text"
-                                        placeholder="Ejemplo: Coach ILCA / Race Officer / Profesional náutico"
+                                        placeholder="Ejemplo: Regatista ILCA y entrenador de vela"
                                         value={professionalTitle}
                                         onChange={(event) =>
                                             setProfessionalTitle(event.target.value)
                                         }
                                     />
 
-                                    <label>Resumen profesional *</label>
+                                    <p className="password-help">
+                                        No tiene que ser una credencial formal.
+                                        Describí cómo te presentás hoy.
+                                    </p>
+
+                                    <label>Resumen náutico *</label>
 
                                     <textarea
                                         rows="6"
-                                        placeholder="Contá tu experiencia, clases, tipo de trabajo que buscás y fortalezas principales."
+                                        placeholder="Contá tu experiencia como regatista, profesional o colaborador, y qué tipo de oportunidades te interesan."
                                         value={summary}
                                         onChange={(event) =>
                                             setSummary(event.target.value)
                                         }
                                     />
 
-                                    <label>Especialidades</label>
+                                    <label>Roles dentro de la comunidad *</label>
+
+                                    <div className="profile-role-grid">
+                                        {NAUTICAL_PROFILE_ROLES.map(role => (
+                                            <label
+                                                className="profile-role-option"
+                                                key={role}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedNauticalRoles.includes(role)}
+                                                    onChange={() =>
+                                                        handleToggleNauticalRole(role)
+                                                    }
+                                                />
+                                                <span>{role}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+
+                                    <label>Especialidades adicionales</label>
 
                                     <input
                                         type="text"
-                                        placeholder="Ejemplo: ILCA, Optimist, táctica, entrenamiento juvenil, race management"
+                                        placeholder="Ejemplo: ILCA, Optimist, táctica, entrenamiento juvenil"
                                         value={specialtiesText}
                                         onChange={(event) =>
                                             setSpecialtiesText(event.target.value)
@@ -928,16 +997,31 @@ function Profile() {
                                         }
                                     />
 
-                                    <label>Disponibilidad</label>
+                                    <label>Disponibilidad laboral</label>
 
-                                    <input
-                                        type="text"
-                                        placeholder="Ejemplo: temporada de verano, fines de semana, disponibilidad internacional"
+                                    <select
                                         value={availability}
                                         onChange={(event) =>
                                             setAvailability(event.target.value)
                                         }
-                                    />
+                                    >
+                                        <option value="">
+                                            Seleccionar disponibilidad
+                                        </option>
+
+                                        {availability &&
+                                            !PROFESSIONAL_AVAILABILITY_OPTIONS.includes(availability) && (
+                                                <option value={availability}>
+                                                    {availability}
+                                                </option>
+                                            )}
+
+                                        {PROFESSIONAL_AVAILABILITY_OPTIONS.map(option => (
+                                            <option key={option} value={option}>
+                                                {option}
+                                            </option>
+                                        ))}
+                                    </select>
 
                                     <label>Teléfono profesional</label>
 
@@ -1025,7 +1109,10 @@ function Profile() {
                                         <button
                                             type="button"
                                             className="reject-button"
-                                            onClick={() => setEditProfessionalMode(false)}
+                                            onClick={() => {
+                                                setEditProfessionalMode(false);
+                                                setIsStartingProfessionalProfile(false);
+                                            }}
                                         >
                                             Cancelar
                                         </button>
@@ -1033,8 +1120,11 @@ function Profile() {
                                         <button
                                             type="submit"
                                             className="accept-button"
+                                            disabled={isSavingProfessional}
                                         >
-                                            Guardar perfil profesional
+                                            {isSavingProfessional
+                                                ? "Guardando..."
+                                                : "Guardar perfil profesional"}
                                         </button>
 
                                     </div>
@@ -1045,7 +1135,7 @@ function Profile() {
                             {!editProfessionalMode && (
                                 <>
                                     <p>
-                                        <strong>Título:</strong>{" "}
+                                        <strong>Presentación:</strong>{" "}
                                         {currentUser.professionalProfile?.title || "No informado"}
                                     </p>
 
@@ -1058,7 +1148,7 @@ function Profile() {
                                     </p>
 
                                     <p>
-                                        <strong>Especialidades:</strong>{" "}
+                                        <strong>Roles y especialidades:</strong>{" "}
                                         {
                                             currentUser.professionalProfile?.specialties?.join(", ") ||
                                             "No informadas"

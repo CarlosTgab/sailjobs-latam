@@ -2205,6 +2205,35 @@ body {
     width: auto !important;
 }
 
+.profile-role-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 10px;
+    margin: 2px 0 8px;
+}
+
+.profile-role-option {
+    display: flex !important;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border: 1px solid rgba(11, 47, 87, 0.16);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.82);
+    color: #0b2f57;
+    cursor: pointer;
+}
+
+.profile-role-option:has(input:checked) {
+    border-color: #ff8400;
+    background: rgba(255, 247, 237, 0.96);
+}
+
+.profile-role-option input {
+    width: auto !important;
+    margin: 0;
+}
+
 .about-page,
 .contact-page,
 .page-container {
