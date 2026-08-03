@@ -329,17 +329,17 @@ function applicationToSupabaseRow(application) {
         organization_id:
             toUuidOrNull(normalized.organizationId),
         owner_type: normalized.ownerType || "club",
-        name: normalized.name || null,
-        email: normalized.email || null,
-        phone: normalized.phone || null,
-        country: normalized.country || null,
+        name: normalized.name || "",
+        email: normalized.email || "",
+        phone: normalized.phone || "",
+        country: normalized.country || "",
         state: normalized.state || null,
         state_code: normalized.stateCode || null,
         city: normalized.city || null,
         city_name: normalized.cityName || null,
-        cv_file_name: normalized.cv || null,
-        cv_url: normalized.cvUrl || null,
-        message: normalized.message || null,
+        cv_file_name: normalized.cv || "",
+        cv_url: normalized.cvUrl || "",
+        message: normalized.message || "",
         status:
             applicationStatusToDatabase(
                 normalized.status
@@ -497,13 +497,11 @@ export async function syncApplicationsFromSupabase() {
     const remoteApplications =
         await fetchSupabaseApplications();
 
-    const cachedApplications =
-        getApplications();
-
-    return saveApplicationsToLocalCache([
-        ...remoteApplications,
-        ...cachedApplications
-    ]);
+    // No se mezclan registros locales con los remotos: una fila eliminada o
+    // no visible por RLS no debe reaparecer desde el navegador.
+    return saveApplicationsToLocalCache(
+        remoteApplications
+    );
 }
 
 export async function saveApplication(applicationData) {

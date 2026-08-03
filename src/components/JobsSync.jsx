@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 
-import staticJobs from "../data/jobs";
 import { syncJobsFromSupabase } from "../utils/jobsStorage";
 
 function JobsSync() {
@@ -10,10 +9,13 @@ function JobsSync() {
         async function syncJobs() {
             try {
                 if (isMounted) {
-                    await syncJobsFromSupabase(staticJobs);
+                    await syncJobsFromSupabase();
                 }
-            } catch {
-                // La app puede seguir funcionando con datos estáticos/locales.
+            } catch (error) {
+                console.error(
+                    "No se pudieron sincronizar las oportunidades desde Supabase.",
+                    error
+                );
             }
         }
 
