@@ -1,4 +1,9 @@
 import {
+    useEffect,
+    useState
+} from "react";
+
+import {
     useParams,
     useNavigate
 } from "react-router-dom";
@@ -25,6 +30,10 @@ import {
     isSuperadmin
 } from "../utils/permissions";
 
+import {
+    getCvAccessUrl
+} from "../utils/cvStorage";
+
 function ApplicantDetail() {
 
     const { id } =
@@ -50,6 +59,53 @@ function ApplicantDetail() {
             item =>
                 sameId(item.id, id)
         );
+
+    const cvReference =
+        application?.cvUrl ||
+        application?.professionalSnapshot?.cvUrl ||
+        "";
+
+    const [cvAccessUrl, setCvAccessUrl] =
+        useState("");
+
+    const [cvAccessError, setCvAccessError] =
+        useState("");
+
+    useEffect(() => {
+        let isMounted = true;
+
+        async function loadCvAccessUrl() {
+            setCvAccessUrl("");
+            setCvAccessError("");
+
+            if (!cvReference) {
+                return;
+            }
+
+            try {
+                const signedUrl =
+                    await getCvAccessUrl(
+                        cvReference
+                    );
+
+                if (isMounted) {
+                    setCvAccessUrl(signedUrl);
+                }
+            } catch {
+                if (isMounted) {
+                    setCvAccessError(
+                        "No se pudo habilitar el acceso al CV."
+                    );
+                }
+            }
+        }
+
+        loadCvAccessUrl();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [cvReference]);
 
     if (!application && isLoadingApplications) {
         return (
@@ -178,11 +234,6 @@ function ApplicantDetail() {
     const cvFileName =
         application.cv ||
         professionalProfile.cvFileName ||
-        "";
-
-    const cvUrl =
-        application.cvUrl ||
-        professionalProfile.cvUrl ||
         "";
 
     const specialties =
@@ -697,10 +748,10 @@ function ApplicantDetail() {
 
                 </p>
 
-                {cvUrl ? (
+                {cvAccessUrl ? (
 
                     <a
-                        href={cvUrl}
+                        href={cvAccessUrl}
                         target="_blank"
                         rel="noreferrer"
                         className="apply-button"
@@ -708,15 +759,17 @@ function ApplicantDetail() {
                         Abrir CV
                     </a>
 
+                ) : cvReference && !cvAccessError ? (
+
+                    <p className="password-help">
+                        Preparando acceso seguro al CV...
+                    </p>
+
                 ) : (
 
                     <p className="password-help">
-                        Esta postulación no tiene un
-                        enlace público al CV. Mientras
-                        la aplicación use localStorage,
-                        el nombre del archivo no permite
-                        descargar el documento desde
-                        otra computadora.
+                        {cvAccessError ||
+                            "Esta postulación no tiene un CV disponible."}
                     </p>
 
                 )}

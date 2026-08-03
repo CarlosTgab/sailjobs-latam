@@ -6,9 +6,9 @@ function BetaBanner() {
             <strong>Versión beta</strong>
 
             <span>
-                SailJobs LATAM está en desarrollo. Los datos cargados en esta
-                beta se guardan localmente en cada navegador. No cargues CVs ni
-                información sensible todavía.
+                SailJobs LATAM está en beta. Las oportunidades, postulaciones
+                y los CVs adjuntos se guardan de forma centralizada y segura.
+                Reportanos cualquier inconveniente.
             </span>
 
             <Link to="/contact">

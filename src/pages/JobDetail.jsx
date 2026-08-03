@@ -39,6 +39,11 @@ import {
     saveApplication
 } from "../utils/applicationsStorage";
 
+import {
+    removePrivateCv,
+    uploadPrivateCv
+} from "../utils/cvStorage";
+
 import useApplications from "../hooks/useApplications";
 
 
@@ -439,16 +444,33 @@ function JobDetail() {
             currentUser.professionalProfile ||
             {};
 
-        const applicationCvName =
-            cv
-                ? cv.name
-                : currentProfile.cvFileName ||
-                "";
+        let applicationCvName =
+            currentProfile.cvFileName || "";
+
+        let applicationCvUrl =
+            currentProfile.cvUrl || "";
+
+        let uploadedCvPath = "";
 
         setIsSubmittingApplication(true);
         setFormMessage("");
 
         try {
+            if (cv) {
+                const uploadedCv =
+                    await uploadPrivateCv(
+                        cv,
+                        currentUser.id
+                    );
+
+                applicationCvName =
+                    uploadedCv.fileName;
+                applicationCvUrl =
+                    uploadedCv.path;
+                uploadedCvPath =
+                    uploadedCv.path;
+            }
+
             await saveApplication({
 
             userId:
@@ -501,8 +523,7 @@ function JobDetail() {
                 applicationCvName,
 
             cvUrl:
-                currentProfile.cvUrl ||
-                "",
+                applicationCvUrl,
 
             message:
                 message.trim(),
@@ -567,8 +588,7 @@ function JobDetail() {
                     applicationCvName,
 
                 cvUrl:
-                    currentProfile.cvUrl ||
-                    ""
+                    applicationCvUrl
 
             },
 
@@ -586,6 +606,16 @@ function JobDetail() {
                 "Postulación enviada correctamente."
             );
         } catch (error) {
+            if (uploadedCvPath) {
+                try {
+                    await removePrivateCv(
+                        uploadedCvPath
+                    );
+                } catch {
+                    // La limpieza no debe ocultar el error original.
+                }
+            }
+
             setFormMessage(
                 error?.message ||
                 "No se pudo enviar la postulación. Probá nuevamente."

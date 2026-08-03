@@ -90,6 +90,41 @@ function normalizeEligibleProfiles(job) {
     return ["professional"];
 }
 
+function normalizeJobStatus(status) {
+    if (status === "published") {
+        return "active";
+    }
+
+    if (
+        status === "archived" ||
+        status === "closed"
+    ) {
+        return "hidden";
+    }
+
+    return status || "active";
+}
+
+function jobStatusToDatabase(status) {
+    if (
+        status === "hidden" ||
+        status === "inactive"
+    ) {
+        return "archived";
+    }
+
+    if (
+        status === "draft" ||
+        status === "closed" ||
+        status === "archived" ||
+        status === "published"
+    ) {
+        return status;
+    }
+
+    return "published";
+}
+
 export function normalizeJob(job) {
     if (!job) return null;
 
@@ -213,7 +248,7 @@ export function normalizeJob(job) {
         applyLink: job.applyLink || job.apply_link || "#",
         website: job.website || "#",
 
-        status: job.status || "active",
+        status: normalizeJobStatus(job.status),
         moderationReason:
             job.moderationReason ||
             job.moderation_reason ||
@@ -364,7 +399,7 @@ function jobToSupabaseRow(job) {
         requirements: normalized.requirements || [],
         apply_link: normalized.applyLink || null,
         website: normalized.website || null,
-        status: normalized.status || "active",
+        status: jobStatusToDatabase(normalized.status),
         moderation_reason: normalized.moderationReason || null,
         moderated_at: normalized.moderatedAt || null,
         metadata: normalized.metadata || {},
@@ -485,22 +520,17 @@ export async function fetchSupabaseJobs() {
 
 export async function syncJobsFromSupabase(staticJobs = []) {
     const remoteJobs = await fetchSupabaseJobs();
-    const cachedJobs = getStoredJobs();
 
-    const mergedStoredJobs = saveJobsToLocalCache([
-        ...remoteJobs,
-        ...cachedJobs
-    ]);
+    // Supabase es la fuente de verdad. La caché local solo conserva la última
+    // lectura exitosa para poder mostrarla si una consulta posterior falla.
+    // El argumento se mantiene temporalmente para no romper los consumidores
+    // existentes mientras se retiran los imports de datos estáticos.
+    void staticJobs;
 
-    return uniqueJobs([
-        ...mergedStoredJobs,
-        ...staticJobs
-    ]);
+    return saveJobsToLocalCache(remoteJobs);
 }
 
 export async function createStoredJob(jobData) {
-    const jobs = getStoredJobs();
-
     const newJob = normalizeJob({
         ...jobData,
         id: jobData.id || crypto.randomUUID?.() || String(Date.now()),
@@ -509,24 +539,14 @@ export async function createStoredJob(jobData) {
         status: jobData.status || "active"
     });
 
+    const savedJob = await upsertSupabaseJob(newJob);
+
     saveJobsToLocalCache([
-        newJob,
-        ...jobs
+        savedJob,
+        ...getStoredJobs()
     ]);
 
-    try {
-        const savedJob = await upsertSupabaseJob(newJob);
-
-        saveJobsToLocalCache([
-            savedJob,
-            ...getStoredJobs()
-        ]);
-
-        return savedJob;
-    } catch (error) {
-        console.warn("No se pudo guardar la oportunidad en Supabase. Se conservó localmente.", error);
-        return newJob;
-    }
+    return savedJob;
 }
 
 export async function updateStoredJob(jobId, updatedData) {
@@ -559,32 +579,17 @@ export async function updateStoredJob(jobId, updatedData) {
         !sameId(job.legacyId, jobId)
     );
 
+    const savedJob = await upsertSupabaseJob(updatedJob);
+
     saveJobsToLocalCache([
-        updatedJob,
+        savedJob,
         ...keptJobs
     ]);
 
-    try {
-        const savedJob = await upsertSupabaseJob(updatedJob);
-
-        saveJobsToLocalCache([
-            savedJob,
-            ...getStoredJobs()
-        ]);
-
-        return savedJob;
-    } catch (error) {
-        console.warn("No se pudo actualizar la oportunidad en Supabase. Se conservó localmente.", error);
-        return updatedJob;
-    }
+    return savedJob;
 }
 
 export async function hideStoredJob(jobId, reason = "", jobData = null) {
-    saveHiddenJobIds([
-        ...getHiddenJobIds(),
-        jobId
-    ]);
-
     const storedJob = getStoredJobs().find(job =>
         sameId(job.id, jobId) ||
         sameId(job.legacyId, jobId)
@@ -604,33 +609,21 @@ export async function hideStoredJob(jobId, reason = "", jobData = null) {
         updatedAt: new Date().toISOString()
     });
 
+    const savedJob = await upsertSupabaseJob(hiddenJob);
+
+    saveHiddenJobIds([
+        ...getHiddenJobIds(),
+        jobId
+    ]);
     saveJobsToLocalCache([
-        hiddenJob,
+        savedJob,
         ...getStoredJobs()
     ]);
 
-    try {
-        const savedJob = await upsertSupabaseJob(hiddenJob);
-
-        saveJobsToLocalCache([
-            savedJob,
-            ...getStoredJobs()
-        ]);
-
-        return savedJob;
-    } catch (error) {
-        console.warn("No se pudo dar de baja la oportunidad en Supabase. Se conservó localmente.", error);
-        return hiddenJob;
-    }
+    return savedJob;
 }
 
 export async function restoreStoredJob(jobId, jobData = null) {
-    saveHiddenJobIds(
-        getHiddenJobIds().filter(id =>
-            !sameId(id, jobId)
-        )
-    );
-
     const storedJob = getStoredJobs().find(job =>
         sameId(job.id, jobId) ||
         sameId(job.legacyId, jobId)
@@ -654,24 +647,19 @@ export async function restoreStoredJob(jobId, jobData = null) {
         updatedAt: new Date().toISOString()
     });
 
+    const savedJob = await upsertSupabaseJob(restoredJob);
+
+    saveHiddenJobIds(
+        getHiddenJobIds().filter(id =>
+            !sameId(id, jobId)
+        )
+    );
     saveJobsToLocalCache([
-        restoredJob,
+        savedJob,
         ...getStoredJobs()
     ]);
 
-    try {
-        const savedJob = await upsertSupabaseJob(restoredJob);
-
-        saveJobsToLocalCache([
-            savedJob,
-            ...getStoredJobs()
-        ]);
-
-        return savedJob;
-    } catch (error) {
-        console.warn("No se pudo restaurar la oportunidad en Supabase. Se conservó localmente.", error);
-        return restoredJob;
-    }
+    return savedJob;
 }
 
 export async function deleteStoredJob(jobId) {
@@ -687,24 +675,20 @@ export async function deleteStoredJob(jobId) {
         !sameId(job.legacyId, jobId)
     );
 
-    saveJobsToLocalCache(updatedJobs);
+    if (jobToDelete) {
+        const existingRow = await findSupabaseJob(jobToDelete);
 
-    try {
-        if (jobToDelete) {
-            const existingRow = await findSupabaseJob(jobToDelete);
+        if (existingRow?.id) {
+            const { error } = await supabase
+                .from("opportunities")
+                .delete()
+                .eq("id", existingRow.id);
 
-            if (existingRow?.id) {
-                const { error } = await supabase
-                    .from("opportunities")
-                    .delete()
-                    .eq("id", existingRow.id);
-
-                if (error) throw error;
-            }
+            if (error) throw error;
         }
-    } catch (error) {
-        console.warn("No se pudo eliminar la oportunidad en Supabase. Se eliminó solo localmente.", error);
     }
+
+    saveJobsToLocalCache(updatedJobs);
 }
 
 export function isStoredJob(jobId) {
@@ -719,10 +703,9 @@ export function isStoredJob(jobId) {
 export function getAllJobsForAdmin(staticJobs = []) {
     const hiddenIds = getHiddenJobIds();
 
-    return uniqueJobs([
-        ...getStoredJobs(),
-        ...staticJobs
-    ]).map(job => {
+    void staticJobs;
+
+    return getStoredJobs().map(job => {
         if (
             hiddenIds.some(id =>
                 sameId(id, job.id) ||
