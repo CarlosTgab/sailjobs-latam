@@ -12,7 +12,7 @@ import {
     getPrimaryDashboardPath,
     isInstitutionalExperience
 } from "../config/roleExperience";
-import { getAllClassifieds } from "../utils/classifiedsStorage";
+import useClassifieds from "../hooks/useClassifieds";
 
 function Classifieds() {
 
@@ -26,7 +26,13 @@ function Classifieds() {
     const [selectedCategory, setSelectedCategory] = useState("");
     const [selectedCountry, setSelectedCountry] = useState("");
 
-    const classifieds = getAllClassifieds()
+    const {
+        classifieds: syncedClassifieds,
+        isLoadingClassifieds,
+        classifiedsError
+    } = useClassifieds();
+
+    const classifieds = syncedClassifieds
         .filter(item => item.status !== "deleted")
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
@@ -186,7 +192,20 @@ function Classifieds() {
 
             <div className="event-grid">
 
-                {filteredClassifieds.length > 0 ? (
+                {isLoadingClassifieds && filteredClassifieds.length === 0 ? (
+
+                    <div className="detail-card">
+                        <h2>Cargando clasificados...</h2>
+                    </div>
+
+                ) : classifiedsError && filteredClassifieds.length === 0 ? (
+
+                    <div className="detail-card">
+                        <h2>No pudimos cargar los clasificados</h2>
+                        <p>{classifiedsError}</p>
+                    </div>
+
+                ) : filteredClassifieds.length > 0 ? (
 
                     filteredClassifieds.map((item) => {
 

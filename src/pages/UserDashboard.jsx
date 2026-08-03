@@ -14,9 +14,7 @@ import {
     hasProfile
 } from "../utils/authStorage";
 
-import {
-    getAllClassifieds
-} from "../utils/classifiedsStorage";
+import useClassifieds from "../hooks/useClassifieds";
 
 import {
     getApplications
@@ -42,6 +40,10 @@ function UserDashboard() {
     const [description, setDescription] = useState(currentUser?.description || "");
     const [profileImage, setProfileImage] = useState(currentUser?.profileImage || "");
     const [formMessage, setFormMessage] = useState("");
+
+    const {
+        classifieds: allClassifieds
+    } = useClassifieds();
 
     if (!currentUser || !hasProfile(currentUser, "user")) {
         return (
@@ -89,7 +91,7 @@ function UserDashboard() {
 
     const professionalIsActive = hasProfessionalProfile(currentUser);
 
-    const classifieds = getAllClassifieds()
+    const classifieds = allClassifieds
         .filter(item => sameId(item.userId, currentUser.id));
 
     const applications = getApplications()

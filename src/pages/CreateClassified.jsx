@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
     CLASSIFIED_CATEGORIES,
@@ -27,9 +27,15 @@ function CreateClassified() {
     const [country, setCountry] = useState("");
     const [city, setCity] = useState("");
     const [description, setDescription] = useState("");
-    const [images, setImages] = useState([]);
+    const [imageFiles, setImageFiles] = useState([]);
+    const [imagePreviews, setImagePreviews] = useState([]);
     const [sellerPhone, setSellerPhone] = useState("");
     const [message, setMessage] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    useEffect(() => () => {
+        imagePreviews.forEach(image => URL.revokeObjectURL(image));
+    }, [imagePreviews]);
 
     if (!currentUser) {
         return (
@@ -97,61 +103,7 @@ function CreateClassified() {
         );
     }
 
-    function compressImage(file) {
-        return new Promise((resolve, reject) => {
-            if (!file.type.startsWith("image/")) {
-                reject("El archivo no es una imagen.");
-                return;
-            }
-
-            const reader = new FileReader();
-
-            reader.onload = () => {
-                const img = new Image();
-
-                img.onload = () => {
-                    const maxWidth = 900;
-                    const scale = Math.min(maxWidth / img.width, 1);
-
-                    const canvas = document.createElement("canvas");
-
-                    canvas.width = img.width * scale;
-                    canvas.height = img.height * scale;
-
-                    const ctx = canvas.getContext("2d");
-
-                    ctx.drawImage(
-                        img,
-                        0,
-                        0,
-                        canvas.width,
-                        canvas.height
-                    );
-
-                    const compressedImage = canvas.toDataURL(
-                        "image/jpeg",
-                        0.65
-                    );
-
-                    resolve(compressedImage);
-                };
-
-                img.onerror = () => {
-                    reject("No se pudo procesar la imagen.");
-                };
-
-                img.src = reader.result;
-            };
-
-            reader.onerror = () => {
-                reject("No se pudo leer la imagen.");
-            };
-
-            reader.readAsDataURL(file);
-        });
-    }
-
-    async function handleImagesChange(e) {
+    function handleImagesChange(e) {
         const selectedFiles = Array.from(e.target.files);
 
         if (selectedFiles.length > 3) {
@@ -159,22 +111,21 @@ function CreateClassified() {
             return;
         }
 
-        try {
-            setMessage("Procesando imágenes...");
-
-            const compressedImages = await Promise.all(
-                selectedFiles.map(file => compressImage(file))
-            );
-
-            setImages(compressedImages);
-
-            setMessage("Imágenes cargadas correctamente.");
-        } catch (error) {
-            setMessage("Hubo un problema al cargar las imágenes.");
+        if (selectedFiles.some(file => !file.type.startsWith("image/"))) {
+            setMessage("Solo podés subir archivos de imagen.");
+            return;
         }
+
+        setImageFiles(selectedFiles);
+        setImagePreviews(selectedFiles.map(file => URL.createObjectURL(file)));
+        setMessage(
+            selectedFiles.length > 0
+                ? "Fotos listas. La primera se usará como portada."
+                : ""
+        );
     }
 
-    function handleSubmit(e) {
+    async function handleSubmit(e) {
         e.preventDefault();
 
         if (!title || !category || !price || !country || !city || !description) {
@@ -182,30 +133,30 @@ function CreateClassified() {
             return;
         }
 
+        setIsSubmitting(true);
+        setMessage("Publicando clasificado y subiendo fotos...");
+
         try {
-            createStoredClassified({
+            const savedClassified = await createStoredClassified({
                 title,
                 category,
                 price,
                 country,
                 city,
                 description,
-                images,
                 sellerName: currentUser.name,
                 sellerEmail: currentUser.email,
                 sellerPhone,
                 userId: currentUser.id
-            });
+            }, imageFiles);
 
-            navigate("/classifieds");
+            navigate(`/classifieds/${savedClassified.id}`);
         } catch (error) {
-            if (error.name === "QuotaExceededError") {
-                setMessage(
-                    "Las fotos siguen siendo demasiado pesadas para guardarlas en esta versión local. Probá con menos fotos o imágenes más chicas."
-                );
-            } else {
-                setMessage("No se pudo publicar el clasificado.");
-            }
+            setMessage(
+                error?.message || "No se pudo publicar el clasificado. Intentá nuevamente."
+            );
+        } finally {
+            setIsSubmitting(false);
         }
     }
 
@@ -305,7 +256,7 @@ function CreateClassified() {
                     />
 
                     <label>
-                        Fotos del producto
+                        Fotos del producto (hasta 3)
                     </label>
 
                     <input
@@ -315,17 +266,23 @@ function CreateClassified() {
                         onChange={handleImagesChange}
                     />
 
-                    {images.length > 0 && (
+                    {imagePreviews.length > 0 && (
                         <div className="classified-preview-gallery">
 
-                            {images.map((image, index) => (
+                            {imagePreviews.map((image, index) => (
 
-                                <img
-                                    key={index}
-                                    src={image}
-                                    alt={`Vista previa ${index + 1}`}
-                                    className="classified-preview"
-                                />
+                                <div
+                                    key={image}
+                                    className="classified-preview-item"
+                                >
+                                    <img
+                                        src={image}
+                                        alt={`Vista previa ${index + 1}`}
+                                        className="classified-preview"
+                                    />
+
+                                    {index === 0 && <small>Portada</small>}
+                                </div>
 
                             ))}
 
@@ -341,8 +298,9 @@ function CreateClassified() {
                     <button
                         className="apply-button"
                         type="submit"
+                        disabled={isSubmitting}
                     >
-                        Publicar clasificado
+                        {isSubmitting ? "Publicando..." : "Publicar clasificado"}
                     </button>
 
                 </form>

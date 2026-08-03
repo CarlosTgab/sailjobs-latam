@@ -27,10 +27,7 @@ import {
 } from "../utils/permissions";
 
 import useApplications from "../hooks/useApplications";
-
-import {
-    getAllClassifieds
-} from "../utils/classifiedsStorage";
+import useClassifieds from "../hooks/useClassifieds";
 
 import staticJobs from "../data/jobs";
 
@@ -52,6 +49,10 @@ function Profile() {
     const {
         applications: allApplications
     } = useApplications();
+
+    const {
+        classifieds: allClassifieds
+    } = useClassifieds();
 
     const [editPersonalMode, setEditPersonalMode] = useState(false);
     const [editProfessionalMode, setEditProfessionalMode] = useState(false);
@@ -161,7 +162,7 @@ function Profile() {
         : [];
 
     const classifieds = currentUser
-        ? getAllClassifieds()
+        ? allClassifieds
             .filter(item =>
                 sameId(item.userId, currentUser.id))
         : [];
