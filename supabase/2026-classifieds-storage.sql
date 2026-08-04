@@ -35,6 +35,33 @@ create table if not exists public.classifieds (
     updated_at timestamptz
 );
 
+/*
+ * Una versión anterior de la aplicación podía haber creado la tabla con menos
+ * columnas. CREATE TABLE IF NOT EXISTS no completa una tabla ya existente, por
+ * eso agregamos cada columna de forma explícita e idempotente.
+ */
+alter table public.classifieds
+add column if not exists title text not null default '',
+add column if not exists category text not null default '',
+add column if not exists price text not null default '',
+add column if not exists country text not null default '',
+add column if not exists country_code text not null default '',
+add column if not exists state text not null default '',
+add column if not exists state_code text not null default '',
+add column if not exists city text not null default '',
+add column if not exists city_name text not null default '',
+add column if not exists description text not null default '',
+add column if not exists image_paths text[] not null default '{}'::text[],
+add column if not exists seller_name text not null default '',
+add column if not exists seller_email text not null default '',
+add column if not exists seller_phone text not null default '',
+add column if not exists user_id uuid references auth.users(id) on delete cascade,
+add column if not exists status text not null default 'active',
+add column if not exists moderation_reason text not null default '',
+add column if not exists moderated_at timestamptz,
+add column if not exists created_at timestamptz not null default now(),
+add column if not exists updated_at timestamptz;
+
 create index if not exists classifieds_status_created_at_idx
 on public.classifieds (status, created_at desc);
 
@@ -147,5 +174,7 @@ using (
         or public.is_superadmin(auth.uid())
     )
 );
+
+notify pgrst, 'reload schema';
 
 commit;
