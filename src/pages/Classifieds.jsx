@@ -109,7 +109,7 @@ function Classifieds() {
 
     return (
 
-        <div className="page">
+        <div className="page classifieds-page">
 
             <div className="page-header">
 
@@ -193,7 +193,7 @@ function Classifieds() {
 
             </div>
 
-            <div className="event-grid">
+            <div className="event-grid classifieds-grid">
 
                 {isLoadingClassifieds && filteredClassifieds.length === 0 ? (
 
