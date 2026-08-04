@@ -2,6 +2,7 @@ import { supabase } from "../lib/supabaseClient";
 import { sameId } from "./idUtils";
 
 const CLASSIFIEDS_STORAGE_KEY = "storedClassifieds";
+const CLASSIFIEDS_TABLE = "classified_listings";
 const CLASSIFIED_IMAGES_BUCKET = "classified-images";
 const MAX_CLASSIFIED_IMAGES = 3;
 const MAX_IMAGE_INPUT_SIZE = 10 * 1024 * 1024;
@@ -118,10 +119,17 @@ function isVisibleClassified(classified) {
 function saveClassifiedsToLocalCache(classifieds) {
     const normalized = uniqueClassifieds(classifieds);
 
-    localStorage.setItem(
-        CLASSIFIEDS_STORAGE_KEY,
-        JSON.stringify(normalized)
-    );
+    try {
+        localStorage.setItem(
+            CLASSIFIEDS_STORAGE_KEY,
+            JSON.stringify(normalized)
+        );
+    } catch (error) {
+        console.error(
+            "No se pudo actualizar la caché local de clasificados.",
+            error
+        );
+    }
 
     safeDispatchClassifiedsChanged();
     return normalized;
@@ -129,6 +137,7 @@ function saveClassifiedsToLocalCache(classifieds) {
 
 function classifiedToSupabaseRow(classified) {
     const normalized = normalizeClassified(classified);
+    const parsedModelYear = Number(normalized.modelYear);
 
     return {
         id: normalized.id,
@@ -136,9 +145,11 @@ function classifiedToSupabaseRow(classified) {
         category: normalized.category.trim(),
         price: normalized.price.trim(),
         club_name: normalized.clubName.trim(),
-        model_year: normalized.modelYear === ""
-            ? null
-            : Number(normalized.modelYear),
+        model_year:
+            normalized.modelYear !== "" &&
+            Number.isInteger(parsedModelYear)
+                ? parsedModelYear
+                : null,
         serial_number: normalized.serialNumber.trim(),
         country: normalized.country.trim(),
         country_code: normalized.countryCode.trim(),
@@ -186,6 +197,12 @@ function compressClassifiedImage(file) {
                 canvas.height = Math.max(1, Math.round(image.height * scale));
 
                 const context = canvas.getContext("2d");
+
+                if (!context) {
+                    reject(new Error("No se pudo preparar la imagen."));
+                    return;
+                }
+
                 context.drawImage(image, 0, 0, canvas.width, canvas.height);
 
                 canvas.toBlob(
@@ -273,7 +290,7 @@ export function saveStoredClassifieds(classifieds) {
 
 export async function fetchSupabaseClassifieds() {
     const { data, error } = await supabase
-        .from("classifieds")
+        .from(CLASSIFIEDS_TABLE)
         .select("*")
         .order("created_at", { ascending: false });
 
@@ -309,7 +326,7 @@ export async function createStoredClassified(classifiedData, imageFiles = []) {
         );
 
         const { data, error } = await supabase
-            .from("classifieds")
+            .from(CLASSIFIEDS_TABLE)
             .insert(classifiedToSupabaseRow({
                 ...newClassified,
                 imagePaths: uploadedPaths
@@ -370,7 +387,7 @@ export async function updateStoredClassified(classifiedId, updatedData, imageFil
         });
 
         const { data, error } = await supabase
-            .from("classifieds")
+            .from(CLASSIFIEDS_TABLE)
             .update(classifiedToSupabaseRow(updatedClassified))
             .eq("id", previousClassified.id)
             .select("*")
@@ -409,7 +426,7 @@ export async function updateStoredClassified(classifiedId, updatedData, imageFil
 
 async function updateClassifiedStatus(classifiedId, status, reason = "") {
     const { data, error } = await supabase
-        .from("classifieds")
+        .from(CLASSIFIEDS_TABLE)
         .update({
             status,
             moderation_reason: reason,
@@ -444,7 +461,7 @@ export async function deleteStoredClassified(classifiedId) {
     const classified = classifieds.find(item => sameId(item.id, classifiedId));
 
     const { error } = await supabase
-        .from("classifieds")
+        .from(CLASSIFIEDS_TABLE)
         .delete()
         .eq("id", classifiedId);
 
