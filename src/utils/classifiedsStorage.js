@@ -287,11 +287,13 @@ export async function syncClassifiedsFromSupabase() {
 }
 
 export async function createStoredClassified(classifiedData, imageFiles = []) {
+    const createdAt = new Date().toISOString();
+
     const newClassified = normalizeClassified({
         ...classifiedData,
         id: classifiedData.id || crypto.randomUUID?.() || String(Date.now()),
-        createdAt: new Date().toISOString(),
-        updatedAt: null,
+        createdAt,
+        updatedAt: createdAt,
         status: "active",
         imagePaths: [],
         images: []

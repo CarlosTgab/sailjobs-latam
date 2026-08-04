@@ -35,7 +35,7 @@ create table if not exists public.classifieds (
     moderation_reason text not null default '',
     moderated_at timestamptz,
     created_at timestamptz not null default now(),
-    updated_at timestamptz
+    updated_at timestamptz not null default now()
 );
 
 /*
@@ -66,7 +66,15 @@ add column if not exists status text not null default 'active',
 add column if not exists moderation_reason text not null default '',
 add column if not exists moderated_at timestamptz,
 add column if not exists created_at timestamptz not null default now(),
-add column if not exists updated_at timestamptz;
+add column if not exists updated_at timestamptz not null default now();
+
+update public.classifieds
+set updated_at = coalesce(created_at, now())
+where updated_at is null;
+
+alter table public.classifieds
+alter column updated_at set default now(),
+alter column updated_at set not null;
 
 update public.classifieds
 set category = 'Casco'
