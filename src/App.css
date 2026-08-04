@@ -632,6 +632,44 @@ body{
     margin-bottom: 15px;
 }
 
+.classifieds-page{
+    position: relative;
+    z-index: 1;
+    padding-top: 48px;
+    padding-bottom: 80px;
+}
+
+.classifieds-page .page-header{
+    margin-bottom: 20px;
+}
+
+.classifieds-page .calendar-filters{
+    margin-bottom: 24px;
+}
+
+.classifieds-grid{
+    grid-template-columns: repeat(auto-fill, minmax(280px, 360px));
+    justify-content: start;
+    align-items: start;
+    margin-top: 24px;
+}
+
+.classifieds-grid .event-card{
+    width: 100%;
+    padding: 18px;
+}
+
+.classifieds-grid .classified-image,
+.classifieds-grid .classified-placeholder{
+    height: auto;
+    aspect-ratio: 4 / 3;
+}
+
+.classifieds-grid .classified-image{
+    object-fit: contain;
+    background: #eef4fb;
+}
+
 .classified-placeholder{
     width: 100%;
     height: 180px;
@@ -798,6 +836,14 @@ body{
 
     .filter-clear-button{
         width: 100%;
+    }
+
+    .page.classifieds-page{
+        padding: 36px 6% 64px;
+    }
+
+    .classifieds-grid{
+        grid-template-columns: 1fr;
     }
 
     .modal{
