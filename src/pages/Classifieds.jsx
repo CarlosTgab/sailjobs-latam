@@ -49,6 +49,9 @@ function Classifieds() {
         const matchesSearch =
             item.title.toLowerCase().includes(searchText) ||
             item.category.toLowerCase().includes(searchText) ||
+            item.clubName.toLowerCase().includes(searchText) ||
+            String(item.modelYear || "").toLowerCase().includes(searchText) ||
+            item.serialNumber.toLowerCase().includes(searchText) ||
             item.city.toLowerCase().includes(searchText) ||
             item.country.toLowerCase().includes(searchText) ||
             item.description.toLowerCase().includes(searchText) ||
@@ -248,6 +251,14 @@ function Classifieds() {
                                 <p>
                                     📍 {item.city}, {item.country}
                                 </p>
+
+                                {item.modelYear && (
+                                    <p>📅 Año {item.modelYear}</p>
+                                )}
+
+                                {item.clubName && (
+                                    <p>⛵ {item.clubName}</p>
+                                )}
 
                                 <p>
                                     {item.description.length > 120

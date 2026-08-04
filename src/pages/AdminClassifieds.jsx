@@ -138,6 +138,9 @@ function AdminClassifieds() {
             const searchText = [
                 item.title,
                 item.category,
+                item.clubName,
+                item.modelYear,
+                item.serialNumber,
                 item.country,
                 item.state,
                 item.city,
@@ -271,6 +274,20 @@ function AdminClassifieds() {
                                     <strong>Precio:</strong>{" "}
                                     {item.price || "A consultar"}
                                 </p>
+
+                                {item.modelYear && (
+                                    <p>
+                                        <strong>Año:</strong>{" "}
+                                        {item.modelYear}
+                                    </p>
+                                )}
+
+                                {item.clubName && (
+                                    <p>
+                                        <strong>Club:</strong>{" "}
+                                        {item.clubName}
+                                    </p>
+                                )}
 
                                 <p>
                                     <strong>Ubicación:</strong>{" "}

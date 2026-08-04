@@ -24,6 +24,9 @@ function CreateClassified() {
     const [title, setTitle] = useState("");
     const [category, setCategory] = useState("");
     const [price, setPrice] = useState("");
+    const [clubName, setClubName] = useState("");
+    const [modelYear, setModelYear] = useState("");
+    const [serialNumber, setSerialNumber] = useState("");
     const [country, setCountry] = useState("");
     const [city, setCity] = useState("");
     const [description, setDescription] = useState("");
@@ -141,6 +144,9 @@ function CreateClassified() {
                 title,
                 category,
                 price,
+                clubName,
+                modelYear,
+                serialNumber,
                 country,
                 city,
                 description,
@@ -214,6 +220,29 @@ function CreateClassified() {
                         placeholder="Precio *"
                         value={price}
                         onChange={(e) => setPrice(e.target.value)}
+                    />
+
+                    <input
+                        type="text"
+                        placeholder="Club (opcional)"
+                        value={clubName}
+                        onChange={(e) => setClubName(e.target.value)}
+                    />
+
+                    <input
+                        type="number"
+                        min="1900"
+                        max={new Date().getFullYear() + 1}
+                        placeholder="Año (opcional)"
+                        value={modelYear}
+                        onChange={(e) => setModelYear(e.target.value)}
+                    />
+
+                    <input
+                        type="text"
+                        placeholder="Número de serie (opcional)"
+                        value={serialNumber}
+                        onChange={(e) => setSerialNumber(e.target.value)}
                     />
 
                     <select

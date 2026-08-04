@@ -59,8 +59,20 @@ export function normalizeClassified(classified) {
     return {
         id: classified.id || crypto.randomUUID?.() || String(Date.now()),
         title: classified.title || "Clasificado sin título",
-        category: classified.category || "",
+        category: classified.category === "Barco"
+            ? "Casco"
+            : classified.category || "",
         price: classified.price || "",
+        clubName: classified.clubName || classified.club_name || classified.club || "",
+        modelYear:
+            classified.modelYear ??
+            classified.model_year ??
+            classified.year ??
+            "",
+        serialNumber:
+            classified.serialNumber ||
+            classified.serial_number ||
+            "",
         country: classified.country || "",
         countryCode: classified.countryCode || classified.country_code || "",
         state: classified.state || classified.province || classified.region || "",
@@ -123,6 +135,11 @@ function classifiedToSupabaseRow(classified) {
         title: normalized.title.trim(),
         category: normalized.category.trim(),
         price: normalized.price.trim(),
+        club_name: normalized.clubName.trim(),
+        model_year: normalized.modelYear === ""
+            ? null
+            : Number(normalized.modelYear),
+        serial_number: normalized.serialNumber.trim(),
         country: normalized.country.trim(),
         country_code: normalized.countryCode.trim(),
         state: normalized.state.trim(),

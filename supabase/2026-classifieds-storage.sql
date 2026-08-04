@@ -15,6 +15,9 @@ create table if not exists public.classifieds (
     title text not null,
     category text not null,
     price text not null,
+    club_name text not null default '',
+    model_year integer,
+    serial_number text not null default '',
     country text not null,
     country_code text not null default '',
     state text not null default '',
@@ -44,6 +47,9 @@ alter table public.classifieds
 add column if not exists title text not null default '',
 add column if not exists category text not null default '',
 add column if not exists price text not null default '',
+add column if not exists club_name text not null default '',
+add column if not exists model_year integer,
+add column if not exists serial_number text not null default '',
 add column if not exists country text not null default '',
 add column if not exists country_code text not null default '',
 add column if not exists state text not null default '',
@@ -61,6 +67,10 @@ add column if not exists moderation_reason text not null default '',
 add column if not exists moderated_at timestamptz,
 add column if not exists created_at timestamptz not null default now(),
 add column if not exists updated_at timestamptz;
+
+update public.classifieds
+set category = 'Casco'
+where lower(trim(category)) = 'barco';
 
 create index if not exists classifieds_status_created_at_idx
 on public.classifieds (status, created_at desc);

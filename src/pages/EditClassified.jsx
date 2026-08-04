@@ -14,6 +14,9 @@ function EditClassifiedForm({ classified, navigate }) {
     const [title, setTitle] = useState(classified.title);
     const [category, setCategory] = useState(classified.category);
     const [price, setPrice] = useState(classified.price);
+    const [clubName, setClubName] = useState(classified.clubName || "");
+    const [modelYear, setModelYear] = useState(classified.modelYear || "");
+    const [serialNumber, setSerialNumber] = useState(classified.serialNumber || "");
     const [country, setCountry] = useState(classified.country);
     const [city, setCity] = useState(classified.city);
     const [description, setDescription] = useState(classified.description);
@@ -68,6 +71,9 @@ function EditClassifiedForm({ classified, navigate }) {
                     title,
                     category,
                     price,
+                    clubName,
+                    modelYear,
+                    serialNumber,
                     country,
                     city,
                     description
@@ -136,6 +142,29 @@ function EditClassifiedForm({ classified, navigate }) {
                         placeholder="Precio *"
                         value={price}
                         onChange={event => setPrice(event.target.value)}
+                    />
+
+                    <input
+                        type="text"
+                        placeholder="Club (opcional)"
+                        value={clubName}
+                        onChange={event => setClubName(event.target.value)}
+                    />
+
+                    <input
+                        type="number"
+                        min="1900"
+                        max={new Date().getFullYear() + 1}
+                        placeholder="Año (opcional)"
+                        value={modelYear}
+                        onChange={event => setModelYear(event.target.value)}
+                    />
+
+                    <input
+                        type="text"
+                        placeholder="Número de serie (opcional)"
+                        value={serialNumber}
+                        onChange={event => setSerialNumber(event.target.value)}
                     />
 
                     <select

@@ -196,6 +196,27 @@ function ClassifiedDetail() {
                         {classified.price}
                     </p>
 
+                    {classified.modelYear && (
+                        <p>
+                            <strong>Año:</strong>{" "}
+                            {classified.modelYear}
+                        </p>
+                    )}
+
+                    {classified.serialNumber && (
+                        <p>
+                            <strong>Número de serie:</strong>{" "}
+                            {classified.serialNumber}
+                        </p>
+                    )}
+
+                    {classified.clubName && (
+                        <p>
+                            <strong>Club:</strong>{" "}
+                            {classified.clubName}
+                        </p>
+                    )}
+
                     <p>
                         <strong>Ubicación:</strong>{" "}
                         {classified.city}, {classified.country}
