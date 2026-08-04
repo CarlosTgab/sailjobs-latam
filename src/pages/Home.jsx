@@ -34,7 +34,7 @@ import {
 } from "../utils/eventsStorage";
 
 import useApplications from "../hooks/useApplications";
-import { getAllClassifieds } from "../utils/classifiedsStorage";
+import useClassifieds from "../hooks/useClassifieds";
 import { sameId, hasId, sortByNewest } from "../utils/idUtils";
 
 import {
@@ -194,7 +194,7 @@ function Home() {
     }, []);
     const clubs = getAllClubs(staticClubs);
     const events = getAllEvents(staticEvents);
-    const classifieds = getAllClassifieds();
+    const { classifieds } = useClassifieds();
 
     const professionals = users.filter(user =>
         hasProfessionalProfile(user)

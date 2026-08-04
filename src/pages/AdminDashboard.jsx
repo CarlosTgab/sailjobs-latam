@@ -15,7 +15,7 @@ import {
     syncJobsFromSupabase
 } from "../utils/jobsStorage";
 
-import { getAllClassifiedsForAdmin } from "../utils/classifiedsStorage";
+import useClassifieds from "../hooks/useClassifieds";
 
 import staticEvents from "../data/events";
 import {
@@ -41,7 +41,7 @@ function AdminDashboard() {
     const users = getUsers();
     const clubs = getAllClubs(staticClubs);
     const [jobs, setJobs] = useState(() => getAllJobsForAdmin(staticJobs));
-    const classifieds = getAllClassifiedsForAdmin();
+    const { classifieds } = useClassifieds({ includeHidden: true });
     const [events, setEvents] = useState(() => getAllEvents(staticEvents));
     const [fayEvents, setFayEvents] = useState(() => getImportedEventsBySource("fay"));
 

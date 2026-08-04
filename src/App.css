@@ -659,6 +659,18 @@ body{
     flex-wrap: wrap;
 }
 
+.classified-preview-item{
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.classified-preview-item small{
+    color: #143b64;
+    font-weight: 700;
+    text-align: center;
+}
+
 .classified-preview{
     width: 120px;
     height: 120px;

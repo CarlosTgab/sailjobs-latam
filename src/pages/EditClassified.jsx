@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
     CLASSIFIED_CATEGORIES,
@@ -7,193 +7,101 @@ import {
 
 import { getCurrentUser } from "../utils/authStorage";
 import { sameId } from "../utils/idUtils";
+import useClassifieds from "../hooks/useClassifieds";
+import { updateStoredClassified } from "../utils/classifiedsStorage";
 
-import {
-    getAllClassifieds,
-    updateStoredClassified
-} from "../utils/classifiedsStorage";
-
-function EditClassified() {
-
-    const { id } = useParams();
-    const navigate = useNavigate();
-
-    const currentUser = getCurrentUser();
-
-    const classifieds = getAllClassifieds();
-
-    const classified = classifieds.find(
-        item => sameId(item.id, id)
-    );
-
-    const [title, setTitle] = useState(classified ? classified.title : "");
-    const [category, setCategory] = useState(classified ? classified.category : "");
-    const [price, setPrice] = useState(classified ? classified.price : "");
-    const [country, setCountry] = useState(classified ? classified.country : "");
-    const [city, setCity] = useState(classified ? classified.city : "");
-    const [description, setDescription] = useState(classified ? classified.description : "");
-    const [images, setImages] = useState(classified ? classified.images || [] : []);
+function EditClassifiedForm({ classified, navigate }) {
+    const [title, setTitle] = useState(classified.title);
+    const [category, setCategory] = useState(classified.category);
+    const [price, setPrice] = useState(classified.price);
+    const [clubName, setClubName] = useState(classified.clubName || "");
+    const [modelYear, setModelYear] = useState(classified.modelYear || "");
+    const [serialNumber, setSerialNumber] = useState(classified.serialNumber || "");
+    const [country, setCountry] = useState(classified.country);
+    const [city, setCity] = useState(classified.city);
+    const [description, setDescription] = useState(classified.description);
+    const [currentImages, setCurrentImages] = useState(classified.images || []);
+    const [imageFiles, setImageFiles] = useState(null);
+    const [imagePreviews, setImagePreviews] = useState([]);
     const [message, setMessage] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    if (!classified) {
-        return (
-            <div className="dashboard-page">
+    useEffect(() => () => {
+        imagePreviews.forEach(image => URL.revokeObjectURL(image));
+    }, [imagePreviews]);
 
-                <h1>Clasificado no encontrado</h1>
-
-                <button
-                    className="back-button"
-                    onClick={() => navigate("/classifieds")}
-                >
-                    ← Volver a clasificados
-                </button>
-
-            </div>
-        );
-    }
-
-    const isOwner =
-        currentUser &&
-        sameId(currentUser.id, classified.userId);
-
-    if (!isOwner) {
-        return (
-            <div className="dashboard-page">
-
-                <h1>Acceso denegado</h1>
-
-                <p>
-                    Solo el dueño del clasificado puede editar esta publicación.
-                </p>
-
-                <button
-                    className="back-button"
-                    onClick={() => navigate(`/classifieds/${classified.id}`)}
-                >
-                    ← Volver al clasificado
-                </button>
-
-            </div>
-        );
-    }
-
-    function compressImage(file) {
-        return new Promise((resolve, reject) => {
-            if (!file.type.startsWith("image/")) {
-                reject("El archivo no es una imagen.");
-                return;
-            }
-
-            const reader = new FileReader();
-
-            reader.onload = () => {
-                const img = new Image();
-
-                img.onload = () => {
-                    const maxWidth = 900;
-                    const scale = Math.min(maxWidth / img.width, 1);
-
-                    const canvas = document.createElement("canvas");
-
-                    canvas.width = img.width * scale;
-                    canvas.height = img.height * scale;
-
-                    const ctx = canvas.getContext("2d");
-
-                    ctx.drawImage(
-                        img,
-                        0,
-                        0,
-                        canvas.width,
-                        canvas.height
-                    );
-
-                    const compressedImage = canvas.toDataURL(
-                        "image/jpeg",
-                        0.65
-                    );
-
-                    resolve(compressedImage);
-                };
-
-                img.onerror = () => {
-                    reject("No se pudo procesar la imagen.");
-                };
-
-                img.src = reader.result;
-            };
-
-            reader.onerror = () => {
-                reject("No se pudo leer la imagen.");
-            };
-
-            reader.readAsDataURL(file);
-        });
-    }
-
-    async function handleImagesChange(e) {
-        const selectedFiles = Array.from(e.target.files);
+    function handleImagesChange(event) {
+        const selectedFiles = Array.from(event.target.files);
 
         if (selectedFiles.length > 3) {
             setMessage("Podés subir hasta 3 fotos por clasificado.");
             return;
         }
 
-        try {
-            setMessage("Procesando imágenes...");
-
-            const compressedImages = await Promise.all(
-                selectedFiles.map(file => compressImage(file))
-            );
-
-            setImages(compressedImages);
-
-            setMessage("Imágenes actualizadas correctamente.");
-        } catch (error) {
-            setMessage("Hubo un problema al cargar las imágenes.");
+        if (selectedFiles.some(file => !file.type.startsWith("image/"))) {
+            setMessage("Solo podés subir archivos de imagen.");
+            return;
         }
+
+        setImageFiles(selectedFiles);
+        setImagePreviews(selectedFiles.map(file => URL.createObjectURL(file)));
+        setCurrentImages([]);
+        setMessage(
+            selectedFiles.length > 0
+                ? "Fotos listas. La primera se usará como portada."
+                : ""
+        );
     }
 
-    function handleSubmit(e) {
-        e.preventDefault();
+    async function handleSubmit(event) {
+        event.preventDefault();
 
         if (!title || !category || !price || !country || !city || !description) {
             setMessage("Completá todos los campos obligatorios.");
             return;
         }
 
+        setIsSubmitting(true);
+        setMessage("Guardando cambios...");
+
         try {
-            updateStoredClassified(classified.id, {
-                title,
-                category,
-                price,
-                country,
-                city,
-                description,
-                images
-            });
+            await updateStoredClassified(
+                classified.id,
+                {
+                    title,
+                    category,
+                    price,
+                    clubName,
+                    modelYear,
+                    serialNumber,
+                    country,
+                    city,
+                    description
+                },
+                imageFiles
+            );
 
             navigate(`/classifieds/${classified.id}`);
         } catch (error) {
-            if (error.name === "QuotaExceededError") {
-                setMessage(
-                    "Las fotos son demasiado pesadas para esta versión local. Probá con menos fotos o imágenes más chicas."
-                );
-            } else {
-                setMessage("No se pudo guardar el clasificado.");
-            }
+            setMessage(
+                error?.message || "No se pudo guardar el clasificado. Intentá nuevamente."
+            );
+        } finally {
+            setIsSubmitting(false);
         }
     }
 
     function removeImages() {
-        setImages([]);
+        setCurrentImages([]);
+        setImageFiles([]);
+        setImagePreviews([]);
         setMessage("Fotos eliminadas. Guardá los cambios para confirmar.");
     }
 
+    const visibleImages = imageFiles === null ? currentImages : imagePreviews;
+
     return (
-
         <div className="dashboard-page">
-
             <button
                 className="back-button"
                 onClick={() => navigate(`/classifieds/${classified.id}`)}
@@ -204,36 +112,26 @@ function EditClassified() {
             <h1>Editar clasificado</h1>
 
             <p>
-                Modificá los datos de tu publicación.
+                Modificá los datos o reemplazá la galería. La primera foto será la portada.
             </p>
 
             <div className="detail-card">
-
-                <form
-                    className="auth-form"
-                    onSubmit={handleSubmit}
-                >
-
+                <form className="auth-form" onSubmit={handleSubmit}>
                     <input
                         type="text"
                         placeholder="Título del clasificado *"
                         value={title}
-                        onChange={(e) => setTitle(e.target.value)}
+                        onChange={event => setTitle(event.target.value)}
                     />
 
                     <select
                         value={category}
-                        onChange={(e) => setCategory(e.target.value)}
+                        onChange={event => setCategory(event.target.value)}
                     >
-                        <option value="">
-                            Seleccionar categoría *
-                        </option>
+                        <option value="">Seleccionar categoría *</option>
 
-                        {CLASSIFIED_CATEGORIES.map((categoryOption) => (
-                            <option
-                                key={categoryOption}
-                                value={categoryOption}
-                            >
+                        {CLASSIFIED_CATEGORIES.map(categoryOption => (
+                            <option key={categoryOption} value={categoryOption}>
                                 {categoryOption}
                             </option>
                         ))}
@@ -243,22 +141,40 @@ function EditClassified() {
                         type="text"
                         placeholder="Precio *"
                         value={price}
-                        onChange={(e) => setPrice(e.target.value)}
+                        onChange={event => setPrice(event.target.value)}
+                    />
+
+                    <input
+                        type="text"
+                        placeholder="Club (opcional)"
+                        value={clubName}
+                        onChange={event => setClubName(event.target.value)}
+                    />
+
+                    <input
+                        type="number"
+                        min="1900"
+                        max={new Date().getFullYear() + 1}
+                        placeholder="Año (opcional)"
+                        value={modelYear}
+                        onChange={event => setModelYear(event.target.value)}
+                    />
+
+                    <input
+                        type="text"
+                        placeholder="Número de serie (opcional)"
+                        value={serialNumber}
+                        onChange={event => setSerialNumber(event.target.value)}
                     />
 
                     <select
                         value={country}
-                        onChange={(e) => setCountry(e.target.value)}
+                        onChange={event => setCountry(event.target.value)}
                     >
-                        <option value="">
-                            Seleccionar país *
-                        </option>
+                        <option value="">Seleccionar país *</option>
 
-                        {COUNTRIES.map((countryOption) => (
-                            <option
-                                key={countryOption}
-                                value={countryOption}
-                            >
+                        {COUNTRIES.map(countryOption => (
+                            <option key={countryOption} value={countryOption}>
                                 {countryOption}
                             </option>
                         ))}
@@ -268,19 +184,17 @@ function EditClassified() {
                         type="text"
                         placeholder="Ciudad *"
                         value={city}
-                        onChange={(e) => setCity(e.target.value)}
+                        onChange={event => setCity(event.target.value)}
                     />
 
                     <textarea
                         placeholder="Descripción *"
                         rows="6"
                         value={description}
-                        onChange={(e) => setDescription(e.target.value)}
+                        onChange={event => setDescription(event.target.value)}
                     />
 
-                    <label>
-                        Reemplazar fotos
-                    </label>
+                    <label>Reemplazar fotos (hasta 3)</label>
 
                     <input
                         type="file"
@@ -289,21 +203,23 @@ function EditClassified() {
                         onChange={handleImagesChange}
                     />
 
-                    {images.length > 0 && (
+                    {visibleImages.length > 0 && (
                         <>
                             <div className="classified-preview-gallery">
+                                {visibleImages.map((image, index) => (
+                                    <div
+                                        key={image}
+                                        className="classified-preview-item"
+                                    >
+                                        <img
+                                            src={image}
+                                            alt={`Vista previa ${index + 1}`}
+                                            className="classified-preview"
+                                        />
 
-                                {images.map((image, index) => (
-
-                                    <img
-                                        key={index}
-                                        src={image}
-                                        alt={`Vista previa ${index + 1}`}
-                                        className="classified-preview"
-                                    />
-
+                                        {index === 0 && <small>Portada</small>}
+                                    </div>
                                 ))}
-
                             </div>
 
                             <button
@@ -316,25 +232,81 @@ function EditClassified() {
                         </>
                     )}
 
-                    {message && (
-                        <p>
-                            {message}
-                        </p>
-                    )}
+                    {message && <p>{message}</p>}
 
                     <button
                         className="apply-button"
                         type="submit"
+                        disabled={isSubmitting}
                     >
-                        Guardar cambios
+                        {isSubmitting ? "Guardando..." : "Guardar cambios"}
                     </button>
-
                 </form>
-
             </div>
-
         </div>
+    );
+}
 
+function EditClassified() {
+    const { id } = useParams();
+    const navigate = useNavigate();
+    const currentUser = getCurrentUser();
+
+    const {
+        classifieds,
+        isLoadingClassifieds
+    } = useClassifieds();
+
+    const classified = classifieds.find(item => sameId(item.id, id));
+
+    if (isLoadingClassifieds && !classified) {
+        return (
+            <div className="dashboard-page">
+                <h1>Cargando clasificado...</h1>
+            </div>
+        );
+    }
+
+    if (!classified) {
+        return (
+            <div className="dashboard-page">
+                <h1>Clasificado no encontrado</h1>
+
+                <button
+                    className="back-button"
+                    onClick={() => navigate("/classifieds")}
+                >
+                    ← Volver a clasificados
+                </button>
+            </div>
+        );
+    }
+
+    const isOwner = currentUser && sameId(currentUser.id, classified.userId);
+
+    if (!isOwner) {
+        return (
+            <div className="dashboard-page">
+                <h1>Acceso denegado</h1>
+
+                <p>Solo el dueño del clasificado puede editar esta publicación.</p>
+
+                <button
+                    className="back-button"
+                    onClick={() => navigate(`/classifieds/${classified.id}`)}
+                >
+                    ← Volver al clasificado
+                </button>
+            </div>
+        );
+    }
+
+    return (
+        <EditClassifiedForm
+            key={classified.id}
+            classified={classified}
+            navigate={navigate}
+        />
     );
 }
 

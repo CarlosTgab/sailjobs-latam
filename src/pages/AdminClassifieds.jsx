@@ -2,10 +2,10 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
-    getAllClassifiedsForAdmin,
     hideStoredClassified,
     restoreStoredClassified
 } from "../utils/classifiedsStorage";
+import useClassifieds from "../hooks/useClassifieds";
 
 import { getCurrentUser } from "../utils/authStorage";
 import { isSuperadmin } from "../utils/permissions";
@@ -45,11 +45,14 @@ function AdminClassifieds() {
     const navigate = useNavigate();
     const currentUser = getCurrentUser();
 
-    const [refreshKey, setRefreshKey] = useState(0);
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
 
-    const classifieds = getAllClassifiedsForAdmin();
+    const {
+        classifieds,
+        isLoadingClassifieds,
+        classifiedsError
+    } = useClassifieds({ includeHidden: true });
 
     if (!currentUser || !isSuperadmin(currentUser)) {
         return (
@@ -68,10 +71,6 @@ function AdminClassifieds() {
                 </button>
             </div>
         );
-    }
-
-    function refresh() {
-        setRefreshKey(refreshKey + 1);
     }
 
     function getStatusLabel(status) {
@@ -94,7 +93,7 @@ function AdminClassifieds() {
         return "status-pill approved";
     }
 
-    function handleHide(classifiedId) {
+    async function handleHide(classifiedId) {
         const confirmed = window.confirm(
             "¿Seguro que querés dar de baja este clasificado? No se verá en la página pública."
         );
@@ -103,11 +102,14 @@ function AdminClassifieds() {
             return;
         }
 
-        hideStoredClassified(classifiedId);
-        refresh();
+        try {
+            await hideStoredClassified(classifiedId);
+        } catch (error) {
+            window.alert(error?.message || "No se pudo dar de baja el clasificado.");
+        }
     }
 
-    function handleRestore(classifiedId) {
+    async function handleRestore(classifiedId) {
         const confirmed = window.confirm(
             "¿Querés restaurar este clasificado y volver a mostrarlo públicamente?"
         );
@@ -116,8 +118,11 @@ function AdminClassifieds() {
             return;
         }
 
-        restoreStoredClassified(classifiedId);
-        refresh();
+        try {
+            await restoreStoredClassified(classifiedId);
+        } catch (error) {
+            window.alert(error?.message || "No se pudo restaurar el clasificado.");
+        }
     }
 
     const activeClassifieds = classifieds.filter(
@@ -133,6 +138,9 @@ function AdminClassifieds() {
             const searchText = [
                 item.title,
                 item.category,
+                item.clubName,
+                item.modelYear,
+                item.serialNumber,
                 item.country,
                 item.state,
                 item.city,
@@ -231,7 +239,16 @@ function AdminClassifieds() {
                 </button>
             </div>
 
-            {filteredClassifieds.length > 0 ? (
+            {isLoadingClassifieds && filteredClassifieds.length === 0 ? (
+                <div className="detail-card">
+                    <h2>Cargando clasificados...</h2>
+                </div>
+            ) : classifiedsError && filteredClassifieds.length === 0 ? (
+                <div className="detail-card">
+                    <h2>No pudimos cargar los clasificados</h2>
+                    <p>{classifiedsError}</p>
+                </div>
+            ) : filteredClassifieds.length > 0 ? (
                 <div className="dashboard-grid">
                     {filteredClassifieds.map(item => {
                         const isHidden = item.status === "hidden" || item.status === "deleted";
@@ -257,6 +274,20 @@ function AdminClassifieds() {
                                     <strong>Precio:</strong>{" "}
                                     {item.price || "A consultar"}
                                 </p>
+
+                                {item.modelYear && (
+                                    <p>
+                                        <strong>Año:</strong>{" "}
+                                        {item.modelYear}
+                                    </p>
+                                )}
+
+                                {item.clubName && (
+                                    <p>
+                                        <strong>Club:</strong>{" "}
+                                        {item.clubName}
+                                    </p>
+                                )}
 
                                 <p>
                                     <strong>Ubicación:</strong>{" "}

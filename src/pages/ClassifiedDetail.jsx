@@ -4,9 +4,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import { getCurrentUser } from "../utils/authStorage";
 import { isSuperadmin } from "../utils/permissions";
 import { sameId } from "../utils/idUtils";
+import useClassifieds from "../hooks/useClassifieds";
 
 import {
-    getAllClassifieds,
     deleteStoredClassified,
     hideStoredClassified
 } from "../utils/classifiedsStorage";
@@ -18,7 +18,12 @@ function ClassifiedDetail() {
 
     const currentUser = getCurrentUser();
 
-    const classifieds = getAllClassifieds();
+    const {
+        classifieds,
+        isLoadingClassifieds
+    } = useClassifieds({
+        includeHidden: isSuperadmin(currentUser)
+    });
 
     const classified = classifieds.find(
         item => sameId(item.id, id)
@@ -28,9 +33,18 @@ function ClassifiedDetail() {
         ? classified.images || []
         : [];
 
-    const [selectedImage, setSelectedImage] = useState(
-        images.length > 0 ? images[0] : null
-    );
+    const [selectedImage, setSelectedImage] = useState(null);
+    const displayedImage = images.includes(selectedImage)
+        ? selectedImage
+        : images[0] || null;
+
+    if (isLoadingClassifieds && !classified) {
+        return (
+            <div className="dashboard-page">
+                <h1>Cargando clasificado...</h1>
+            </div>
+        );
+    }
 
     if (!classified) {
         return (
@@ -76,7 +90,7 @@ function ClassifiedDetail() {
         `Consulta por ${classified.title}`
     );
 
-    function handleDelete() {
+    async function handleDelete() {
         const confirmDelete = window.confirm(
             "¿Seguro que querés eliminar este clasificado?"
         );
@@ -85,12 +99,17 @@ function ClassifiedDetail() {
             return;
         }
 
-        deleteStoredClassified(classified.id);
-
-        navigate("/classifieds");
+        try {
+            await deleteStoredClassified(classified.id);
+            navigate("/classifieds");
+        } catch (error) {
+            window.alert(
+                error?.message || "No se pudo eliminar el clasificado."
+            );
+        }
     }
 
-    function handleModerateClassified() {
+    async function handleModerateClassified() {
         const confirmModeration = window.confirm(
             "¿Seguro que querés dar de baja este clasificado? No se verá en la página pública."
         );
@@ -99,9 +118,14 @@ function ClassifiedDetail() {
             return;
         }
 
-        hideStoredClassified(classified.id);
-
-        navigate("/admin/classifieds");
+        try {
+            await hideStoredClassified(classified.id);
+            navigate("/admin/classifieds");
+        } catch (error) {
+            window.alert(
+                error?.message || "No se pudo dar de baja el clasificado."
+            );
+        }
     }
 
     return (
@@ -119,10 +143,10 @@ function ClassifiedDetail() {
 
                 <div>
 
-                    {selectedImage ? (
+                    {displayedImage ? (
 
                         <img
-                            src={selectedImage}
+                            src={displayedImage}
                             alt={classified.title}
                             className="classified-main-image"
                         />
@@ -171,6 +195,27 @@ function ClassifiedDetail() {
                         <strong>Precio:</strong>{" "}
                         {classified.price}
                     </p>
+
+                    {classified.modelYear && (
+                        <p>
+                            <strong>Año:</strong>{" "}
+                            {classified.modelYear}
+                        </p>
+                    )}
+
+                    {classified.serialNumber && (
+                        <p>
+                            <strong>Número de serie:</strong>{" "}
+                            {classified.serialNumber}
+                        </p>
+                    )}
+
+                    {classified.clubName && (
+                        <p>
+                            <strong>Club:</strong>{" "}
+                            {classified.clubName}
+                        </p>
+                    )}
 
                     <p>
                         <strong>Ubicación:</strong>{" "}

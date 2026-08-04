@@ -1,7 +1,11 @@
+import { supabase } from "../lib/supabaseClient";
 import { sameId } from "./idUtils";
 
 const CLASSIFIEDS_STORAGE_KEY = "storedClassifieds";
-const HIDDEN_CLASSIFIEDS_STORAGE_KEY = "hiddenClassifieds";
+const CLASSIFIEDS_TABLE = "classified_listings";
+const CLASSIFIED_IMAGES_BUCKET = "classified-images";
+const MAX_CLASSIFIED_IMAGES = 3;
+const MAX_IMAGE_INPUT_SIZE = 10 * 1024 * 1024;
 
 function readStorageArray(key) {
     try {
@@ -12,41 +16,81 @@ function readStorageArray(key) {
     }
 }
 
-function writeStorageArray(key, items) {
-    localStorage.setItem(
-        key,
-        JSON.stringify(items)
-    );
+function safeDispatchClassifiedsChanged() {
+    try {
+        window.dispatchEvent(new Event("classifiedsChanged"));
+    } catch {
+        // No-op outside browser contexts.
+    }
 }
 
-function normalizeClassified(classified) {
-    if (!classified) {
-        return null;
+function getPublicImageUrl(path) {
+    if (!path) return "";
+
+    if (
+        String(path).startsWith("http://") ||
+        String(path).startsWith("https://") ||
+        String(path).startsWith("data:") ||
+        String(path).startsWith("blob:")
+    ) {
+        return path;
     }
 
-    return {
-        id: classified.id || crypto.randomUUID?.() || Date.now(),
-        title: classified.title || "Clasificado sin título",
-        category: classified.category || "",
-        price: classified.price || "",
+    return supabase.storage
+        .from(CLASSIFIED_IMAGES_BUCKET)
+        .getPublicUrl(path)
+        .data.publicUrl;
+}
 
+export function normalizeClassified(classified) {
+    if (!classified) return null;
+
+    const imagePaths = Array.isArray(classified.imagePaths)
+        ? classified.imagePaths
+        : Array.isArray(classified.image_paths)
+            ? classified.image_paths
+            : [];
+
+    const images = imagePaths.length > 0
+        ? imagePaths.map(getPublicImageUrl).filter(Boolean)
+        : Array.isArray(classified.images)
+            ? classified.images
+            : [];
+
+    return {
+        id: classified.id || crypto.randomUUID?.() || String(Date.now()),
+        title: classified.title || "Clasificado sin título",
+        category: classified.category === "Barco"
+            ? "Casco"
+            : classified.category || "",
+        price: classified.price || "",
+        clubName: classified.clubName || classified.club_name || classified.club || "",
+        modelYear:
+            classified.modelYear ??
+            classified.model_year ??
+            classified.year ??
+            "",
+        serialNumber:
+            classified.serialNumber ||
+            classified.serial_number ||
+            "",
         country: classified.country || "",
         countryCode: classified.countryCode || classified.country_code || "",
         state: classified.state || classified.province || classified.region || "",
         stateCode: classified.stateCode || classified.state_code || "",
         city: classified.city || "",
         cityName: classified.cityName || classified.city_name || classified.city || "",
-
         description: classified.description || "",
-        images: Array.isArray(classified.images) ? classified.images : [],
-        sellerName: classified.sellerName || "",
-        sellerEmail: classified.sellerEmail || "",
-        sellerPhone: classified.sellerPhone || "",
+        imagePaths,
+        images,
+        sellerName: classified.sellerName || classified.seller_name || "",
+        sellerEmail: classified.sellerEmail || classified.seller_email || "",
+        sellerPhone: classified.sellerPhone || classified.seller_phone || "",
         userId: classified.userId || classified.user_id || null,
         createdAt: classified.createdAt || classified.created_at || new Date().toISOString(),
         updatedAt: classified.updatedAt || classified.updated_at || null,
         status: classified.status || "active",
-        moderationReason: classified.moderationReason || "",
+        moderationReason: classified.moderationReason || classified.moderation_reason || "",
         moderatedAt: classified.moderatedAt || classified.moderated_at || null
     };
 }
@@ -57,11 +101,10 @@ function uniqueClassifieds(classifieds) {
     classifieds.forEach(classified => {
         const normalized = normalizeClassified(classified);
 
-        if (!normalized) {
-            return;
-        }
-
-        if (!result.some(item => sameId(item.id, normalized.id))) {
+        if (
+            normalized &&
+            !result.some(item => sameId(item.id, normalized.id))
+        ) {
             result.push(normalized);
         }
     });
@@ -70,36 +113,171 @@ function uniqueClassifieds(classifieds) {
 }
 
 function isVisibleClassified(classified) {
-    return (
-        classified.status !== "hidden" &&
-        classified.status !== "deleted"
-    );
+    return classified.status !== "hidden" && classified.status !== "deleted";
 }
 
-export function getHiddenClassifiedIds() {
-    return readStorageArray(HIDDEN_CLASSIFIEDS_STORAGE_KEY);
+function saveClassifiedsToLocalCache(classifieds) {
+    const normalized = uniqueClassifieds(classifieds);
+
+    try {
+        localStorage.setItem(
+            CLASSIFIEDS_STORAGE_KEY,
+            JSON.stringify(normalized)
+        );
+    } catch (error) {
+        console.error(
+            "No se pudo actualizar la caché local de clasificados.",
+            error
+        );
+    }
+
+    safeDispatchClassifiedsChanged();
+    return normalized;
 }
 
-function saveHiddenClassifiedIds(ids) {
-    const uniqueIds = [];
+function classifiedToSupabaseRow(classified) {
+    const normalized = normalizeClassified(classified);
+    const parsedModelYear = Number(normalized.modelYear);
 
-    ids.forEach(id => {
-        if (!uniqueIds.some(existingId => sameId(existingId, id))) {
-            uniqueIds.push(id);
+    return {
+        id: normalized.id,
+        title: normalized.title.trim(),
+        category: normalized.category.trim(),
+        price: normalized.price.trim(),
+        club_name: normalized.clubName.trim(),
+        model_year:
+            normalized.modelYear !== "" &&
+            Number.isInteger(parsedModelYear)
+                ? parsedModelYear
+                : null,
+        serial_number: normalized.serialNumber.trim(),
+        country: normalized.country.trim(),
+        country_code: normalized.countryCode.trim(),
+        state: normalized.state.trim(),
+        state_code: normalized.stateCode.trim(),
+        city: normalized.city.trim(),
+        city_name: normalized.cityName.trim(),
+        description: normalized.description.trim(),
+        image_paths: normalized.imagePaths,
+        seller_name: normalized.sellerName.trim(),
+        seller_email: normalized.sellerEmail.trim(),
+        seller_phone: normalized.sellerPhone.trim(),
+        user_id: normalized.userId,
+        status: normalized.status,
+        moderation_reason: normalized.moderationReason,
+        moderated_at: normalized.moderatedAt,
+        created_at: normalized.createdAt,
+        updated_at: normalized.updatedAt
+    };
+}
+
+function compressClassifiedImage(file) {
+    return new Promise((resolve, reject) => {
+        if (!file?.type?.startsWith("image/")) {
+            reject(new Error("Solo podés subir archivos de imagen."));
+            return;
         }
+
+        if (file.size > MAX_IMAGE_INPUT_SIZE) {
+            reject(new Error("Cada foto debe pesar menos de 10 MB."));
+            return;
+        }
+
+        const reader = new FileReader();
+
+        reader.onload = () => {
+            const image = new Image();
+
+            image.onload = () => {
+                const maxWidth = 1600;
+                const scale = Math.min(maxWidth / image.width, 1);
+                const canvas = document.createElement("canvas");
+
+                canvas.width = Math.max(1, Math.round(image.width * scale));
+                canvas.height = Math.max(1, Math.round(image.height * scale));
+
+                const context = canvas.getContext("2d");
+
+                if (!context) {
+                    reject(new Error("No se pudo preparar la imagen."));
+                    return;
+                }
+
+                context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+                canvas.toBlob(
+                    blob => {
+                        if (blob) {
+                            resolve(blob);
+                        } else {
+                            reject(new Error("No se pudo comprimir la imagen."));
+                        }
+                    },
+                    "image/jpeg",
+                    0.82
+                );
+            };
+
+            image.onerror = () => reject(new Error("No se pudo procesar la imagen."));
+            image.src = reader.result;
+        };
+
+        reader.onerror = () => reject(new Error("No se pudo leer la imagen."));
+        reader.readAsDataURL(file);
     });
-
-    writeStorageArray(HIDDEN_CLASSIFIEDS_STORAGE_KEY, uniqueIds);
-
-    window.dispatchEvent(new Event("classifiedsChanged"));
-
-    return uniqueIds;
 }
 
-export function isClassifiedHidden(classifiedId) {
-    return getHiddenClassifiedIds().some(id =>
-        sameId(id, classifiedId)
-    );
+async function removeImagePaths(paths) {
+    const pathsToRemove = (paths || []).filter(Boolean);
+
+    if (pathsToRemove.length === 0) return;
+
+    const { error } = await supabase.storage
+        .from(CLASSIFIED_IMAGES_BUCKET)
+        .remove(pathsToRemove);
+
+    if (error) throw error;
+}
+
+async function uploadClassifiedImages(userId, classifiedId, files) {
+    if (!userId) {
+        throw new Error("Tenés que iniciar sesión para subir fotos.");
+    }
+
+    if (files.length > MAX_CLASSIFIED_IMAGES) {
+        throw new Error("Podés subir hasta 3 fotos por clasificado.");
+    }
+
+    const uploadedPaths = [];
+
+    try {
+        for (const file of files) {
+            const compressedImage = await compressClassifiedImage(file);
+            const imageId = crypto.randomUUID?.() || `${Date.now()}-${uploadedPaths.length}`;
+            const path = `${userId}/${classifiedId}/${imageId}.jpg`;
+
+            const { error } = await supabase.storage
+                .from(CLASSIFIED_IMAGES_BUCKET)
+                .upload(path, compressedImage, {
+                    contentType: "image/jpeg",
+                    cacheControl: "31536000",
+                    upsert: false
+                });
+
+            if (error) throw error;
+            uploadedPaths.push(path);
+        }
+
+        return uploadedPaths;
+    } catch (error) {
+        try {
+            await removeImagePaths(uploadedPaths);
+        } catch {
+            // Best effort cleanup after a partial upload.
+        }
+
+        throw error;
+    }
 }
 
 export function getStoredClassifieds() {
@@ -107,128 +285,203 @@ export function getStoredClassifieds() {
 }
 
 export function saveStoredClassifieds(classifieds) {
-    const normalized = uniqueClassifieds(classifieds);
-
-    localStorage.setItem(
-        CLASSIFIEDS_STORAGE_KEY,
-        JSON.stringify(normalized)
-    );
-
-    window.dispatchEvent(new Event("classifiedsChanged"));
-
-    return normalized;
+    return saveClassifiedsToLocalCache(classifieds);
 }
 
-export function createStoredClassified(classifiedData) {
-    const classifieds = getStoredClassifieds();
+export async function fetchSupabaseClassifieds() {
+    const { data, error } = await supabase
+        .from(CLASSIFIEDS_TABLE)
+        .select("*")
+        .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    return uniqueClassifieds(data || []);
+}
+
+export async function syncClassifiedsFromSupabase() {
+    const remoteClassifieds = await fetchSupabaseClassifieds();
+    return saveClassifiedsToLocalCache(remoteClassifieds);
+}
+
+export async function createStoredClassified(classifiedData, imageFiles = []) {
+    const createdAt = new Date().toISOString();
 
     const newClassified = normalizeClassified({
         ...classifiedData,
-        id: classifiedData.id || crypto.randomUUID?.() || Date.now(),
-        createdAt: classifiedData.createdAt || new Date().toISOString(),
-        updatedAt: null,
-        status: classifiedData.status || "active"
+        id: classifiedData.id || crypto.randomUUID?.() || String(Date.now()),
+        createdAt,
+        updatedAt: createdAt,
+        status: "active",
+        imagePaths: [],
+        images: []
     });
 
-    saveStoredClassifieds([
-        ...classifieds,
-        newClassified
-    ]);
+    let uploadedPaths = [];
 
-    return newClassified;
-}
+    try {
+        uploadedPaths = await uploadClassifiedImages(
+            newClassified.userId,
+            newClassified.id,
+            imageFiles
+        );
 
-export function updateStoredClassified(classifiedId, updatedData) {
-    const classifieds = getStoredClassifieds();
+        const { data, error } = await supabase
+            .from(CLASSIFIEDS_TABLE)
+            .insert(classifiedToSupabaseRow({
+                ...newClassified,
+                imagePaths: uploadedPaths
+            }))
+            .select("*")
+            .single();
 
-    const updatedClassifieds = classifieds.map(classified => {
-        if (sameId(classified.id, classifiedId)) {
-            return normalizeClassified({
-                ...classified,
-                ...updatedData,
-                id: classified.id,
-                updatedAt: new Date().toISOString()
-            });
+        if (error) throw error;
+
+        const savedClassified = normalizeClassified(data);
+
+        saveClassifiedsToLocalCache([
+            savedClassified,
+            ...getStoredClassifieds()
+        ]);
+
+        return savedClassified;
+    } catch (error) {
+        try {
+            await removeImagePaths(uploadedPaths);
+        } catch {
+            // Best effort cleanup if the database insert fails.
         }
 
-        return classified;
-    });
+        throw error;
+    }
+}
 
-    saveStoredClassifieds(updatedClassifieds);
+export async function updateStoredClassified(classifiedId, updatedData, imageFiles = null) {
+    const currentClassifieds = getStoredClassifieds();
+    const previousClassified = currentClassifieds.find(item => sameId(item.id, classifiedId));
 
-    return updatedClassifieds.find(classified =>
-        sameId(classified.id, classifiedId)
-    );
+    if (!previousClassified) {
+        throw new Error("No encontramos el clasificado que querés editar.");
+    }
+
+    let nextImagePaths = previousClassified.imagePaths || [];
+    let uploadedPaths = [];
+
+    try {
+        if (Array.isArray(imageFiles)) {
+            uploadedPaths = await uploadClassifiedImages(
+                previousClassified.userId,
+                previousClassified.id,
+                imageFiles
+            );
+            nextImagePaths = uploadedPaths;
+        }
+
+        const updatedClassified = normalizeClassified({
+            ...previousClassified,
+            ...updatedData,
+            id: previousClassified.id,
+            userId: previousClassified.userId,
+            imagePaths: nextImagePaths,
+            images: [],
+            updatedAt: new Date().toISOString()
+        });
+
+        const { data, error } = await supabase
+            .from(CLASSIFIEDS_TABLE)
+            .update(classifiedToSupabaseRow(updatedClassified))
+            .eq("id", previousClassified.id)
+            .select("*")
+            .single();
+
+        if (error) throw error;
+
+        const savedClassified = normalizeClassified(data);
+        saveClassifiedsToLocalCache([
+            savedClassified,
+            ...currentClassifieds.filter(item => !sameId(item.id, classifiedId))
+        ]);
+
+        if (Array.isArray(imageFiles)) {
+            try {
+                await removeImagePaths(previousClassified.imagePaths || []);
+            } catch (cleanupError) {
+                console.error(
+                    "No se pudieron limpiar las fotos anteriores del clasificado.",
+                    cleanupError
+                );
+            }
+        }
+
+        return savedClassified;
+    } catch (error) {
+        try {
+            await removeImagePaths(uploadedPaths);
+        } catch {
+            // Best effort cleanup after a failed update.
+        }
+
+        throw error;
+    }
+}
+
+async function updateClassifiedStatus(classifiedId, status, reason = "") {
+    const { data, error } = await supabase
+        .from(CLASSIFIEDS_TABLE)
+        .update({
+            status,
+            moderation_reason: reason,
+            moderated_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        })
+        .eq("id", classifiedId)
+        .select("*")
+        .single();
+
+    if (error) throw error;
+
+    const savedClassified = normalizeClassified(data);
+    saveClassifiedsToLocalCache([
+        savedClassified,
+        ...getStoredClassifieds().filter(item => !sameId(item.id, classifiedId))
+    ]);
+
+    return savedClassified;
 }
 
 export function hideStoredClassified(classifiedId, reason = "") {
-    const storedClassified = getStoredClassifieds().find(classified =>
-        sameId(classified.id, classifiedId)
-    );
-
-    saveHiddenClassifiedIds([
-        ...getHiddenClassifiedIds(),
-        classifiedId
-    ]);
-
-    if (storedClassified) {
-        updateStoredClassified(classifiedId, {
-            status: "hidden",
-            moderationReason: reason,
-            moderatedAt: new Date().toISOString()
-        });
-    }
+    return updateClassifiedStatus(classifiedId, "hidden", reason);
 }
 
 export function restoreStoredClassified(classifiedId) {
-    saveHiddenClassifiedIds(
-        getHiddenClassifiedIds().filter(id =>
-            !sameId(id, classifiedId)
-        )
+    return updateClassifiedStatus(classifiedId, "active", "");
+}
+
+export async function deleteStoredClassified(classifiedId) {
+    const classifieds = getStoredClassifieds();
+    const classified = classifieds.find(item => sameId(item.id, classifiedId));
+
+    const { error } = await supabase
+        .from(CLASSIFIEDS_TABLE)
+        .delete()
+        .eq("id", classifiedId);
+
+    if (error) throw error;
+
+    saveClassifiedsToLocalCache(
+        classifieds.filter(item => !sameId(item.id, classifiedId))
     );
 
-    const storedClassified = getStoredClassifieds().find(classified =>
-        sameId(classified.id, classifiedId)
-    );
-
-    if (storedClassified) {
-        updateStoredClassified(classifiedId, {
-            status: "active",
-            moderationReason: "",
-            moderatedAt: new Date().toISOString()
-        });
+    try {
+        await removeImagePaths(classified?.imagePaths || []);
+    } catch (cleanupError) {
+        console.error("No se pudieron eliminar las fotos del clasificado.", cleanupError);
     }
 }
 
-export function deleteStoredClassified(classifiedId) {
-    const classifieds = getStoredClassifieds();
-
-    saveStoredClassifieds(
-        classifieds.filter(classified =>
-            !sameId(classified.id, classifiedId)
-        )
-    );
+export function getAllClassifiedsForAdmin() {
+    return getStoredClassifieds();
 }
 
-export function getAllClassifiedsForAdmin(staticClassifieds = []) {
-    const hiddenIds = getHiddenClassifiedIds();
-
-    return uniqueClassifieds([
-        ...staticClassifieds,
-        ...getStoredClassifieds()
-    ]).map(classified => {
-        if (hiddenIds.some(id => sameId(id, classified.id))) {
-            return {
-                ...classified,
-                status: "hidden"
-            };
-        }
-
-        return classified;
-    });
-}
-
-export function getAllClassifieds(staticClassifieds = []) {
-    return getAllClassifiedsForAdmin(staticClassifieds)
-        .filter(isVisibleClassified);
+export function getAllClassifieds() {
+    return getStoredClassifieds().filter(isVisibleClassified);
 }

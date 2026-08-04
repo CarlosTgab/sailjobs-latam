@@ -110,7 +110,7 @@ export const COUNTRIES = [
 ];
 
 export const CLASSIFIED_CATEGORIES = [
-    "Barco",
+    "Casco",
     "Vela",
     "Puntera",
     "Base",
