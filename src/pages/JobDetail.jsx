@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { sameId } from "../utils/idUtils";
 import {
     useParams,
@@ -1032,7 +1033,7 @@ function JobDetail() {
 
             </div>
 
-            {showApplyModal && (
+            {showApplyModal && createPortal((
 
                 <div className="modal-overlay">
 
@@ -1255,7 +1256,7 @@ function JobDetail() {
 
                 </div>
 
-            )}
+            ), document.body)}
 
         </div>
 
