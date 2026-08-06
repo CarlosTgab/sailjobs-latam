@@ -291,7 +291,7 @@ function OrganizationAdminDashboard() {
                 reviewingOrganizationName: organizationName,
                 source: organizationName,
                 isOfficial: true,
-                reviewedBy: currentUser.name || currentUser.email,
+                reviewedBy: currentUser.id,
                 reviewMessage: "Aprobado y publicado por la organización."
             }
         );
@@ -318,7 +318,7 @@ function OrganizationAdminDashboard() {
                 organizationName,
                 reviewingOrganizationId: organizationId || event.reviewingOrganizationId,
                 reviewingOrganizationName: organizationName,
-                reviewedBy: currentUser.name || currentUser.email,
+                reviewedBy: currentUser.id,
                 reviewMessage: reason.trim() || "Rechazado por la organización."
             }
         );
@@ -345,7 +345,7 @@ function OrganizationAdminDashboard() {
                 organizationName,
                 reviewingOrganizationId: organizationId || event.reviewingOrganizationId,
                 reviewingOrganizationName: organizationName,
-                reviewedBy: currentUser.name || currentUser.email,
+                reviewedBy: currentUser.id,
                 reviewMessage: reason.trim() || "La organización solicitó cambios."
             }
         );

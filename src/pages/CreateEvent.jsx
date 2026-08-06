@@ -84,6 +84,39 @@ function uniqueById(entities) {
     return result;
 }
 
+function getEventSaveErrorMessage(error) {
+    const code = String(error?.code || "");
+    const detail = String(error?.message || "").trim();
+    const normalizedDetail = detail.toLowerCase();
+
+    if (code === "42501" || normalizedDetail.includes("row-level security")) {
+        return "Tu cuenta no tiene permiso online para publicar este evento. Revisá que la migración de eventos y permisos esté aplicada.";
+    }
+
+    if (
+        code === "23502" &&
+        normalizedDetail.includes("club_id")
+    ) {
+        return "La base todavía exige asociar cada evento a un club. Ejecutá el hotfix de eventos para permitir publicaciones institucionales.";
+    }
+
+    if (code === "22P02" && normalizedDetail.includes("uuid")) {
+        return "La base rechazó el identificador de la organización o del usuario. Cerrá sesión, volvé a ingresar e intentá nuevamente.";
+    }
+
+    if (code === "42703") {
+        return "Falta actualizar la estructura de eventos en Supabase. Ejecutá las migraciones indicadas antes de publicar.";
+    }
+
+    const technicalDetail = [code && `[${code}]`, detail]
+        .filter(Boolean)
+        .join(" ");
+
+    return technicalDetail
+        ? `No se pudo guardar el evento online. Detalle: ${technicalDetail}`
+        : "No se pudo guardar el evento online. Revisá la conexión e intentá nuevamente.";
+}
+
 function CreateEvent() {
     const { clubId } = useParams();
     const navigate = useNavigate();
@@ -308,7 +341,7 @@ function CreateEvent() {
                 source: targetEntity.name,
                 status: EVENT_STATUS.APPROVED,
                 isOfficial: true,
-                reviewedBy: currentUser?.name || currentUser?.email || "Organización",
+                reviewedBy: currentUser?.id || "",
                 reviewedAt: new Date().toISOString()
                 });
 
@@ -338,13 +371,7 @@ function CreateEvent() {
 
             navigate(`/club-dashboard/${targetEntity.id}`);
         } catch (error) {
-            const errorText = String(error?.message || "").toLowerCase();
-
-            setMessage(
-                errorText.includes("row-level security") || error?.code === "42501"
-                    ? "Tu cuenta no tiene permiso online para publicar este evento. Revisá que la migración de eventos y permisos esté aplicada."
-                    : "No se pudo guardar el evento online. No se publicó ningún dato; revisá la conexión e intentá nuevamente."
-            );
+            setMessage(getEventSaveErrorMessage(error));
         } finally {
             setIsSubmitting(false);
         }
