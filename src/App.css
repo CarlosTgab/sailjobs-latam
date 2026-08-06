@@ -271,6 +271,49 @@ body{
     margin-top: 40px;
 }
 
+.calendar-months{
+    display: flex;
+    flex-direction: column;
+    gap: 44px;
+    margin-top: 40px;
+}
+
+.calendar-month-divider{
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.calendar-month-divider h2{
+    margin: 0;
+    color: #0F2D52;
+    font-size: clamp(1.35rem, 2.2vw, 1.8rem);
+    white-space: nowrap;
+}
+
+.calendar-month-line{
+    flex: 1;
+    height: 2px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #1e76bd, rgba(30,118,189,0.08));
+}
+
+.calendar-month-count{
+    color: #60748b;
+    font-size: 0.9rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.calendar-month-grid{
+    margin-top: 0;
+}
+
+.calendar-empty-state{
+    margin-top: 40px;
+}
+
 .event-card{
     background: white;
     padding: 25px;
@@ -836,6 +879,18 @@ body{
 
     .filter-clear-button{
         width: 100%;
+    }
+
+    .calendar-months{
+        gap: 36px;
+    }
+
+    .calendar-month-divider{
+        gap: 10px;
+    }
+
+    .calendar-month-count{
+        font-size: 0.78rem;
     }
 
     .page.classifieds-page{

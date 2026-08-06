@@ -50,6 +50,37 @@ function getLocationLabel(event) {
         : "Ubicación no informada";
 }
 
+function parseEventDate(value) {
+    if (!value) return null;
+
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(value)
+        ? new Date(`${value}T00:00:00`)
+        : new Date(value);
+
+    return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function getMonthGroup(event) {
+    const date = parseEventDate(event.startDate);
+
+    if (!date) {
+        return {
+            key: "date-to-confirm",
+            label: "Fecha a confirmar"
+        };
+    }
+
+    const rawLabel = date.toLocaleDateString("es-AR", {
+        month: "long",
+        year: "numeric"
+    });
+
+    return {
+        key: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`,
+        label: rawLabel.charAt(0).toUpperCase() + rawLabel.slice(1)
+    };
+}
+
 
 function Calendar() {
 
@@ -211,12 +242,30 @@ function Calendar() {
         );
     });
 
+    const eventsByMonth = [...filteredEvents.reduce((groups, event) => {
+        const month = getMonthGroup(event);
+        const currentGroup = groups.get(month.key);
+
+        if (currentGroup) {
+            currentGroup.events.push(event);
+        } else {
+            groups.set(month.key, {
+                ...month,
+                events: [event]
+            });
+        }
+
+        return groups;
+    }, new Map()).values()];
+
     function formatDate(date) {
-        if (!date) {
+        const parsedDate = parseEventDate(date);
+
+        if (!parsedDate) {
             return "Fecha a confirmar";
         }
 
-        return new Date(date + "T00:00:00").toLocaleDateString(
+        return parsedDate.toLocaleDateString(
             "es-AR",
             {
                 day: "2-digit",
@@ -336,108 +385,131 @@ function Calendar() {
                 </div>
             )}
 
-            <div className="event-grid">
+            {eventsByMonth.length > 0 ? (
 
-                {filteredEvents.length > 0 ? (
+                <div className="calendar-months">
 
-                    filteredEvents.map((event) => (
+                    {eventsByMonth.map((month) => (
 
-                        <div
-                            className="event-card"
-                            key={event.id}
-                            onClick={() => navigate(`/calendar/${event.id}`)}
+                        <section
+                            className="calendar-month-section"
+                            key={month.key}
                         >
 
-                            <div className="event-card-top">
-
-                                <span className="sidebar-tag">
-                                    {getEventClassLabel(event)}
+                            <div className="calendar-month-divider">
+                                <h2>{month.label}</h2>
+                                <span className="calendar-month-line" />
+                                <span className="calendar-month-count">
+                                    {month.events.length} {month.events.length === 1 ? "evento" : "eventos"}
                                 </span>
+                            </div>
 
-                                {event.isOfficial ? (
-                                    <span className="event-official-badge">
-                                        {event.source === "FAY" ? "Oficial FAY" : "Oficial"}
-                                    </span>
-                                ) : (
-                                    <span className="event-proposed-badge">
-                                        Comunidad
-                                    </span>
-                                )}
+                            <div className="event-grid calendar-month-grid">
+
+                                {month.events.map((event) => (
+
+                                    <div
+                                        className="event-card"
+                                        key={event.id}
+                                        onClick={() => navigate(`/calendar/${event.id}`)}
+                                    >
+
+                                        <div className="event-card-top">
+
+                                            <span className="sidebar-tag">
+                                                {getEventClassLabel(event)}
+                                            </span>
+
+                                            {event.isOfficial ? (
+                                                <span className="event-official-badge">
+                                                    {event.source === "FAY" ? "Oficial FAY" : "Oficial"}
+                                                </span>
+                                            ) : (
+                                                <span className="event-proposed-badge">
+                                                    Comunidad
+                                                </span>
+                                            )}
+
+                                        </div>
+
+                                        <h2>{event.title}</h2>
+
+                                        <p>
+                                            📍 {getLocationLabel(event)}
+                                        </p>
+
+                                        <p>
+                                            📅 {formatDate(event.startDate)}
+                                            {" "}
+                                            -
+                                            {" "}
+                                            {formatDate(event.endDate)}
+                                        </p>
+
+                                        {event.organizationName && (
+                                            <p>
+                                                Organización: <strong>{event.organizationName}</strong>
+                                            </p>
+                                        )}
+
+                                        {event.organizingClubName && (
+                                            <p>
+                                                Organizador indicado: <strong>{event.organizingClubName}</strong>
+                                            </p>
+                                        )}
+
+                                        {event.source && (
+                                            <p>
+                                                Fuente: <strong>{event.source}</strong>
+                                            </p>
+                                        )}
+
+                                        {canManageEvent(currentUser, event) && (
+                                            <button
+                                                type="button"
+                                                className="small-action-button"
+                                                onClick={(clickEvent) => {
+                                                    clickEvent.preventDefault();
+                                                    clickEvent.stopPropagation();
+                                                    navigate(`/calendar/${event.id}/edit`);
+                                                }}
+                                            >
+                                                Editar evento
+                                            </button>
+                                        )}
+
+                                    </div>
+
+                                ))}
 
                             </div>
 
-                            <h2>{event.title}</h2>
+                        </section>
 
-                            <p>
-                                📍 {getLocationLabel(event)}
-                            </p>
+                    ))}
 
-                            <p>
-                                📅 {formatDate(event.startDate)}
-                                {" "}
-                                -
-                                {" "}
-                                {formatDate(event.endDate)}
-                            </p>
+                </div>
 
-                            {event.organizationName && (
-                                <p>
-                                    Organización: <strong>{event.organizationName}</strong>
-                                </p>
-                            )}
+            ) : (
 
-                            {event.organizingClubName && (
-                                <p>
-                                    Organizador indicado: <strong>{event.organizingClubName}</strong>
-                                </p>
-                            )}
+                <div className="detail-card calendar-empty-state">
 
-                            {event.source && (
-                                <p>
-                                    Fuente: <strong>{event.source}</strong>
-                                </p>
-                            )}
+                    <h2>No se encontraron eventos</h2>
 
-                            {canManageEvent(currentUser, event) && (
-                                <button
-                                    type="button"
-                                    className="small-action-button"
-                                    onClick={(clickEvent) => {
-                                        clickEvent.preventDefault();
-                                        clickEvent.stopPropagation();
-                                        navigate(`/calendar/${event.id}/edit`);
-                                    }}
-                                >
-                                    Editar evento
-                                </button>
-                            )}
+                    <p>
+                        Probá cambiar la clase, fuente, ubicación o el texto buscado.
+                    </p>
 
-                        </div>
+                    <button
+                        className="back-button"
+                        onClick={clearFilters}
+                    >
+                        Limpiar filtros
+                    </button>
 
-                    ))
+                </div>
 
-                ) : (
-
-                    <div className="detail-card">
-
-                        <h2>No se encontraron eventos</h2>
-
-                        <p>
-                            Probá cambiar la clase, fuente, ubicación o el texto buscado.
-                        </p>
-
-                        <button
-                            className="back-button"
-                            onClick={clearFilters}
-                        >
-                            Limpiar filtros
-                        </button>
-
-                    </div>
-
-                )}
-
-            </div>
+            )}
 
         </div>
 
