@@ -59,6 +59,39 @@ function getResolvedCity(cityValue, customCityValue, stateValue) {
         : resolvedCity;
 }
 
+function getJobSaveErrorMessage(error) {
+    const code = String(error?.code || "");
+    const detail = String(error?.message || "").trim();
+    const normalizedDetail = detail.toLowerCase();
+
+    if (
+        code === "42501" ||
+        normalizedDetail.includes("row-level security")
+    ) {
+        return "Tu cuenta no tiene permiso online para publicar esta oportunidad. Ejecutá el hotfix de permisos para clubes y organizaciones.";
+    }
+
+    if (code === "23514") {
+        return `La base rechazó uno de los valores de la oportunidad. Detalle: ${detail || code}`;
+    }
+
+    if (code === "22P02" && normalizedDetail.includes("uuid")) {
+        return "La base rechazó el identificador del campeonato o de la organización. Cerrá sesión, volvé a ingresar e intentá nuevamente.";
+    }
+
+    if (code === "42703") {
+        return "Falta actualizar la estructura de oportunidades en Supabase.";
+    }
+
+    const technicalDetail = [code && `[${code}]`, detail]
+        .filter(Boolean)
+        .join(" ");
+
+    return technicalDetail
+        ? `No se pudo publicar la oportunidad. Detalle: ${technicalDetail}`
+        : "No se pudo publicar la oportunidad. Revisá la conexión e intentá nuevamente.";
+}
+
 function CreateJob() {
     const { clubId } = useParams();
 
@@ -412,9 +445,9 @@ function CreateJob() {
             );
 
             navigate(`/jobs/${createdJob.id}`);
-        } catch {
+        } catch (error) {
             setFormMessage(
-                "No se pudo publicar la oportunidad. Revisá la conexión e intentá nuevamente."
+                getJobSaveErrorMessage(error)
             );
         }
     }
