@@ -5,9 +5,13 @@ import {
     getUsers,
     hasProfessionalProfile
 } from "../utils/authStorage";
+import { fetchSuperadminUsers } from "../utils/adminUsersStorage";
 
 import staticClubs from "../data/clubs";
-import { getAllClubs } from "../utils/clubsStorage";
+import {
+    getAllClubs,
+    syncEntitiesFromSupabase
+} from "../utils/clubsStorage";
 
 import staticJobs from "../data/jobs";
 import {
@@ -39,8 +43,10 @@ function AdminDashboard() {
 
     const { applications } = useApplications();
 
-    const users = getUsers();
-    const clubs = getAllClubs(staticClubs);
+    const [users, setUsers] = useState(() => getUsers());
+    const [clubs, setClubs] = useState(() => getAllClubs(staticClubs));
+    const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+    const [usersError, setUsersError] = useState("");
     const [jobs, setJobs] = useState(() => getAllJobsForAdmin(staticJobs));
     const { classifieds } = useClassifieds({ includeHidden: true });
     const [events, setEvents] = useState(() => getAllEvents(staticEvents));
@@ -50,24 +56,52 @@ function AdminDashboard() {
         let isMounted = true;
 
         async function loadData() {
-            try {
-                const [syncedEvents, syncedJobs] = await Promise.all([
-                    syncEventsFromSupabase(staticEvents),
-                    syncJobsFromSupabase(staticJobs)
-                ]);
+            const [
+                eventsResult,
+                jobsResult,
+                entitiesResult,
+                usersResult
+            ] = await Promise.allSettled([
+                syncEventsFromSupabase(staticEvents),
+                syncJobsFromSupabase(staticJobs),
+                syncEntitiesFromSupabase(staticClubs),
+                fetchSuperadminUsers()
+            ]);
 
-                if (isMounted) {
-                    setEvents(syncedEvents);
-                    setJobs(syncedJobs);
-                    setFayEvents(getImportedEventsBySource("fay"));
-                }
-            } catch {
-                if (isMounted) {
-                    setEvents(getAllEvents(staticEvents));
-                    setJobs(getAllJobsForAdmin(staticJobs));
-                    setFayEvents(getImportedEventsBySource("fay"));
-                }
+            if (!isMounted) {
+                return;
             }
+
+            setEvents(
+                eventsResult.status === "fulfilled"
+                    ? eventsResult.value
+                    : getAllEvents(staticEvents)
+            );
+
+            setJobs(
+                jobsResult.status === "fulfilled"
+                    ? jobsResult.value
+                    : getAllJobsForAdmin(staticJobs)
+            );
+
+            setClubs(
+                entitiesResult.status === "fulfilled"
+                    ? entitiesResult.value
+                    : getAllClubs(staticClubs)
+            );
+
+            if (usersResult.status === "fulfilled") {
+                setUsers(usersResult.value);
+                setUsersError("");
+            } else {
+                setUsers(getUsers());
+                setUsersError(
+                    "No se pudo cargar el registro central de usuarios."
+                );
+            }
+
+            setIsLoadingUsers(false);
+            setFayEvents(getImportedEventsBySource("fay"));
         }
 
         function refreshJobsFromLocalCache() {
@@ -283,7 +317,7 @@ function AdminDashboard() {
 
             <div className="dashboard-stats">
                 <div className="dashboard-stat-card">
-                    <h2>{users.length}</h2>
+                    <h2>{isLoadingUsers ? "…" : users.length}</h2>
                     <p>Usuarios registrados</p>
                 </div>
 
@@ -497,27 +531,35 @@ function AdminDashboard() {
 
                 <div className="dashboard-stats">
                     <div className="dashboard-stat-card">
-                        <h2>{superadmins.length}</h2>
+                        <h2>{isLoadingUsers ? "…" : superadmins.length}</h2>
                         <p>Superadmins</p>
                     </div>
 
                     <div className="dashboard-stat-card">
-                        <h2>{organizationAdmins.length}</h2>
+                        <h2>{isLoadingUsers ? "…" : organizationAdmins.length}</h2>
                         <p>Admins de organización</p>
                     </div>
 
                     <div className="dashboard-stat-card">
-                        <h2>{clubUsers.length}</h2>
+                        <h2>{isLoadingUsers ? "…" : clubUsers.length}</h2>
                         <p>Cuentas de organización</p>
                     </div>
 
                     <div className="dashboard-stat-card">
-                        <h2>{professionalUsers.length}</h2>
+                        <h2>{isLoadingUsers ? "…" : professionalUsers.length}</h2>
                         <p>Profesionales activos</p>
                     </div>
                 </div>
 
-                {latestUsers.length > 0 ? (
+                {usersError && (
+                    <p role="alert" style={{ color: "#a52a2a" }}>
+                        {usersError}
+                    </p>
+                )}
+
+                {isLoadingUsers ? (
+                    <p>Cargando usuarios registrados…</p>
+                ) : latestUsers.length > 0 ? (
                     <div className="dashboard-grid">
                         {latestUsers.map(user => (
                             <div
