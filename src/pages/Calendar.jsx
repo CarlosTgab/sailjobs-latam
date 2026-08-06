@@ -92,7 +92,7 @@ function Calendar() {
                 );
 
                 setEventsError("");
-            } catch (error) {
+            } catch {
                 if (!isMounted) return;
 
                 setEventsError(

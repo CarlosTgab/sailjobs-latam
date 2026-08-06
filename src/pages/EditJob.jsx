@@ -192,9 +192,15 @@ function EditJob() {
     );
 
     const [formMessage, setFormMessage] = useState("");
+    const [formInitialized, setFormInitialized] = useState(false);
 
+    /*
+     * La oportunidad llega después de sincronizar con Supabase. Esta
+     * hidratación se ejecuta una sola vez para no borrar cambios del usuario.
+     */
+    /* eslint-disable react-hooks/set-state-in-effect */
     useEffect(() => {
-        if (!job) return;
+        if (!job || formInitialized) return;
 
         setTitle(job.title || "");
         setCategory(job.category || "Coach");
@@ -222,7 +228,9 @@ function EditJob() {
                 ? job.requirements.join("\n")
                 : ""
         );
-    }, [job?.id]);
+        setFormInitialized(true);
+    }, [club?.country, formInitialized, job]);
+    /* eslint-enable react-hooks/set-state-in-effect */
 
     if (!job && isLoadingJob) {
         return (

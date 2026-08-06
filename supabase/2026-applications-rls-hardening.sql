@@ -49,8 +49,15 @@ begin
         new.reviewed_at := null;
         new.internal_notes := null;
     else
-        new.user_id := coalesce(new.user_id, new.applicant_id);
-        new.applicant_id := coalesce(new.applicant_id, new.user_id);
+        new.user_id := old.user_id;
+        new.applicant_id := old.applicant_id;
+        new.job_id := old.job_id;
+        new.opportunity_id := old.opportunity_id;
+        new.job_legacy_id := old.job_legacy_id;
+        new.club_id := old.club_id;
+        new.organization_id := old.organization_id;
+        new.owner_type := old.owner_type;
+        new.reviewed_by := auth.uid();
     end if;
 
     new.job_id := coalesce(new.job_id, new.opportunity_id);
@@ -117,7 +124,12 @@ on public.applications
 for insert
 to authenticated
 with check (
-    true
+    user_id = auth.uid()
+    and applicant_id = auth.uid()
+    and status = 'pending'
+    and reviewed_by is null
+    and reviewed_at is null
+    and internal_notes is null
 );
 
 create policy applications_update_manager_or_superadmin

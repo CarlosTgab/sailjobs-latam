@@ -166,6 +166,11 @@ function EditEvent() {
 
     const [message, setMessage] = useState("");
 
+    /*
+     * El registro llega después de sincronizar con Supabase. Esta hidratación
+     * se ejecuta una sola vez y no debe reiniciar cambios hechos por el usuario.
+     */
+    /* eslint-disable react-hooks/set-state-in-effect */
     useEffect(() => {
         if (!event || formInitialized) return;
 
@@ -190,6 +195,7 @@ function EditEvent() {
         setOrganizingClubName(event.organizingClubName || "");
         setFormInitialized(true);
     }, [event, formInitialized]);
+    /* eslint-enable react-hooks/set-state-in-effect */
 
     if (!event) {
         return (

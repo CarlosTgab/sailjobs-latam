@@ -355,7 +355,8 @@ export async function parseRankingFromUrl(sourceUrl) {
         return parseRankingArrayBuffer(arrayBuffer);
     } catch (error) {
         throw new Error(
-            `${error.message} Si la fuente es Google Sheets, probá publicarla como CSV o usar el enlace de exportación.`
+            `${error.message} Si la fuente es Google Sheets, probá publicarla como CSV o usar el enlace de exportación.`,
+            { cause: error }
         );
     }
 }

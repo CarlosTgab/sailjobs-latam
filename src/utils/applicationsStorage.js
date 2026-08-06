@@ -117,11 +117,15 @@ export function normalizeApplication(application) {
         userId:
             application.userId ||
             application.user_id ||
+            application.applicantId ||
+            application.applicant_id ||
             null,
 
         jobId:
             application.jobId ||
             application.job_id ||
+            application.opportunityId ||
+            application.opportunity_id ||
             application.jobLegacyId ||
             application.job_legacy_id ||
             null,
@@ -281,9 +285,12 @@ function mapSupabaseApplication(row) {
     return normalizeApplication({
         id: row.id,
         legacyId: row.legacy_id,
-        userId: row.user_id,
+        userId:
+            row.user_id ||
+            row.applicant_id,
         jobId:
             row.job_id ||
+            row.opportunity_id ||
             row.job_legacy_id,
         clubId: row.club_id,
         organizationId: row.organization_id,
@@ -320,7 +327,9 @@ function applicationToSupabaseRow(application) {
             normalized.legacyId ||
             (!idIsUuid ? String(normalized.id) : null),
         user_id: toUuidOrNull(normalized.userId),
+        applicant_id: toUuidOrNull(normalized.userId),
         job_id: toUuidOrNull(normalized.jobId),
+        opportunity_id: toUuidOrNull(normalized.jobId),
         job_legacy_id:
             isUuid(normalized.jobId)
                 ? null
@@ -505,9 +514,25 @@ export async function syncApplicationsFromSupabase() {
 }
 
 export async function saveApplication(applicationData) {
+    const {
+        data: authenticatedUserData,
+        error: authenticationError
+    } = await supabase.auth.getUser();
+
+    if (
+        authenticationError ||
+        !authenticatedUserData.user
+    ) {
+        throw new Error(
+            "Tu sesión venció. Volvé a ingresar antes de enviar la postulación."
+        );
+    }
+
     const newApplication =
         normalizeApplication({
             ...applicationData,
+            userId:
+                authenticatedUserData.user.id,
             id:
                 applicationData.id ||
                 crypto.randomUUID?.() ||

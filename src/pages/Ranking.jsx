@@ -75,11 +75,18 @@ function Ranking() {
     const isWaitingForRemoteRanking =
         isLoadingRanking && !hasRemoteRanking;
 
-    const rankings = hasRemoteRanking
-        ? remoteRanking.entries
-        : isWaitingForRemoteRanking
-            ? []
-            : staticRankings;
+    const rankings = useMemo(
+        () => hasRemoteRanking
+            ? remoteRanking.entries
+            : isWaitingForRemoteRanking
+                ? []
+                : staticRankings,
+        [
+            hasRemoteRanking,
+            isWaitingForRemoteRanking,
+            remoteRanking
+        ]
+    );
 
     const sourceLabel = remoteRanking?.metadata
         ? `Última actualización publicada: ${formatDate(remoteRanking.metadata.createdAt)}${remoteRanking.metadata.sourceType === "url" ? " · Fuente externa" : ""}${remoteRanking.metadata.sourceFileName ? ` · ${remoteRanking.metadata.sourceFileName}` : ""}`

@@ -89,6 +89,26 @@ function getResolvedCity(cityValue, customCityValue, stateValue) {
         : resolvedCity;
 }
 
+function getApplicationErrorMessage(error) {
+    const errorMessage = String(
+        error?.message || ""
+    );
+
+    if (
+        error?.code === "42501" ||
+        errorMessage
+            .toLowerCase()
+            .includes("row-level security")
+    ) {
+        return "No pudimos validar los permisos de tu cuenta. Cerrá sesión, volvé a ingresar e intentá nuevamente.";
+    }
+
+    return (
+        errorMessage ||
+        "No se pudo enviar la postulación. Probá nuevamente."
+    );
+}
+
 function JobDetail() {
 
     const { id } =
@@ -618,8 +638,7 @@ function JobDetail() {
             }
 
             setFormMessage(
-                error?.message ||
-                "No se pudo enviar la postulación. Probá nuevamente."
+                getApplicationErrorMessage(error)
             );
         } finally {
             setIsSubmittingApplication(false);
