@@ -4,12 +4,17 @@ import { useParams, useNavigate } from "react-router-dom";
 import staticEvents from "../data/events";
 import {
     getAllEvents,
+    getEventClassNames,
     syncEventsFromSupabase,
     updateStoredEvent
 } from "../utils/eventsStorage";
 
 import staticClubs from "../data/clubs";
-import { getAllClubs } from "../utils/clubsStorage";
+import {
+    getAllClubs,
+    getEntityType,
+    syncEntitiesFromSupabase
+} from "../utils/clubsStorage";
 
 import { getCurrentUser } from "../utils/authStorage";
 import {
@@ -20,7 +25,6 @@ import {
 import { sameId } from "../utils/idUtils";
 
 import {
-    SAILING_CLASSES,
     EVENT_STATUS,
     EVENT_STATUS_LABELS
 } from "../config/appConfig";
@@ -28,6 +32,7 @@ import {
 import LocationSelects, {
     CUSTOM_CITY_VALUE
 } from "../components/LocationSelects";
+import SailingClassSelect from "../components/SailingClassSelect";
 
 function getEventCityName(event) {
     if (event?.cityName) {
@@ -79,7 +84,23 @@ function EditEvent() {
     const [isLoadingOnlineEvent, setIsLoadingOnlineEvent] = useState(true);
     const [formInitialized, setFormInitialized] = useState(false);
 
-    const clubs = getAllClubs(staticClubs);
+    const [clubs, setClubs] = useState(() => getAllClubs(staticClubs));
+
+    useEffect(() => {
+        let isMounted = true;
+
+        syncEntitiesFromSupabase(staticClubs)
+            .then(syncedEntities => {
+                if (isMounted) setClubs(syncedEntities);
+            })
+            .catch(() => {
+                if (isMounted) setClubs(getAllClubs(staticClubs));
+            });
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
 
     useEffect(() => {
         let isMounted = true;
@@ -129,7 +150,10 @@ function EditEvent() {
         : null;
 
     const [title, setTitle] = useState(event?.title || "");
-    const [className, setClassName] = useState(event?.className || "");
+    const [classNames, setClassNames] = useState(() => getEventClassNames(event));
+    const [invitedEntityIds, setInvitedEntityIds] = useState(() =>
+        (event?.invitedEntities || []).map(entity => entity.entityId).filter(Boolean)
+    );
 
     const [country, setCountry] = useState(event?.country || "");
     const [countryCode, setCountryCode] = useState(event?.countryCode || "");
@@ -165,6 +189,7 @@ function EditEvent() {
     const [organizingClubName, setOrganizingClubName] = useState(event?.organizingClubName || "");
 
     const [message, setMessage] = useState("");
+    const [isSaving, setIsSaving] = useState(false);
 
     /*
      * El registro llega después de sincronizar con Supabase. Esta hidratación
@@ -175,7 +200,10 @@ function EditEvent() {
         if (!event || formInitialized) return;
 
         setTitle(event.title || "");
-        setClassName(event.className || "");
+        setClassNames(getEventClassNames(event));
+        setInvitedEntityIds(
+            (event.invitedEntities || []).map(entity => entity.entityId).filter(Boolean)
+        );
         setCountry(event.country || "");
         setCountryCode(event.countryCode || "");
         setState(event.state || "");
@@ -246,7 +274,7 @@ function EditEvent() {
 
         if (
             !title.trim() ||
-            !className ||
+            classNames.length === 0 ||
             !country.trim() ||
             !state.trim() ||
             !resolvedCity ||
@@ -266,10 +294,32 @@ function EditEvent() {
             ? status
             : EVENT_STATUS.PENDING;
 
-        const updatedEvent = await updateStoredEvent(event.id, {
-            ...event,
-            title: title.trim(),
-            className,
+        const invitationOptions = clubs.filter(entity =>
+            !sameId(entity.id, event.proposedById || event.clubId || event.organizationId)
+        );
+
+        const invitedEntities = invitationOptions
+            .filter(entity => invitedEntityIds.some(entityId => sameId(entity.id, entityId)))
+            .map(entity => ({
+                entityId: entity.id,
+                entityName: entity.name,
+                entityType: getEntityType(entity),
+                role: "coorganizer",
+                status:
+                    event.invitedEntities?.find(invitation => sameId(invitation.entityId, entity.id))?.status ||
+                    "pending"
+            }));
+
+        setMessage("");
+        setIsSaving(true);
+
+        try {
+            const updatedEvent = await updateStoredEvent(event.id, {
+                ...event,
+                title: title.trim(),
+                className: classNames[0],
+                classNames,
+                invitedEntities,
 
             country: country.trim(),
             countryCode,
@@ -295,13 +345,24 @@ function EditEvent() {
             organizationName: currentUserCanEditInstitutionalData
                 ? organizationName.trim()
                 : event.organizationName || "",
-            organizingClubName: currentUserCanEditInstitutionalData
-                ? organizingClubName.trim()
-                : event.organizingClubName || ""
-        });
+                organizingClubName: currentUserCanEditInstitutionalData
+                    ? organizingClubName.trim()
+                    : event.organizingClubName || "",
+                updatedBy: currentUser?.id || event.updatedBy || event.createdBy || ""
+            });
 
-        setMessage("");
-        navigate(`/calendar/${updatedEvent.id}`);
+            navigate(`/calendar/${updatedEvent.id}`);
+        } catch (error) {
+            const errorText = String(error?.message || "").toLowerCase();
+
+            setMessage(
+                errorText.includes("row-level security") || error?.code === "42501"
+                    ? "Tu cuenta no tiene permiso online para modificar este evento."
+                    : "No se pudieron guardar los cambios online. El evento anterior se mantuvo sin modificaciones."
+            );
+        } finally {
+            setIsSaving(false);
+        }
     }
 
     return (
@@ -362,33 +423,41 @@ function EditEvent() {
                         onChange={(inputEvent) => setTitle(inputEvent.target.value)}
                     />
 
+                    <SailingClassSelect
+                        value={classNames}
+                        onChange={setClassNames}
+                        extraOptions={getEventClassNames(event)}
+                    />
+
                     <label>
-                        Clase *
+                        Entidades colaboradoras invitadas
                     </label>
 
-                    <select
-                        value={className}
-                        onChange={(inputEvent) => setClassName(inputEvent.target.value)}
-                    >
-                        <option value="">
-                            Seleccionar clase *
-                        </option>
-
-                        {SAILING_CLASSES.map(classOption => (
-                            <option
-                                key={classOption}
-                                value={classOption}
-                            >
-                                {classOption}
-                            </option>
-                        ))}
-
-                        {className && !SAILING_CLASSES.includes(className) && (
-                            <option value={className}>
-                                {className}
-                            </option>
-                        )}
-                    </select>
+                    <div className="entity-invitation-list">
+                        {clubs
+                            .filter(entity =>
+                                !sameId(entity.id, event.proposedById || event.clubId || event.organizationId)
+                            )
+                            .map(entity => (
+                                <label
+                                    className="checkbox-row"
+                                    key={entity.id}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={invitedEntityIds.some(entityId => sameId(entityId, entity.id))}
+                                        onChange={() => {
+                                            setInvitedEntityIds(currentIds =>
+                                                currentIds.some(entityId => sameId(entityId, entity.id))
+                                                    ? currentIds.filter(entityId => !sameId(entityId, entity.id))
+                                                    : [...currentIds, entity.id]
+                                            );
+                                        }}
+                                    />
+                                    {entity.name}
+                                </label>
+                            ))}
+                    </div>
 
                     <div className="section-header">
                         <h3>Ubicación</h3>
@@ -614,8 +683,9 @@ function EditEvent() {
                         <button
                             type="submit"
                             className="accept-button"
+                            disabled={isSaving}
                         >
-                            Guardar cambios
+                            {isSaving ? "Guardando..." : "Guardar cambios"}
                         </button>
                     </div>
                 </form>

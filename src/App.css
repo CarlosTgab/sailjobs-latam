@@ -2681,3 +2681,46 @@ body {
         min-height: 240px;
     }
 }
+
+/* =========================
+   EVENTOS MULTICLASE
+========================= */
+
+.multi-select-fieldset {
+    margin: 16px 0;
+    padding: 16px;
+    border: 1px solid #cfd8e3;
+    border-radius: 14px;
+    background: rgba(247, 250, 252, 0.8);
+}
+
+.multi-select-fieldset legend {
+    padding: 0 8px;
+    color: #0f2d52;
+    font-weight: 800;
+}
+
+.multi-select-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px 14px;
+}
+
+.multi-select-grid .checkbox-row {
+    margin: 0;
+}
+
+.entity-invitation-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 10px 14px;
+    margin: 10px 0 18px;
+}
+
+.entity-invitation-list .checkbox-row {
+    margin: 0;
+    padding: 10px 12px;
+    border: 1px solid #dbe3ec;
+    border-radius: 12px;
+    background: #fff;
+}

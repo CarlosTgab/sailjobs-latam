@@ -12,7 +12,11 @@ import staticJobs from "../data/jobs";
 import { getAllJobs } from "../utils/jobsStorage";
 
 import staticEvents from "../data/events";
-import { getAllEvents } from "../utils/eventsStorage";
+import {
+    eventBelongsToEntity,
+    getAllEvents,
+    getEventClassLabel
+} from "../utils/eventsStorage";
 
 import useApplications from "../hooks/useApplications";
 
@@ -104,7 +108,7 @@ function ClubDetail() {
     );
 
     const clubEvents = events
-        .filter(event => sameId(event.clubId, club.id))
+        .filter(event => eventBelongsToEntity(event, club.id))
         .sort((a, b) => {
             const dateA = a.startDate || a.start_date || "";
             const dateB = b.startDate || b.start_date || "";
@@ -352,7 +356,7 @@ function ClubDetail() {
                             >
                                 <div className="event-card-top">
                                     <span className="sidebar-tag">
-                                        {event.className}
+                                        {getEventClassLabel(event)}
                                     </span>
 
                                     {event.isOfficial ? (

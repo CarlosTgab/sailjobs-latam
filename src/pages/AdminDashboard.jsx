@@ -20,6 +20,7 @@ import useClassifieds from "../hooks/useClassifieds";
 import staticEvents from "../data/events";
 import {
     getAllEvents,
+    getEventClassLabel,
     getImportedEventsBySource,
     syncEventsFromSupabase
 } from "../utils/eventsStorage";
@@ -586,7 +587,7 @@ function AdminDashboard() {
                                 >
                                     <div className="event-card-top">
                                         <span className="sidebar-tag">
-                                            {event.className}
+                                            {getEventClassLabel(event)}
                                         </span>
 
                                         {event.isOfficial ? (

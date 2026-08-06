@@ -220,22 +220,31 @@ export function canManageEvent(user, event) {
         return true;
     }
 
-    const isProposalStillEditable =
-        !event.status ||
-        [
-            "draft",
-            "pending",
-            "pending_review",
-            "changes_requested",
-            "rejected"
-        ].includes(event.status);
+    const managedEntityIds = [
+        user.entityId,
+        user.organizationId,
+        user.clubId,
+        ...(Array.isArray(user.organizationMemberships)
+            ? user.organizationMemberships.flatMap(membership => [
+                membership.organizationId,
+                membership.clubId
+            ])
+            : [])
+    ].filter(Boolean);
+
+    const managesOrganizerEntity =
+        Array.isArray(event.organizerEntities) &&
+        event.organizerEntities.some(entity =>
+            entity.status === "accepted" &&
+            managedEntityIds.some(entityId => sameId(entity.entityId, entityId))
+        );
 
     if (
-        isClubAdmin(user) &&
-        isProposalStillEditable &&
+        (isClubAdmin(user) || isOrganizationAdmin(user)) &&
         (
-            sameId(event.proposedById, user.clubId) ||
-            sameId(event.clubId, user.clubId)
+            managedEntityIds.some(entityId => sameId(event.proposedById, entityId)) ||
+            managedEntityIds.some(entityId => sameId(event.clubId, entityId)) ||
+            managesOrganizerEntity
         )
     ) {
         return true;

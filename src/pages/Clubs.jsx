@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -12,14 +12,18 @@ import {
     getEntityType,
     getEntityTypeLabel,
     getOrganizationTypeLabel,
-    isOrganizationEntity
+    isOrganizationEntity,
+    syncEntitiesFromSupabase
 } from "../utils/clubsStorage";
 
 import staticJobs from "../data/jobs";
 import { getAllJobs } from "../utils/jobsStorage";
 
 import staticEvents from "../data/events";
-import { getAllEvents } from "../utils/eventsStorage";
+import {
+    eventBelongsToEntity,
+    getAllEvents
+} from "../utils/eventsStorage";
 import { sameId } from "../utils/idUtils";
 
 function getCityLabel(entity) {
@@ -49,13 +53,37 @@ function getLocationLabel(entity) {
 function Clubs() {
     const navigate = useNavigate();
 
-    const clubs = getAllClubs(staticClubs);
+    const [clubs, setClubs] = useState(() => getAllClubs(staticClubs));
     const jobs = getAllJobs(staticJobs);
     const events = getAllEvents(staticEvents);
 
     const [search, setSearch] = useState("");
     const [selectedCountry, setSelectedCountry] = useState("");
     const [selectedEntityType, setSelectedEntityType] = useState("");
+
+    useEffect(() => {
+        let isMounted = true;
+
+        async function loadEntities() {
+            try {
+                const syncedEntities = await syncEntitiesFromSupabase(staticClubs);
+
+                if (isMounted) {
+                    setClubs(syncedEntities);
+                }
+            } catch {
+                if (isMounted) {
+                    setClubs(getAllClubs(staticClubs));
+                }
+            }
+        }
+
+        loadEntities();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
 
     const countries = [
         ...new Set([
@@ -113,7 +141,7 @@ function Clubs() {
 
     function getClubEvents(clubId) {
         return events.filter(
-            event => sameId(event.clubId, clubId)
+            event => eventBelongsToEntity(event, clubId)
         );
     }
 

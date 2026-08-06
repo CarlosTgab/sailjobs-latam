@@ -15,7 +15,9 @@ import {
 
 import staticEvents from "../data/events";
 import {
+    eventHasClass,
     getAllEvents,
+    getEventClassLabel,
     syncEventsFromSupabase,
     isPendingReviewEvent,
     isPublishedEvent,
@@ -214,7 +216,7 @@ function OrganizationAdminDashboard() {
 
         const matchesManagedClass =
             managedClasses.length > 0 &&
-            managedClasses.includes(event.className);
+            managedClasses.some(className => eventHasClass(event, className));
 
         return matchesId || matchesName || matchesManagedClass;
     }
@@ -363,7 +365,7 @@ function OrganizationAdminDashboard() {
                     <h4>{event.title}</h4>
 
                     <p>
-                        {event.className} · {getLocationLabel(event)}
+                        {getEventClassLabel(event)} · {getLocationLabel(event)}
                     </p>
 
                     <p>

@@ -9,6 +9,7 @@ import {
 } from "../config/appConfig";
 
 import {
+    getEventClassLabel,
     getStoredEvents,
     syncEventsFromSupabase,
     updateStoredEventStatus,
@@ -220,7 +221,7 @@ function AdminEvents() {
                 <div className="event-card-top">
 
                     <span className="sidebar-tag">
-                        {event.className || "Evento"}
+                        {getEventClassLabel(event)}
                     </span>
 
                     <span

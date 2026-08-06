@@ -28,7 +28,9 @@ import { getAllClubs } from "../utils/clubsStorage";
 
 import staticEvents from "../data/events";
 import {
+    eventHasClass,
     getAllEvents,
+    getEventClassLabel,
     isPendingReviewEvent,
     isPublishedEvent
 } from "../utils/eventsStorage";
@@ -114,7 +116,7 @@ function eventBelongsToOrganization(event, user) {
 
     const matchesManagedClass =
         managedClasses.length > 0 &&
-        managedClasses.includes(event.className);
+        managedClasses.some(className => eventHasClass(event, className));
 
     return Boolean(matchesId || matchesName || matchesManagedClass);
 }
@@ -303,7 +305,7 @@ function Home() {
                                         <div key={event.id} className="dashboard-list-item" onClick={() => navigate(`/calendar/${event.id}`)}>
                                             <div>
                                                 <h4>{event.title}</h4>
-                                                <p>{event.className} · {getLocationLabel(event)}</p>
+                                                <p>{getEventClassLabel(event)} · {getLocationLabel(event)}</p>
                                             </div>
                                             <span>Ver</span>
                                         </div>
@@ -449,7 +451,7 @@ function Home() {
                                         >
                                             <div>
                                                 <h4>{event.title}</h4>
-                                                <p>{event.className} · {getLocationLabel(event)}</p>
+                                                <p>{getEventClassLabel(event)} · {getLocationLabel(event)}</p>
                                                 {event.proposedByName && (
                                                     <p>Propuesto por: {event.proposedByName}</p>
                                                 )}
@@ -487,7 +489,7 @@ function Home() {
                                     >
                                         <div>
                                             <h4>{event.title}</h4>
-                                            <p>{event.className} · {getLocationLabel(event)}</p>
+                                            <p>{getEventClassLabel(event)} · {getLocationLabel(event)}</p>
                                             <p>{formatDate(event.startDate)}</p>
                                         </div>
 
@@ -666,7 +668,7 @@ function Home() {
                                             >
                                                 <div className="event-card-top">
                                                     <span className="sidebar-tag">
-                                                        {event.className}
+                                                        {getEventClassLabel(event)}
                                                     </span>
 
                                                     {event.isOfficial ? (

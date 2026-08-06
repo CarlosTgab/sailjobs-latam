@@ -1,4 +1,5 @@
 import { sameId } from "./idUtils";
+import { supabase } from "../lib/supabaseClient";
 import {
     ENTITY_TYPE_LABELS,
     ORGANIZATION_TYPE_LABELS
@@ -271,6 +272,26 @@ export function getAllClubs(staticClubs = []) {
     return uniqueClubs([
         ...staticClubs,
         ...getStoredClubs()
+    ]);
+}
+
+export async function fetchSupabaseEntities() {
+    const { data, error } = await supabase
+        .from("clubs")
+        .select("*")
+        .order("name", { ascending: true });
+
+    if (error) throw error;
+
+    return uniqueClubs(data || []);
+}
+
+export async function syncEntitiesFromSupabase(staticClubs = []) {
+    const remoteEntities = await fetchSupabaseEntities();
+
+    return saveStoredClubs([
+        ...remoteEntities,
+        ...staticClubs
     ]);
 }
 

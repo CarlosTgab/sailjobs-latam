@@ -2,7 +2,11 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
 import staticEvents from "../data/events";
-import { getAllEvents, syncEventsFromSupabase } from "../utils/eventsStorage";
+import {
+    getAllEvents,
+    getEventClassLabel,
+    syncEventsFromSupabase
+} from "../utils/eventsStorage";
 
 import staticClubs from "../data/clubs";
 import { getAllClubs } from "../utils/clubsStorage";
@@ -231,7 +235,7 @@ function EventDetail() {
             <div className="event-detail-hero">
                 <div>
                     <span className="sidebar-tag">
-                        {event.className}
+                        {getEventClassLabel(event)}
                     </span>
 
                     {event.isOfficial && (
@@ -269,9 +273,29 @@ function EventDetail() {
                 </div>
 
                 <p>
-                    <strong>Clase:</strong>{" "}
-                    {event.className}
+                    <strong>Clases:</strong>{" "}
+                    {getEventClassLabel(event)}
                 </p>
+
+                {event.organizerEntities?.length > 0 && (
+                    <p>
+                        <strong>Entidades organizadoras:</strong>{" "}
+                        {event.organizerEntities
+                            .filter(entity => entity.status === "accepted")
+                            .map(entity => entity.entityName)
+                            .join(", ")}
+                    </p>
+                )}
+
+                {event.invitedEntities?.some(entity => entity.status === "pending") && (
+                    <p>
+                        <strong>Entidades invitadas:</strong>{" "}
+                        {event.invitedEntities
+                            .filter(entity => entity.status === "pending")
+                            .map(entity => entity.entityName)
+                            .join(", ")}
+                    </p>
+                )}
 
                 <p>
                     <strong>Fecha de inicio:</strong>{" "}

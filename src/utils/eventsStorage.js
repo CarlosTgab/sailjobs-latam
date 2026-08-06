@@ -66,6 +66,115 @@ function getLegacyId(event) {
     );
 }
 
+function uniqueStrings(values) {
+    const result = [];
+
+    (Array.isArray(values) ? values : []).forEach(value => {
+        const normalizedValue = String(value || "").trim();
+
+        if (
+            normalizedValue &&
+            !result.some(item => item.toLowerCase() === normalizedValue.toLowerCase())
+        ) {
+            result.push(normalizedValue);
+        }
+    });
+
+    return result;
+}
+
+function normalizeEventEntities(entities, defaultStatus = "pending") {
+    const result = [];
+
+    (Array.isArray(entities) ? entities : []).forEach(entity => {
+        const entityId = entity?.entityId || entity?.entity_id || entity?.id || "";
+        const entityName = entity?.entityName || entity?.entity_name || entity?.name || "";
+
+        if (!entityId && !entityName) return;
+
+        if (
+            result.some(item =>
+                (entityId && sameId(item.entityId, entityId)) ||
+                (
+                    !entityId &&
+                    entityName &&
+                    item.entityName.toLowerCase() === String(entityName).trim().toLowerCase()
+                )
+            )
+        ) {
+            return;
+        }
+
+        result.push({
+            entityId,
+            entityName: String(entityName || "Entidad").trim(),
+            entityType: entity?.entityType || entity?.entity_type || "organization",
+            role: entity?.role || "coorganizer",
+            status: entity?.status || defaultStatus
+        });
+    });
+
+    return result;
+}
+
+export function getEventClassNames(event) {
+    if (!event) return [];
+
+    if (Array.isArray(event.classNames)) {
+        return uniqueStrings(event.classNames);
+    }
+
+    if (Array.isArray(event.class_names)) {
+        return uniqueStrings(event.class_names);
+    }
+
+    if (Array.isArray(event.metadata?.classNames)) {
+        return uniqueStrings(event.metadata.classNames);
+    }
+
+    return uniqueStrings([
+        event.className,
+        event.class_name
+    ]);
+}
+
+export function getEventClassLabel(event) {
+    const classNames = getEventClassNames(event);
+
+    return classNames.length > 0
+        ? classNames.join(" · ")
+        : "Clase no informada";
+}
+
+export function eventHasClass(event, className) {
+    if (!className) return true;
+
+    return getEventClassNames(event).some(item =>
+        item.toLowerCase() === String(className).trim().toLowerCase()
+    );
+}
+
+export function eventBelongsToEntity(event, entityId) {
+    if (!event || !entityId) return false;
+
+    const directIds = [
+        event.clubId,
+        event.proposedById,
+        event.reviewingOrganizationId,
+        event.ownerId,
+        event.organizationId
+    ].filter(Boolean);
+
+    if (directIds.some(id => sameId(id, entityId))) {
+        return true;
+    }
+
+    return [
+        ...(Array.isArray(event.organizerEntities) ? event.organizerEntities : []),
+        ...(Array.isArray(event.invitedEntities) ? event.invitedEntities : [])
+    ].some(entity => sameId(entity.entityId, entityId));
+}
+
 export function isPublishedEvent(event) {
     return (
         event?.status === EVENT_STATUS.APPROVED ||
@@ -147,6 +256,36 @@ export function normalizeEvent(event) {
         event.organizer_type ||
         ownerType;
 
+    const classNames = getEventClassNames(event);
+    const primaryClassName =
+        event.className ||
+        event.class_name ||
+        classNames[0] ||
+        "";
+
+    const organizerEntities = normalizeEventEntities(
+        event.organizerEntities ||
+        event.organizer_entities ||
+        event.metadata?.organizerEntities ||
+        [],
+        "accepted"
+    );
+
+    const invitedEntities = normalizeEventEntities(
+        event.invitedEntities ||
+        event.invited_entities ||
+        event.metadata?.invitedEntities ||
+        [],
+        "pending"
+    );
+
+    const metadata = {
+        ...(event.metadata || {}),
+        classNames,
+        organizerEntities,
+        invitedEntities
+    };
+
     return {
         id: event.id || crypto.randomUUID?.() || String(Date.now()),
         legacyId,
@@ -154,6 +293,8 @@ export function normalizeEvent(event) {
 
         clubId: event.clubId || event.club_id || "",
         organizerType,
+        organizerEntities,
+        invitedEntities,
 
         proposedByType,
         proposedById,
@@ -180,7 +321,8 @@ export function normalizeEvent(event) {
             event.organizing_club_name ||
             proposedByName,
 
-        className: event.className || event.class_name || "",
+        className: primaryClassName,
+        classNames,
 
         country: event.country || "",
         countryCode: event.countryCode || event.country_code || "",
@@ -222,7 +364,7 @@ export function normalizeEvent(event) {
         externalId: event.externalId || event.external_id || "",
         externalCalendarType: event.externalCalendarType || event.external_calendar_type || "",
         importedAt: event.importedAt || event.imported_at || "",
-        metadata: event.metadata || {},
+        metadata,
 
         createdBy: event.createdBy || event.created_by || "",
         updatedBy: event.updatedBy || event.updated_by || "",
@@ -309,6 +451,9 @@ function mapSupabaseEvent(row) {
         organizationName: row.organization_name,
         organizingClubName: row.organizing_club_name,
         className: row.class_name,
+        classNames: row.class_names,
+        organizerEntities: row.organizer_entities,
+        invitedEntities: row.invited_entities,
         country: row.country,
         countryCode: row.country_code,
         state: row.state,
@@ -359,6 +504,9 @@ function eventToSupabaseRow(event) {
         organization_name: normalized.organizationName || null,
         organizing_club_name: normalized.organizingClubName || null,
         class_name: normalized.className || null,
+        class_names: normalized.classNames,
+        organizer_entities: normalized.organizerEntities,
+        invited_entities: normalized.invitedEntities,
         country: normalized.country || null,
         country_code: normalized.countryCode || null,
         state: normalized.state || null,
@@ -381,6 +529,8 @@ function eventToSupabaseRow(event) {
         external_calendar_type: normalized.externalCalendarType || null,
         imported_at: normalized.importedAt || null,
         metadata: normalized.metadata || {},
+        created_by: toUuidOrNull(normalized.createdBy),
+        updated_by: toUuidOrNull(normalized.updatedBy || normalized.createdBy),
         updated_at: new Date().toISOString()
     };
 
@@ -483,15 +633,10 @@ export async function fetchSupabaseEvents() {
 
 export async function syncEventsFromSupabase(staticEvents = []) {
     const remoteEvents = await fetchSupabaseEvents();
-    const cachedEvents = getStoredEvents();
-
-    const mergedStoredEvents = saveEventsToLocalCache([
-        ...remoteEvents,
-        ...cachedEvents
-    ]);
+    const syncedEvents = saveEventsToLocalCache(remoteEvents);
 
     return uniqueEvents([
-        ...mergedStoredEvents,
+        ...syncedEvents,
         ...staticEvents
     ]);
 }
@@ -506,11 +651,6 @@ export async function createStoredEvent(eventData) {
         updatedAt: null
     });
 
-    saveEventsToLocalCache([
-        newEvent,
-        ...events
-    ]);
-
     try {
         const savedEvent = await upsertSupabaseEvent(newEvent);
 
@@ -521,8 +661,8 @@ export async function createStoredEvent(eventData) {
 
         return savedEvent;
     } catch (error) {
-        console.warn("No se pudo guardar el evento en Supabase. Se conservó localmente.", error);
-        return newEvent;
+        saveEventsToLocalCache(events);
+        throw error;
     }
 }
 
@@ -548,16 +688,6 @@ export async function updateStoredEvent(eventId, updatedData) {
         updatedAt: new Date().toISOString()
     });
 
-    const keptEvents = currentEvents.filter(event =>
-        !sameId(event.id, eventId) &&
-        !sameId(event.legacyId, eventId)
-    );
-
-    saveEventsToLocalCache([
-        updatedEvent,
-        ...keptEvents
-    ]);
-
     try {
         const savedEvent = await upsertSupabaseEvent(updatedEvent);
 
@@ -568,8 +698,8 @@ export async function updateStoredEvent(eventId, updatedData) {
 
         return savedEvent;
     } catch (error) {
-        console.warn("No se pudo actualizar el evento en Supabase. Se conservó localmente.", error);
-        return updatedEvent;
+        saveEventsToLocalCache(currentEvents);
+        throw error;
     }
 }
 

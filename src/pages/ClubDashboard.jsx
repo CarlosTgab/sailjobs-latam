@@ -25,7 +25,11 @@ import {
 } from "../utils/jobsStorage";
 
 import staticEvents from "../data/events";
-import { getAllEvents } from "../utils/eventsStorage";
+import {
+    eventBelongsToEntity,
+    getAllEvents,
+    getEventClassLabel
+} from "../utils/eventsStorage";
 
 import useApplications from "../hooks/useApplications";
 
@@ -83,12 +87,23 @@ function ClubDashboard() {
                 sameId(item.id, clubId)
         );
 
+    const currentUserEntityId =
+        currentUser?.entityId ||
+        currentUser?.organizationId ||
+        currentUser?.clubId ||
+        "";
+
     const clubFromCurrentUser =
         currentUser &&
-            sameId(currentUser.clubId, clubId)
+            sameId(currentUserEntityId, clubId)
             ? {
-                id: currentUser.clubId,
-                name: currentUser.clubName || currentUser.name || "Mi organización",
+                id: currentUserEntityId,
+                name:
+                    currentUser.entityName ||
+                    currentUser.organizationName ||
+                    currentUser.clubName ||
+                    currentUser.name ||
+                    "Mi organización",
                 country: currentUser.country || "",
                 city: currentUser.city || "",
                 description: currentUser.description || "",
@@ -134,7 +149,7 @@ function ClubDashboard() {
     );
 
     const clubEvents = events.filter(
-        event => sameId(event.clubId, clubId)
+        event => eventBelongsToEntity(event, clubId)
     );
 
     const clubJobIds = clubJobs.map(
@@ -568,7 +583,7 @@ function ClubDashboard() {
                             >
                                 <div className="event-card-top">
                                     <span className="sidebar-tag">
-                                        {event.className}
+                                        {getEventClassLabel(event)}
                                     </span>
 
                                     {event.isOfficial ? (

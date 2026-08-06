@@ -33,7 +33,9 @@ import {
 import staticEvents from "../data/events";
 
 import {
-    getAllEvents
+    eventBelongsToEntity,
+    getAllEvents,
+    getEventClassLabel
 } from "../utils/eventsStorage";
 
 import {
@@ -140,7 +142,7 @@ function EditJob() {
 
     const clubEvents = job
         ? allEvents.filter(
-            event => sameId(event.clubId, job.clubId)
+            event => eventBelongsToEntity(event, job.clubId)
         )
         : [];
 
@@ -380,20 +382,6 @@ function EditJob() {
             return false;
         }
 
-        if (
-            (
-                opportunityType === OPPORTUNITY_TYPES.EVENT_ROLE ||
-                opportunityType === OPPORTUNITY_TYPES.VOLUNTEER
-            ) &&
-            !eventId
-        ) {
-            setFormMessage(
-                "Para cargos técnicos o voluntariados, vinculá la oportunidad a un evento."
-            );
-
-            return false;
-        }
-
         return true;
     }
 
@@ -536,10 +524,14 @@ function EditJob() {
 
                         {clubEvents.map(event => (
                             <option key={event.id} value={event.id}>
-                                {event.title} · {event.className}
+                                {event.title} · {getEventClassLabel(event)}
                             </option>
                         ))}
                     </select>
+
+                    <p className="password-help">
+                        El evento es opcional. Usalo solamente cuando la convocatoria corresponda a un campeonato concreto.
+                    </p>
 
                     <hr />
 

@@ -39,7 +39,9 @@ import {
 import staticEvents from "../data/events";
 
 import {
-    getAllEvents
+    eventBelongsToEntity,
+    getAllEvents,
+    getEventClassLabel
 } from "../utils/eventsStorage";
 
 function getResolvedCity(cityValue, customCityValue, stateValue) {
@@ -73,12 +75,24 @@ function CreateJob() {
                 sameId(item.id, clubId)
         );
 
+    const currentUserEntityId =
+        currentUser?.entityId ||
+        currentUser?.organizationId ||
+        currentUser?.clubId ||
+        "";
+
     const clubFromCurrentUser =
         currentUser &&
-            sameId(currentUser.clubId, clubId)
+            sameId(currentUserEntityId, clubId)
             ? {
-                id: currentUser.clubId,
-                name: currentUser.clubName || currentUser.name || "Mi organización",
+                id: currentUserEntityId,
+                name:
+                    currentUser.entityName ||
+                    currentUser.organizationName ||
+                    currentUser.clubName ||
+                    currentUser.name ||
+                    "Mi organización",
+                entityType: currentUser.entityType || (currentUser.organizationId ? "organization" : "club"),
                 country: currentUser.country || "",
                 city: currentUser.city || "",
                 description: currentUser.description || "",
@@ -95,8 +109,7 @@ function CreateJob() {
     const allEvents = getAllEvents(staticEvents);
 
     const clubEvents = allEvents.filter(
-        event =>
-            sameId(event.clubId, clubId)
+        event => eventBelongsToEntity(event, clubId)
     );
 
     const [title, setTitle] = useState("");
@@ -313,30 +326,6 @@ function CreateJob() {
         ) {
             setFormMessage(
                 "La cantidad de vacantes debe ser mayor a cero."
-            );
-
-            return false;
-        }
-
-        if (
-            opportunityType ===
-            OPPORTUNITY_TYPES.EVENT_ROLE &&
-            !eventId
-        ) {
-            setFormMessage(
-                "Para un cargo técnico de campeonato, vinculá la oportunidad a un evento."
-            );
-
-            return false;
-        }
-
-        if (
-            opportunityType ===
-            OPPORTUNITY_TYPES.VOLUNTEER &&
-            !eventId
-        ) {
-            setFormMessage(
-                "Para una convocatoria de voluntarios, vinculá la oportunidad a un evento."
             );
 
             return false;
@@ -563,16 +552,13 @@ function CreateJob() {
                             >
                                 {event.title}
                                 {" · "}
-                                {event.className}
+                                {getEventClassLabel(event)}
                             </option>
                         ))}
                     </select>
 
                     <p className="password-help">
-                        Para cargos técnicos o
-                        voluntariados de campeonato, lo
-                        ideal es vincular la oportunidad
-                        con un evento del calendario.
+                        El evento es opcional. Vinculalo si la convocatoria corresponde a un campeonato concreto.
                     </p>
 
                     <hr />

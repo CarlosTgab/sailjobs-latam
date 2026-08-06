@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
 import staticClubs from "../data/clubs";
 import {
     getAllClubs,
     getEntityType,
-    isOrganizationEntity
+    isOrganizationEntity,
+    syncEntitiesFromSupabase
 } from "../utils/clubsStorage";
 
 import { getCurrentUser } from "../utils/authStorage";
@@ -17,13 +18,13 @@ import {
 import { sameId } from "../utils/idUtils";
 
 import {
-    SAILING_CLASSES,
     EVENT_STATUS
 } from "../config/appConfig";
 
 import LocationSelects, {
     CUSTOM_CITY_VALUE
 } from "../components/LocationSelects";
+import SailingClassSelect from "../components/SailingClassSelect";
 
 import { createStoredEvent } from "../utils/eventsStorage";
 
@@ -90,8 +91,32 @@ function CreateEvent() {
     const currentUser = getCurrentUser();
     const currentUserIsOrganization = isOrganizationAdmin(currentUser);
 
-    const entities = getAllClubs(staticClubs);
+    const [entities, setEntities] = useState(() => getAllClubs(staticClubs));
     const currentUserEntity = getCurrentUserEntity(currentUser);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        async function loadEntities() {
+            try {
+                const syncedEntities = await syncEntitiesFromSupabase(staticClubs);
+
+                if (isMounted) {
+                    setEntities(syncedEntities);
+                }
+            } catch {
+                if (isMounted) {
+                    setEntities(getAllClubs(staticClubs));
+                }
+            }
+        }
+
+        loadEntities();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
 
     const entitiesWithCurrentUser = uniqueById([
         ...entities,
@@ -125,7 +150,8 @@ function CreateEvent() {
         "";
 
     const [title, setTitle] = useState("");
-    const [className, setClassName] = useState("");
+    const [classNames, setClassNames] = useState([]);
+    const [invitedEntityIds, setInvitedEntityIds] = useState([]);
 
     const [country, setCountry] = useState("");
     const [countryCode, setCountryCode] = useState("");
@@ -142,6 +168,19 @@ function CreateEvent() {
     const [description, setDescription] = useState("");
     const [reviewingOrganizationId, setReviewingOrganizationId] = useState(defaultReviewingOrganizationId);
     const [message, setMessage] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const invitationOptions = entitiesWithCurrentUser
+        .filter(entity => !sameId(entity.id, targetEntity?.id))
+        .sort((a, b) => a.name.localeCompare(b.name, "es"));
+
+    function toggleInvitedEntity(entityId) {
+        setInvitedEntityIds(currentIds =>
+            currentIds.some(id => sameId(id, entityId))
+                ? currentIds.filter(id => !sameId(id, entityId))
+                : [...currentIds, entityId]
+        );
+    }
 
     const userCanAccess =
         targetEntity &&
@@ -186,7 +225,7 @@ function CreateEvent() {
 
         if (
             !title.trim() ||
-            !className ||
+            classNames.length === 0 ||
             !country ||
             !state ||
             !resolvedCity ||
@@ -207,9 +246,28 @@ function CreateEvent() {
             return;
         }
 
+        const invitedEntities = invitationOptions
+            .filter(entity => invitedEntityIds.some(id => sameId(id, entity.id)))
+            .map(entity => ({
+                entityId: entity.id,
+                entityName: entity.name,
+                entityType: getEntityType(entity),
+                role: "coorganizer",
+                status: "pending"
+            }));
+
         const baseEventData = {
             title: title.trim(),
-            className,
+            className: classNames[0],
+            classNames,
+            organizerEntities: [{
+                entityId: targetEntity.id,
+                entityName: targetEntity.name,
+                entityType: targetEntityType,
+                role: "organizer",
+                status: "accepted"
+            }],
+            invitedEntities,
 
             country,
             countryCode,
@@ -222,11 +280,17 @@ function CreateEvent() {
             endDate,
             website: website.trim(),
             description: description.trim(),
-            sourceUrl: ""
+            sourceUrl: "",
+            createdBy: currentUser?.id || "",
+            updatedBy: currentUser?.id || ""
         };
 
-        if (targetIsOrganization) {
-            await createStoredEvent({
+        setMessage("");
+        setIsSubmitting(true);
+
+        try {
+            if (targetIsOrganization) {
+                await createStoredEvent({
                 ...baseEventData,
                 clubId: "",
                 organizerType: "organization",
@@ -246,33 +310,44 @@ function CreateEvent() {
                 isOfficial: true,
                 reviewedBy: currentUser?.name || currentUser?.email || "Organización",
                 reviewedAt: new Date().toISOString()
+                });
+
+                navigate("/organization-admin");
+                return;
+            }
+
+            await createStoredEvent({
+                ...baseEventData,
+                clubId: targetEntity.id,
+                organizerType: "club",
+                proposedByType: "club",
+                proposedById: targetEntity.id,
+                proposedByName: targetEntity.name,
+                organizingClubName: targetEntity.name,
+                reviewingOrganizationId: reviewingOrganization.id,
+                reviewingOrganizationName: reviewingOrganization.name,
+                ownerType: "organization",
+                ownerId: reviewingOrganization.id,
+                ownerName: reviewingOrganization.name,
+                organizationId: reviewingOrganization.id,
+                organizationName: reviewingOrganization.name,
+                source: "Propuesta de club",
+                status: EVENT_STATUS.PENDING,
+                isOfficial: false
             });
 
-            navigate("/organization-admin");
-            return;
+            navigate(`/club-dashboard/${targetEntity.id}`);
+        } catch (error) {
+            const errorText = String(error?.message || "").toLowerCase();
+
+            setMessage(
+                errorText.includes("row-level security") || error?.code === "42501"
+                    ? "Tu cuenta no tiene permiso online para publicar este evento. Revisá que la migración de eventos y permisos esté aplicada."
+                    : "No se pudo guardar el evento online. No se publicó ningún dato; revisá la conexión e intentá nuevamente."
+            );
+        } finally {
+            setIsSubmitting(false);
         }
-
-        await createStoredEvent({
-            ...baseEventData,
-            clubId: targetEntity.id,
-            organizerType: "club",
-            proposedByType: "club",
-            proposedById: targetEntity.id,
-            proposedByName: targetEntity.name,
-            organizingClubName: targetEntity.name,
-            reviewingOrganizationId: reviewingOrganization.id,
-            reviewingOrganizationName: reviewingOrganization.name,
-            ownerType: "organization",
-            ownerId: reviewingOrganization.id,
-            ownerName: reviewingOrganization.name,
-            organizationId: reviewingOrganization.id,
-            organizationName: reviewingOrganization.name,
-            source: "Propuesta de club",
-            status: EVENT_STATUS.PENDING,
-            isOfficial: false
-        });
-
-        navigate(`/club-dashboard/${targetEntity.id}`);
     }
 
     return (
@@ -316,27 +391,10 @@ function CreateEvent() {
                         onChange={(inputEvent) => setTitle(inputEvent.target.value)}
                     />
 
-                    <label>
-                        Clase *
-                    </label>
-
-                    <select
-                        value={className}
-                        onChange={(inputEvent) => setClassName(inputEvent.target.value)}
-                    >
-                        <option value="">
-                            Seleccionar clase *
-                        </option>
-
-                        {SAILING_CLASSES.map(classOption => (
-                            <option
-                                key={classOption}
-                                value={classOption}
-                            >
-                                {classOption}
-                            </option>
-                        ))}
-                    </select>
+                    <SailingClassSelect
+                        value={classNames}
+                        onChange={setClassNames}
+                    />
 
                     {targetIsClub && (
                         <>
@@ -363,6 +421,36 @@ function CreateEvent() {
                             </select>
                         </>
                     )}
+
+                    <label>
+                        Invitar entidades colaboradoras
+                    </label>
+
+                    <div className="entity-invitation-list">
+                        {invitationOptions.length === 0 && (
+                            <p className="password-help">
+                                No hay otras entidades disponibles para invitar.
+                            </p>
+                        )}
+
+                        {invitationOptions.map(entity => (
+                            <label
+                                className="checkbox-row"
+                                key={entity.id}
+                            >
+                                <input
+                                    type="checkbox"
+                                    checked={invitedEntityIds.some(id => sameId(id, entity.id))}
+                                    onChange={() => toggleInvitedEntity(entity.id)}
+                                />
+                                {entity.name}
+                            </label>
+                        ))}
+                    </div>
+
+                    <p className="password-help">
+                        Las entidades seleccionadas quedarán registradas como invitadas a colaborar en la organización.
+                    </p>
 
                     <LocationSelects
                         countryCode={countryCode}
@@ -437,8 +525,11 @@ function CreateEvent() {
                         <button
                             className="accept-button"
                             type="submit"
+                            disabled={isSubmitting}
                         >
-                            {targetIsOrganization
+                            {isSubmitting
+                                ? "Guardando..."
+                                : targetIsOrganization
                                 ? "Publicar evento"
                                 : "Enviar evento a revisión"}
                         </button>

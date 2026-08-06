@@ -8,7 +8,13 @@ import {
 import LocationFilterSelects from "../components/LocationFilterSelects";
 
 import staticEvents from "../data/events";
-import { getApprovedEvents, syncEventsFromSupabase } from "../utils/eventsStorage";
+import {
+    eventHasClass,
+    getApprovedEvents,
+    getEventClassLabel,
+    getEventClassNames,
+    syncEventsFromSupabase
+} from "../utils/eventsStorage";
 import { getCurrentUser } from "../utils/authStorage";
 import {
     canManageEvent
@@ -124,7 +130,7 @@ function Calendar() {
     const classes = [
         ...new Set([
             ...SAILING_CLASSES,
-            ...events.map(event => event.className)
+            ...events.flatMap(event => getEventClassNames(event))
         ])
     ].filter(Boolean);
 
@@ -169,7 +175,7 @@ function Calendar() {
 
         const searchableText = [
             event.title,
-            event.className,
+            ...getEventClassNames(event),
             event.city,
             event.cityName,
             event.state,
@@ -189,7 +195,7 @@ function Calendar() {
 
         const matchesClass =
             selectedClass === "" ||
-            event.className === selectedClass;
+            eventHasClass(event, selectedClass);
 
         const matchesSource =
             selectedSource === "" ||
@@ -345,7 +351,7 @@ function Calendar() {
                             <div className="event-card-top">
 
                                 <span className="sidebar-tag">
-                                    {event.className}
+                                    {getEventClassLabel(event)}
                                 </span>
 
                                 {event.isOfficial ? (
