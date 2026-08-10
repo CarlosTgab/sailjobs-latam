@@ -17,7 +17,26 @@ function mapRankingEntry(row) {
             ? null
             : Number(row.total_points),
         events: Number(row.events) || 0,
-        eventsBreakdown: row.raw?.eventsBreakdown || {}
+        eventsBreakdown: row.raw?.eventsBreakdown || {},
+        profileId: row.profile_id || "",
+        profileName: row.profile_name || "",
+        profileImage: row.profile_image_url || ""
+    };
+}
+
+function mapRankingProfileLink(row) {
+    return {
+        id: row.id,
+        rankingName: row.ranking_name || "",
+        rankingClub: row.ranking_club || "",
+        normalizedName: row.normalized_name || "",
+        normalizedClub: row.normalized_club || "",
+        profileId: row.profile_id || "",
+        profileName: row.profile_name || "",
+        profileImage: row.profile_image_url || "",
+        profileActive: Boolean(row.profile_active),
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
     };
 }
 
@@ -62,16 +81,32 @@ export async function getLatestPublishedRanking() {
         return null;
     }
 
-    const { data: entries, error: entriesError } =
-        await supabase
-            .from("ranking_entries")
-            .select("*")
-            .eq("import_id", rankingImport.id)
-            .order("class_name", { ascending: true })
-            .order("position", { ascending: true });
+    let entries;
 
-    if (entriesError) {
-        throw entriesError;
+    const { data: enrichedEntries, error: enrichedEntriesError } =
+        await supabase.rpc(
+            "get_published_ranking_entries_with_profiles",
+            {
+                import_id_param: rankingImport.id
+            }
+        );
+
+    if (!enrichedEntriesError) {
+        entries = enrichedEntries || [];
+    } else {
+        const { data: baseEntries, error: baseEntriesError } =
+            await supabase
+                .from("ranking_entries")
+                .select("*")
+                .eq("import_id", rankingImport.id)
+                .order("class_name", { ascending: true })
+                .order("position", { ascending: true });
+
+        if (baseEntriesError) {
+            throw baseEntriesError;
+        }
+
+        entries = baseEntries || [];
     }
 
     return {
@@ -166,4 +201,57 @@ export async function publishRankingImport({
     }
 
     return data;
+}
+
+export async function getRankingProfileLinks() {
+    const { data, error } =
+        await supabase.rpc("get_ranking_profile_links");
+
+    if (error) {
+        throw error;
+    }
+
+    return (data || []).map(mapRankingProfileLink);
+}
+
+export async function saveRankingProfileLink({
+    rankingName,
+    rankingClub,
+    profileId
+}) {
+    if (!rankingName?.trim()) {
+        throw new Error("El timonel no tiene un nombre válido.");
+    }
+
+    if (!profileId) {
+        throw new Error("Seleccioná un perfil profesional.");
+    }
+
+    const { data, error } =
+        await supabase.rpc("upsert_ranking_profile_link", {
+            ranking_name_param: rankingName.trim(),
+            ranking_club_param: rankingClub?.trim() || "",
+            profile_id_param: profileId
+        });
+
+    if (error) {
+        throw error;
+    }
+
+    return data;
+}
+
+export async function removeRankingProfileLink(linkId) {
+    if (!linkId) {
+        return;
+    }
+
+    const { error } =
+        await supabase.rpc("delete_ranking_profile_link", {
+            link_id_param: linkId
+        });
+
+    if (error) {
+        throw error;
+    }
 }

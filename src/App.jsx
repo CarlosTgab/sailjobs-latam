@@ -57,6 +57,8 @@ import AdminFayImport from "./pages/AdminFayImport";
 import AdminJobs from "./pages/AdminJobs";
 import AdminClassifieds from "./pages/AdminClassifieds";
 import AdminMessages from "./pages/AdminMessages";
+import AdminRanking from "./pages/AdminRanking";
+import AdminRankingProfiles from "./pages/AdminRankingProfiles";
 
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -320,6 +322,24 @@ function App() {
           element={
             <RequireRole roles={["superadmin", "admin"]}>
               <AdminMessages />
+            </RequireRole>
+          }
+        />
+
+        <Route
+          path="/admin/ranking"
+          element={
+            <RequireRole roles={["superadmin", "admin"]}>
+              <AdminRanking />
+            </RequireRole>
+          }
+        />
+
+        <Route
+          path="/admin/ranking-profiles"
+          element={
+            <RequireRole roles={["superadmin", "admin"]}>
+              <AdminRankingProfiles />
             </RequireRole>
           }
         />

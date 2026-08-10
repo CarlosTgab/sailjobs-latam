@@ -248,6 +248,13 @@ function AdminRanking() {
                 <div className="dashboard-actions">
                     <button
                         className="apply-button"
+                        onClick={() => navigate("/admin/ranking-profiles")}
+                    >
+                        Vincular perfiles
+                    </button>
+
+                    <button
+                        className="small-action-button"
                         onClick={() => navigate("/ranking")}
                     >
                         Ver ranking público

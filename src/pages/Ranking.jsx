@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 
 import staticRankings from "../data/rankings";
 import { getLatestPublishedRanking } from "../utils/rankingStorage";
@@ -21,6 +22,64 @@ function formatDate(date) {
             month: "long",
             year: "numeric"
         }
+    );
+}
+
+function getInitials(name) {
+    return String(name || "N")
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map(part => part[0]?.toUpperCase())
+        .join("") || "N";
+}
+
+function RankingAvatar({ sailor, compact = false }) {
+    const className = compact
+        ? "ranking-profile-avatar compact"
+        : "ranking-profile-avatar";
+
+    const avatar = sailor.profileImage ? (
+        <img
+            className={className}
+            src={sailor.profileImage}
+            alt={`Foto de ${sailor.profileName || sailor.name}`}
+        />
+    ) : (
+        <span className={`${className} ranking-profile-initials`}>
+            {getInitials(sailor.name)}
+        </span>
+    );
+
+    if (!sailor.profileId) {
+        return avatar;
+    }
+
+    return (
+        <Link
+            className="ranking-profile-avatar-link"
+            to={`/professionals/${sailor.profileId}`}
+            title={`Ver perfil profesional de ${sailor.profileName || sailor.name}`}
+        >
+            {avatar}
+        </Link>
+    );
+}
+
+function RankingName({ sailor }) {
+    if (!sailor.profileId) {
+        return <strong>{sailor.name}</strong>;
+    }
+
+    return (
+        <Link
+            className="ranking-profile-name"
+            to={`/professionals/${sailor.profileId}`}
+        >
+            {sailor.name}
+            <span>Ver perfil</span>
+        </Link>
     );
 }
 
@@ -290,7 +349,11 @@ function Ranking() {
                                                 #{sailor.position}
                                             </div>
 
-                                            <h3>{sailor.name}</h3>
+                                            <RankingAvatar sailor={sailor} />
+
+                                            <h3>
+                                                <RankingName sailor={sailor} />
+                                            </h3>
 
                                             <p>
                                                 {sailor.club}
@@ -345,9 +408,14 @@ function Ranking() {
                                                 </td>
 
                                                 <td>
-                                                    <strong>
-                                                        {sailor.name}
-                                                    </strong>
+                                                    <div className="ranking-sailor-cell">
+                                                        <RankingAvatar
+                                                            sailor={sailor}
+                                                            compact
+                                                        />
+
+                                                        <RankingName sailor={sailor} />
+                                                    </div>
                                                 </td>
 
                                                 <td>

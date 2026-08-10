@@ -312,6 +312,20 @@ function AdminDashboard() {
                     >
                         Mensajes de contacto
                     </button>
+
+                    <button
+                        className="apply-button"
+                        onClick={() => navigate("/admin/ranking")}
+                    >
+                        Actualizar ranking
+                    </button>
+
+                    <button
+                        className="apply-button"
+                        onClick={() => navigate("/admin/ranking-profiles")}
+                    >
+                        Vincular perfiles al ranking
+                    </button>
                 </div>
             </div>
 
