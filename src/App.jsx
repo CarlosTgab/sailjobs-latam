@@ -34,6 +34,8 @@ import EditEvent from "./pages/EditEvent";
 import Jobs from "./pages/Jobs";
 import JobDetail from "./pages/JobDetail";
 import EditJob from "./pages/EditJob";
+import Professionals from "./pages/Professionals";
+import ProfessionalDetail from "./pages/ProfessionalDetail";
 
 import Classifieds from "./pages/Classifieds";
 import CreateClassified from "./pages/CreateClassified";
@@ -149,6 +151,16 @@ function App() {
               <EditJob />
             </RequireAuth>
           }
+        />
+
+        <Route
+          path="/professionals"
+          element={<Professionals />}
+        />
+
+        <Route
+          path="/professionals/:id"
+          element={<ProfessionalDetail />}
         />
 
         <Route

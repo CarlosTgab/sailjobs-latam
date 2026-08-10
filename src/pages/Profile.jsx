@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { sameId } from "../utils/idUtils";
 
@@ -13,13 +13,23 @@ import {
 
 import {
     getCurrentUser,
-    updateCurrentUserProfile,
     hasProfessionalProfile
 } from "../utils/authStorage";
 
 import {
+    savePersonalProfileWithSupabase,
     saveProfessionalProfileWithSupabase
 } from "../utils/supabaseAuth";
+import {
+    getCvAccessUrl,
+    removePrivateCv,
+    uploadPrivateCv
+} from "../utils/cvStorage";
+import {
+    removeProfileMedia,
+    uploadProfileMedia
+} from "../utils/profileMediaStorage";
+import EntityProfileEditor from "../components/EntityProfileEditor";
 
 import {
     isSuperadmin as hasSuperadminPermission,
@@ -40,6 +50,10 @@ import staticClubs from "../data/clubs";
 import {
     getAllClubs
 } from "../utils/clubsStorage";
+
+function isExternalUrl(value) {
+    return /^https?:\/\//i.test(String(value || ""));
+}
 
 function Profile() {
     const navigate = useNavigate();
@@ -76,6 +90,8 @@ function Profile() {
     const [country, setCountry] = useState(currentUser?.country || "");
     const [description, setDescription] = useState(currentUser?.description || "");
     const [profileImage, setProfileImage] = useState(currentUser?.profileImage || "");
+    const [profileImageFile, setProfileImageFile] = useState(null);
+    const [isSavingPersonal, setIsSavingPersonal] = useState(false);
 
     const [professionalTitle, setProfessionalTitle] = useState(
         professionalProfile.title || ""
@@ -145,11 +161,36 @@ function Profile() {
     const [cvUrl, setCvUrl] = useState(
         professionalProfile.cvUrl || ""
     );
+    const [cvFile, setCvFile] = useState(null);
+    const [cvAccessUrl, setCvAccessUrl] = useState("");
 
     const [formMessage, setFormMessage] = useState("");
 
     const [isSavingProfessional, setIsSavingProfessional] =
         useState(false);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        async function loadCvUrl() {
+            const reference = currentUser?.professionalProfile?.cvUrl || "";
+
+            if (!reference) {
+                setCvAccessUrl("");
+                return;
+            }
+
+            try {
+                const accessUrl = await getCvAccessUrl(reference);
+                if (isMounted) setCvAccessUrl(accessUrl);
+            } catch {
+                if (isMounted) setCvAccessUrl("");
+            }
+        }
+
+        loadCvUrl();
+        return () => { isMounted = false; };
+    }, [currentUser?.professionalProfile?.cvUrl]);
 
     const jobs = getAllJobs(staticJobs);
     const clubs = getAllClubs(staticClubs);
@@ -266,129 +307,14 @@ function Profile() {
         );
     }
 
-    if (isOrganizationAdmin) {
-        const organizationId =
-            currentUser.organizationId ||
-            currentUser.entityId ||
-            null;
-
-        const organizationName =
-            currentUser.organizationName ||
-            currentUser.entityName ||
-            currentUser.name ||
-            "Mi organización";
-
+    if (isManagedEntityAccount) {
         return (
-            <div className="dashboard-page">
-                <div className="dashboard-hero">
-                    <div className="dashboard-hero-info">
-                        <div className="dashboard-avatar">
-                            ORG
-                        </div>
-
-                        <div>
-                            <h1>Cuenta organización</h1>
-
-                            <p>
-                                {organizationName}
-                            </p>
-
-                            <p>
-                                Administrá eventos, oportunidades, postulaciones
-                                y datos institucionales de tu organización náutica.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="dashboard-actions">
-                        <button
-                            className="apply-button"
-                            onClick={() => navigate("/organization-admin")}
-                        >
-                            Panel de organización
-                        </button>
-
-                        {organizationId && (
-                            <>
-                                <button
-                                    className="apply-button"
-                                    onClick={() => navigate(`/club-dashboard/${organizationId}/new-job`)}
-                                >
-                                    Publicar oportunidad
-                                </button>
-
-                                <button
-                                    className="apply-button"
-                                    onClick={() => navigate("/organization-admin/new-event")}
-                                >
-                                    Publicar evento
-                                </button>
-                            </>
-                        )}
-                    </div>
-                </div>
-
-                <div className="dashboard-stats">
-                    <div className="dashboard-stat-card">
-                        <h2>ORG</h2>
-                        <p>Tipo de cuenta</p>
-                    </div>
-
-                    <div className="dashboard-stat-card">
-                        <h2>{currentUser.permissions?.length || 0}</h2>
-                        <p>Permisos institucionales</p>
-                    </div>
-
-                    <div className="dashboard-stat-card">
-                        <h2>{organizationId ? "Sí" : "No"}</h2>
-                        <p>Organización vinculada</p>
-                    </div>
-                </div>
-
-                <div className="detail-card">
-                    <div className="section-header">
-                        <h2>Datos de la cuenta organización</h2>
-                    </div>
-
-                    <p>
-                        <strong>Organización:</strong>{" "}
-                        {organizationName}
-                    </p>
-
-                    <p>
-                        <strong>Usuario administrador:</strong>{" "}
-                        {currentUser.name}
-                    </p>
-
-                    <p>
-                        <strong>Email:</strong>{" "}
-                        {currentUser.email}
-                    </p>
-
-                    <p>
-                        <strong>Ubicación:</strong>{" "}
-                        {
-                            [currentUser.city, currentUser.country]
-                                .filter(Boolean)
-                                .join(", ") ||
-                            "No informada"
-                        }
-                    </p>
-
-                    <p>
-                        <strong>Rol interno:</strong>{" "}
-                        {currentUser.role || "organization_admin"}
-                    </p>
-
-                    <p>
-                        <strong>Permisos:</strong>{" "}
-                        {currentUser.permissions?.join(", ") || "organization_admin"}
-                    </p>
-                </div>
-            </div>
+            <EntityProfileEditor
+                currentUser={currentUser}
+                onUpdated={setCurrentUser}
+            />
         );
     }
-
 
     function getInitials(userName) {
         if (!userName) {
@@ -479,6 +405,8 @@ function Profile() {
             return;
         }
 
+        setProfileImageFile(file);
+
         const reader = new FileReader();
 
         reader.onloadend = () => {
@@ -495,10 +423,11 @@ function Profile() {
             return;
         }
 
+        setCvFile(file);
         setCvFileName(file.name);
     }
 
-    function handleSavePersonalProfile(event) {
+    async function handleSavePersonalProfile(event) {
         event.preventDefault();
 
         if (!name.trim()) {
@@ -506,20 +435,62 @@ function Profile() {
             return;
         }
 
-        updateCurrentUserProfile({
-            name: name.trim(),
-            phone: phone.trim(),
-            city: city.trim(),
-            country,
-            description: description.trim(),
-            profileImage
-        });
+        const previousImageUrl = currentUser.profileImage || "";
+        let nextImageUrl = profileImage;
+        let uploadedImageUrl = "";
 
-        const updatedUser = getCurrentUser();
+        setIsSavingPersonal(true);
+        setFormMessage("");
 
-        setCurrentUser(updatedUser);
-        setFormMessage("Perfil personal actualizado correctamente.");
-        setEditPersonalMode(false);
+        try {
+            if (profileImageFile) {
+                const uploadedImage = await uploadProfileMedia(
+                    profileImageFile,
+                    currentUser.id,
+                    "avatar"
+                );
+                nextImageUrl = uploadedImage.publicUrl;
+                uploadedImageUrl = uploadedImage.publicUrl;
+            }
+
+            const updatedUser = await savePersonalProfileWithSupabase({
+                name,
+                phone,
+                city,
+                country,
+                description,
+                profileImage: nextImageUrl
+            });
+
+            if (previousImageUrl && previousImageUrl !== nextImageUrl) {
+                try {
+                    await removeProfileMedia(previousImageUrl);
+                } catch {
+                    // La actualización principal ya fue guardada.
+                }
+            }
+
+            setCurrentUser(updatedUser);
+            setProfileImage(updatedUser.profileImage || nextImageUrl);
+            setProfileImageFile(null);
+            setFormMessage("Perfil personal actualizado correctamente.");
+            setEditPersonalMode(false);
+        } catch (error) {
+            if (uploadedImageUrl) {
+                try {
+                    await removeProfileMedia(uploadedImageUrl);
+                } catch {
+                    // Limpieza de mejor esfuerzo.
+                }
+            }
+
+            setFormMessage(
+                error?.message ||
+                "No se pudo guardar el perfil personal."
+            );
+        } finally {
+            setIsSavingPersonal(false);
+        }
     }
 
     function handleActivateProfessionalProfile() {
@@ -563,7 +534,19 @@ function Profile() {
         setIsSavingProfessional(true);
         setFormMessage("");
 
+        const previousCvUrl = professionalProfile.cvUrl || "";
+        let nextCvFileName = cvFileName;
+        let nextCvUrl = cvUrl.trim();
+        let uploadedCvPath = "";
+
         try {
+            if (cvFile) {
+                const uploadedCv = await uploadPrivateCv(cvFile, currentUser.id);
+                nextCvFileName = uploadedCv.fileName;
+                nextCvUrl = uploadedCv.path;
+                uploadedCvPath = uploadedCv.path;
+            }
+
             const updatedUser =
                 await saveProfessionalProfileWithSupabase({
                     title: professionalTitle.trim(),
@@ -579,17 +562,36 @@ function Profile() {
                     phone: professionalPhone.trim(),
                     city: professionalCity.trim(),
                     country: professionalCountry,
-                    cvFileName,
-                    cvUrl: cvUrl.trim()
+                    cvFileName: nextCvFileName,
+                    cvUrl: nextCvUrl
                 });
 
+            if (previousCvUrl && previousCvUrl !== nextCvUrl) {
+                try {
+                    await removePrivateCv(previousCvUrl);
+                } catch {
+                    // El perfil ya quedó actualizado.
+                }
+            }
+
             setCurrentUser(updatedUser);
+            setCvFileName(updatedUser.professionalProfile?.cvFileName || nextCvFileName);
+            setCvUrl(updatedUser.professionalProfile?.cvUrl || nextCvUrl);
+            setCvFile(null);
             setFormMessage(
                 "Perfil profesional actualizado correctamente."
             );
             setIsStartingProfessionalProfile(false);
             setEditProfessionalMode(false);
         } catch (error) {
+            if (uploadedCvPath) {
+                try {
+                    await removePrivateCv(uploadedCvPath);
+                } catch {
+                    // Limpieza de mejor esfuerzo.
+                }
+            }
+
             setFormMessage(
                 error?.message ||
                 "No se pudo guardar el perfil profesional. Probá nuevamente."
@@ -656,12 +658,20 @@ function Profile() {
                     )}
 
                     {professionalIsActive && !isManagedEntityAccount && (
-                        <button
-                            className="apply-button"
-                            onClick={() => setEditProfessionalMode(!editProfessionalMode)}
-                        >
-                            {editProfessionalMode ? "Cerrar profesional" : "Editar profesional"}
-                        </button>
+                        <>
+                            <button
+                                className="apply-button"
+                                onClick={() => setEditProfessionalMode(!editProfessionalMode)}
+                            >
+                                {editProfessionalMode ? "Cerrar profesional" : "Editar profesional"}
+                            </button>
+                            <button
+                                className="small-action-button"
+                                onClick={() => navigate(`/professionals/${currentUser.id}`)}
+                            >
+                                Ver perfil público
+                            </button>
+                        </>
                     )}
 
                     {isSuperadmin && (
@@ -819,8 +829,9 @@ function Profile() {
                             <button
                                 type="submit"
                                 className="accept-button"
+                                disabled={isSavingPersonal}
                             >
-                                Guardar perfil
+                                {isSavingPersonal ? "Guardando..." : "Guardar perfil"}
                             </button>
 
                         </div>
@@ -1081,23 +1092,36 @@ function Profile() {
                                         </p>
                                     )}
 
-                                    <label>Link público al CV</label>
+                                    <label>Link externo al CV (opcional)</label>
 
                                     <input
                                         type="url"
                                         placeholder="Ejemplo: link de Google Drive, Dropbox o portfolio"
-                                        value={cvUrl}
+                                        value={isExternalUrl(cvUrl) ? cvUrl : ""}
                                         onChange={(event) =>
                                             setCvUrl(event.target.value)
                                         }
                                     />
 
                                     <p className="password-help">
-                                        Mientras usemos localStorage, el archivo queda
-                                        guardado solo como nombre. Para que una
-                                        organización pueda abrirlo, agregá un link
-                                        público.
+                                        El archivo se guarda de forma privada. Solo vos,
+                                        las organizaciones relacionadas con una postulación
+                                        y los administradores autorizados pueden abrirlo.
                                     </p>
+
+                                    {(cvFileName || cvUrl) && (
+                                        <button
+                                            type="button"
+                                            className="reject-button"
+                                            onClick={() => {
+                                                setCvFile(null);
+                                                setCvFileName("");
+                                                setCvUrl("");
+                                            }}
+                                        >
+                                            Quitar CV guardado
+                                        </button>
+                                    )}
 
                                     {formMessage && (
                                         <p style={{ color: "#067647" }}>
@@ -1188,9 +1212,9 @@ function Profile() {
                                         }
                                     </p>
 
-                                    {currentUser.professionalProfile?.cvUrl && (
+                                    {cvAccessUrl && (
                                         <a
-                                            href={currentUser.professionalProfile.cvUrl}
+                                            href={cvAccessUrl}
                                             target="_blank"
                                             rel="noreferrer"
                                             className="apply-button"

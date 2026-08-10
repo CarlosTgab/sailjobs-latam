@@ -91,6 +91,16 @@ function mapEntityRowToStoredClub(entity, profile) {
         ownerId: entity.owner_id,
         name: entity.name,
         entityType,
+        entityProfile: entity
+            ? {
+                name: entity.name || "",
+                description: entity.description || "",
+                website: entity.website || "",
+                logoUrl: entity.logo_url || "",
+                city: entity.city_name || entity.city || "",
+                country: entity.country || ""
+            }
+            : null,
         organizationType:
             entity.organization_type ||
             (
@@ -427,6 +437,69 @@ export async function saveProfessionalProfileWithSupabase(
 
     setCurrentUser(appUser);
 
+    return appUser;
+}
+
+export async function savePersonalProfileWithSupabase(profileData) {
+    const { data: authData, error: authError } =
+        await supabase.auth.getUser();
+
+    if (authError) throw authError;
+
+    if (!authData.user) {
+        throw new Error("Tenés que iniciar sesión para guardar el perfil.");
+    }
+
+    const { error } = await supabase.rpc(
+        "save_my_personal_profile",
+        {
+            name_param: profileData.name?.trim() || "",
+            phone_param: profileData.phone?.trim() || "",
+            city_param: profileData.city?.trim() || "",
+            country_param: profileData.country || "",
+            description_param: profileData.description?.trim() || "",
+            profile_image_url_param: profileData.profileImage || ""
+        }
+    );
+
+    if (error) throw error;
+
+    const appUser = await fetchSupabaseCurrentUser(authData.user.id);
+    setCurrentUser(appUser);
+    return appUser;
+}
+
+export async function saveEntityProfileWithSupabase(entityData) {
+    const { data: authData, error: authError } =
+        await supabase.auth.getUser();
+
+    if (authError) throw authError;
+
+    if (!authData.user) {
+        throw new Error("Tenés que iniciar sesión para guardar la organización.");
+    }
+
+    if (!entityData.id) {
+        throw new Error("No encontramos la entidad vinculada a tu cuenta.");
+    }
+
+    const { error } = await supabase.rpc(
+        "save_my_entity_profile",
+        {
+            entity_id_param: entityData.id,
+            name_param: entityData.name?.trim() || "",
+            description_param: entityData.description?.trim() || "",
+            website_param: entityData.website?.trim() || "",
+            city_param: entityData.city?.trim() || "",
+            country_param: entityData.country || "",
+            logo_url_param: entityData.logoUrl || ""
+        }
+    );
+
+    if (error) throw error;
+
+    const appUser = await fetchSupabaseCurrentUser(authData.user.id);
+    setCurrentUser(appUser);
     return appUser;
 }
 

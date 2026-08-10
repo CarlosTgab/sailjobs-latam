@@ -146,6 +146,7 @@ export function getNavbarLinksForUser(user) {
             { to: "/", label: "Inicio" },
             { to: "/calendar", label: "Calendario" },
             { to: "/jobs", label: "Oportunidades" },
+            { to: "/professionals", label: "Profesionales" },
             { to: "/clubs", label: "Clubes" },
             { to: "/organization-admin", label: "Mi organización" }
         ];
@@ -160,6 +161,7 @@ export function getNavbarLinksForUser(user) {
             { to: "/", label: "Inicio" },
             { to: "/calendar", label: "Calendario" },
             { to: "/jobs", label: "Oportunidades" },
+            { to: "/professionals", label: "Profesionales" },
             { to: "/clubs", label: "Clubes" },
             { to: clubPath, label: "Mi club" }
         ];
@@ -169,6 +171,7 @@ export function getNavbarLinksForUser(user) {
         return [
             { to: "/", label: "Inicio" },
             { to: "/jobs", label: "Oportunidades" },
+            { to: "/professionals", label: "Profesionales" },
             { to: "/calendar", label: "Calendario" },
             { to: "/classifieds", label: "Clasificados" },
             { to: "/clubs", label: "Clubes" },
@@ -181,6 +184,7 @@ export function getNavbarLinksForUser(user) {
         return [
             { to: "/", label: "Inicio" },
             { to: "/jobs", label: "Oportunidades" },
+            { to: "/professionals", label: "Profesionales" },
             { to: "/calendar", label: "Calendario" },
             { to: "/classifieds", label: "Clasificados" },
             { to: "/clubs", label: "Clubes" },
@@ -192,6 +196,7 @@ export function getNavbarLinksForUser(user) {
     return [
         { to: "/", label: "Inicio" },
         { to: "/jobs", label: "Oportunidades" },
+        { to: "/professionals", label: "Profesionales" },
         { to: "/calendar", label: "Calendario" },
         { to: "/classifieds", label: "Clasificados" },
         { to: "/clubs", label: "Clubes" },

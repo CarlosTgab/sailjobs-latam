@@ -38,6 +38,7 @@ import {
 import useApplications from "../hooks/useApplications";
 import useClassifieds from "../hooks/useClassifieds";
 import { sameId, hasId, sortByNewest } from "../utils/idUtils";
+import { fetchPublicProfessionals } from "../utils/professionalsStorage";
 
 import {
     OPPORTUNITY_TYPE_LABELS,
@@ -164,6 +165,9 @@ function Home() {
 
     const users = getUsers();
     const [jobs, setJobs] = useState(() => getAllJobs(staticJobs));
+    const [professionals, setProfessionals] = useState(() =>
+        users.filter(user => hasProfessionalProfile(user))
+    );
 
     useEffect(() => {
         let isMounted = true;
@@ -182,11 +186,24 @@ function Home() {
             }
         }
 
+        async function loadProfessionals() {
+            try {
+                const publicProfessionals = await fetchPublicProfessionals();
+
+                if (isMounted) {
+                    setProfessionals(publicProfessionals);
+                }
+            } catch {
+                // Conserva el conteo local si el directorio todavía no fue migrado.
+            }
+        }
+
         function refreshFromLocalCache() {
             setJobs(getAllJobs(staticJobs));
         }
 
         loadJobs();
+        loadProfessionals();
         window.addEventListener("jobsChanged", refreshFromLocalCache);
 
         return () => {
@@ -197,10 +214,6 @@ function Home() {
     const clubs = getAllClubs(staticClubs);
     const events = getAllEvents(staticEvents);
     const { classifieds } = useClassifieds();
-
-    const professionals = users.filter(user =>
-        hasProfessionalProfile(user)
-    );
 
     const latestOpportunities = sortByNewest(jobs)
         .slice(0, 3);

@@ -314,6 +314,74 @@ body{
     margin-top: 40px;
 }
 
+.professionals-page{
+    padding-top: 130px;
+}
+
+.professional-grid{
+    align-items: stretch;
+}
+
+.professional-card{
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.professional-card .apply-button{
+    margin-top: auto;
+}
+
+.professional-card-header,
+.professional-detail-hero{
+    display: flex;
+    align-items: center;
+    gap: 18px;
+}
+
+.professional-card-header h2,
+.professional-card-header p,
+.professional-detail-hero h1,
+.professional-detail-hero h2{
+    margin: 0;
+}
+
+.professional-avatar,
+.professional-detail-avatar{
+    width: 76px;
+    height: 76px;
+    flex: 0 0 76px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #dbe8f4;
+    background: #0f2d52;
+    color: white;
+}
+
+.professional-detail-avatar{
+    width: 132px;
+    height: 132px;
+    flex-basis: 132px;
+}
+
+.professional-initials{
+    display: grid;
+    place-items: center;
+    font-size: 1.25rem;
+    font-weight: 800;
+}
+
+.professional-detail-avatar.professional-initials{
+    font-size: 2rem;
+}
+
+.professional-tags{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 6px 0 14px;
+}
+
 .event-card{
     background: white;
     padding: 25px;
@@ -891,6 +959,11 @@ body{
 
     .calendar-month-count{
         font-size: 0.78rem;
+    }
+
+    .professional-detail-hero{
+        align-items: flex-start;
+        flex-direction: column;
     }
 
     .page.classifieds-page{
