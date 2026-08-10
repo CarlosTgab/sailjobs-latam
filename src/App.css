@@ -326,6 +326,7 @@ body{
     display: flex;
     flex-direction: column;
     gap: 14px;
+    min-width: 0;
 }
 
 .professional-card .apply-button{
@@ -337,6 +338,42 @@ body{
     display: flex;
     align-items: center;
     gap: 18px;
+}
+
+.professional-card-header{
+    align-items: flex-start;
+    min-height: 82px;
+    min-width: 0;
+}
+
+.professional-card-heading{
+    flex: 1;
+    min-width: 0;
+}
+
+.professional-card-header h2{
+    color: #0F2D52;
+    font-size: clamp(1.25rem, 1.7vw, 1.6rem);
+    line-height: 1.12;
+    overflow-wrap: anywhere;
+}
+
+.professional-card-header p{
+    color: #475467;
+    line-height: 1.35;
+    margin-top: 5px;
+}
+
+.professional-card-summary{
+    color: #344054;
+    line-height: 1.5;
+    min-height: 3em;
+}
+
+.professional-card .professional-avatar{
+    width: 68px;
+    height: 68px;
+    flex-basis: 68px;
 }
 
 .professional-card-header h2,

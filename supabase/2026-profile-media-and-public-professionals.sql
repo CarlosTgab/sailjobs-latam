@@ -281,6 +281,8 @@ as $$
     from public.professional_profiles professional
     join public.profiles profile
       on profile.id = professional.user_id
+    join auth.users authenticated_user
+      on authenticated_user.id = profile.id
     where professional.active is true
     order by profile.name asc;
 $$;

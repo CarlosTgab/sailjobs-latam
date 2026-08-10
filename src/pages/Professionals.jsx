@@ -17,6 +17,28 @@ function getInitials(name) {
         .toUpperCase();
 }
 
+function hasMeaningfulText(value) {
+    return /[A-Za-zÀ-ÿ0-9]/.test(String(value || ""));
+}
+
+function getDisplayName(profile) {
+    const name = String(profile?.name || "").trim();
+
+    if (!name || name.includes("@")) {
+        return "Profesional náutico";
+    }
+
+    return name;
+}
+
+function getDisplaySummary(profile) {
+    if (hasMeaningfulText(profile?.summary)) {
+        return profile.summary.trim();
+    }
+
+    return "Perfil profesional disponible para oportunidades náuticas.";
+}
+
 function Professionals() {
     const navigate = useNavigate();
     const [professionals, setProfessionals] = useState([]);
@@ -130,36 +152,46 @@ function Professionals() {
 
             {!isLoading && !error && filteredProfessionals.length > 0 && (
                 <div className="dashboard-grid professional-grid">
-                    {filteredProfessionals.map(profile => (
+                    {filteredProfessionals.map(profile => {
+                        const displayName = getDisplayName(profile);
+                        const displayTitle = hasMeaningfulText(profile.title)
+                            ? profile.title.trim()
+                            : "Especialidad a completar";
+
+                        return (
                         <article className="dashboard-card professional-card" key={profile.id}>
                             <div className="professional-card-header">
                                 {profile.profileImage ? (
                                     <img
                                         src={profile.profileImage}
-                                        alt={profile.name}
+                                        alt={displayName}
                                         className="professional-avatar"
                                     />
                                 ) : (
                                     <div className="professional-avatar professional-initials">
-                                        {getInitials(profile.name)}
+                                        {getInitials(displayName)}
                                     </div>
                                 )}
 
-                                <div>
-                                    <h2>{profile.name}</h2>
-                                    <p>{profile.title}</p>
+                                <div className="professional-card-heading">
+                                    <h2>{displayName}</h2>
+                                    <p>{displayTitle}</p>
                                 </div>
                             </div>
 
-                            <p>{profile.summary || "Perfil profesional activo en SailJobs LATAM."}</p>
+                            <p className="professional-card-summary">
+                                {getDisplaySummary(profile)}
+                            </p>
                             <p><strong>Ubicación:</strong> {[profile.city, profile.country].filter(Boolean).join(", ") || "No informada"}</p>
                             <p><strong>Disponibilidad:</strong> {profile.availability || "A consultar"}</p>
 
-                            <div className="professional-tags">
-                                {profile.specialties.slice(0, 4).map(role => (
-                                    <span className="sidebar-tag" key={role}>{role}</span>
-                                ))}
-                            </div>
+                            {profile.specialties.length > 0 && (
+                                <div className="professional-tags">
+                                    {profile.specialties.slice(0, 4).map(role => (
+                                        <span className="sidebar-tag" key={role}>{role}</span>
+                                    ))}
+                                </div>
+                            )}
 
                             <button
                                 className="apply-button"
@@ -168,7 +200,8 @@ function Professionals() {
                                 Ver perfil
                             </button>
                         </article>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
 
