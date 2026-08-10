@@ -171,7 +171,6 @@ export function getNavbarLinksForUser(user) {
         return [
             { to: "/", label: "Inicio" },
             { to: "/jobs", label: "Oportunidades" },
-            { to: "/professionals", label: "Profesionales" },
             { to: "/calendar", label: "Calendario" },
             { to: "/classifieds", label: "Clasificados" },
             { to: "/clubs", label: "Clubes" },
@@ -184,7 +183,6 @@ export function getNavbarLinksForUser(user) {
         return [
             { to: "/", label: "Inicio" },
             { to: "/jobs", label: "Oportunidades" },
-            { to: "/professionals", label: "Profesionales" },
             { to: "/calendar", label: "Calendario" },
             { to: "/classifieds", label: "Clasificados" },
             { to: "/clubs", label: "Clubes" },
@@ -196,7 +194,6 @@ export function getNavbarLinksForUser(user) {
     return [
         { to: "/", label: "Inicio" },
         { to: "/jobs", label: "Oportunidades" },
-        { to: "/professionals", label: "Profesionales" },
         { to: "/calendar", label: "Calendario" },
         { to: "/classifieds", label: "Clasificados" },
         { to: "/clubs", label: "Clubes" },
