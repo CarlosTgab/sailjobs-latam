@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { fetchPublicProfessionals } from "../utils/professionalsStorage";
+import {
+    fetchProfessionalSportHistory,
+    fetchPublicProfessionals
+} from "../utils/professionalsStorage";
 
 function getInitials(name) {
     return String(name || "P")
@@ -17,6 +20,8 @@ function ProfessionalDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
     const [profile, setProfile] = useState(null);
+    const [sportHistory, setSportHistory] = useState([]);
+    const [historyError, setHistoryError] = useState("");
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState("");
 
@@ -29,6 +34,17 @@ function ProfessionalDetail() {
                 const selectedProfile = professionals.find(item => String(item.id) === String(id));
 
                 if (isMounted) setProfile(selectedProfile || null);
+
+                if (selectedProfile) {
+                    try {
+                        const history = await fetchProfessionalSportHistory(selectedProfile.id);
+                        if (isMounted) setSportHistory(history);
+                    } catch {
+                        if (isMounted) {
+                            setHistoryError("El historial deportivo no está disponible temporalmente.");
+                        }
+                    }
+                }
             } catch (loadError) {
                 if (isMounted) {
                     setError(loadError?.message || "No se pudo cargar el perfil.");
@@ -119,6 +135,55 @@ function ProfessionalDetail() {
                 {profile.experience.length > 0
                     ? <ul>{profile.experience.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}</ul>
                     : <p>No informada.</p>}
+            </div>
+
+            <div className="detail-card professional-sport-history">
+                <div className="section-header">
+                    <div>
+                        <h2>Resultados y ranking</h2>
+                        <p>Antecedentes vinculados con rankings publicados en SailJobs.</p>
+                    </div>
+                </div>
+
+                {historyError && <p>{historyError}</p>}
+
+                {!historyError && sportHistory.length === 0 && (
+                    <p>Todavía no hay resultados vinculados con este perfil.</p>
+                )}
+
+                {sportHistory.length > 0 && (
+                    <div className="ranking-table-wrapper">
+                        <table className="ranking-table">
+                            <thead>
+                                <tr>
+                                    <th>Ranking</th>
+                                    <th>Clase</th>
+                                    <th>Posición</th>
+                                    <th>Club</th>
+                                    <th>Puntos netos</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {sportHistory.map(result => (
+                                    <tr key={`${result.id}-${result.rankingDate}`}>
+                                        <td>
+                                            <strong>{result.rankingTitle}</strong>
+                                            {result.rankingDate && (
+                                                <small className="sport-history-date">
+                                                    {new Date(result.rankingDate).toLocaleDateString("es-AR")}
+                                                </small>
+                                            )}
+                                        </td>
+                                        <td>{result.className || "—"}</td>
+                                        <td><strong>#{result.position}</strong></td>
+                                        <td>{result.club || "—"}</td>
+                                        <td>{result.netPoints ?? "—"}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
             </div>
 
             <div className="detail-card">

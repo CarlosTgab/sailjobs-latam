@@ -32,3 +32,27 @@ export async function fetchPublicProfessionals() {
         .map(normalizePublicProfessional)
         .filter(profile => profile?.id);
 }
+
+export async function fetchProfessionalSportHistory(profileId) {
+    if (!profileId) return [];
+
+    const { data, error } = await supabase.rpc(
+        "get_public_professional_sport_history",
+        { profile_id_param: profileId }
+    );
+
+    if (error) throw error;
+
+    return (data || []).map(row => ({
+        id: row.entry_id,
+        rankingTitle: row.ranking_title || "Ranking",
+        rankingDate: row.ranking_date,
+        className: row.class_name || "",
+        position: Number(row.position) || 0,
+        club: row.club || "",
+        category: row.category || "",
+        netPoints: row.net_points === null ? null : Number(row.net_points),
+        totalPoints: row.total_points === null ? null : Number(row.total_points),
+        events: Number(row.events) || 0
+    }));
+}

@@ -24,6 +24,8 @@ import {
     COMPENSATION_TYPE_LABELS
 } from "../config/appConfig";
 
+import EventRegistrationPanel from "../components/EventRegistrationPanel";
+
 function getEventCityName(event) {
     if (event?.cityName) {
         return event.cityName;
@@ -257,6 +259,12 @@ function EventDetail() {
                     </p>
                 </div>
             </div>
+
+            <EventRegistrationPanel
+                event={event}
+                currentUser={currentUser}
+                canManage={userCanEditEvent}
+            />
 
             <div className="detail-card">
                 <div className="section-header">

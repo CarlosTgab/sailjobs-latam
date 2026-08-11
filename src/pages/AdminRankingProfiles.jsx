@@ -249,9 +249,9 @@ function AdminRankingProfiles() {
                     <h1>Perfiles en el ranking</h1>
 
                     <p>
-                        Asociá cada identidad del ranking con su perfil profesional.
-                        El vínculo se conserva en próximas importaciones mientras
-                        coincidan el nombre y el club.
+                        Las coincidencias exactas y únicas se vinculan automáticamente.
+                        Desde acá podés revisar y resolver manualmente los casos
+                        restantes o ambiguos.
                     </p>
                 </div>
 
@@ -274,9 +274,10 @@ function AdminRankingProfiles() {
 
             <div className="ranking-note">
                 <p>
-                    <strong>Importante:</strong> vinculá sólo coincidencias seguras.
-                    SailJobs no relaciona automáticamente nombres parecidos para
-                    evitar mostrar la foto o el perfil de otra persona.
+                    <strong>Importante:</strong> SailJobs sólo automatiza nombres
+                    exactamente iguales cuando existe un único perfil posible. Los
+                    nombres parecidos no se relacionan sin revisión para evitar
+                    mostrar resultados en el perfil de otra persona.
                 </p>
             </div>
 
