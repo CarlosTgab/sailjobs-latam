@@ -3035,3 +3035,72 @@ body {
     border-radius: 12px;
     background: #fff;
 }
+
+.entity-event-invitations-card{
+    border: 1px solid rgba(15, 45, 82, 0.12);
+}
+
+.entity-event-invitation{
+    align-items: center;
+    cursor: default;
+}
+
+.entity-event-invitation h4{
+    margin: 8px 0 6px;
+    color: #0f2d52;
+}
+
+.entity-event-invitation p{
+    margin: 4px 0;
+}
+
+.invitation-count-badge{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    padding: 7px 12px;
+    border-radius: 999px;
+    background: #ff8400;
+    color: white;
+    font-size: 0.85rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.invitation-feedback{
+    display: block;
+    width: fit-content;
+    max-width: 100%;
+    margin: 0 0 18px;
+    white-space: normal;
+}
+
+.invitation-history{
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid #dbe3ec;
+}
+
+.invitation-history summary{
+    width: fit-content;
+    margin-bottom: 16px;
+    color: #0f2d52;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+@media (max-width: 768px){
+    .entity-event-invitation{
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .entity-event-invitation .dashboard-actions{
+        width: 100%;
+    }
+
+    .entity-event-invitation .dashboard-actions button{
+        flex: 1 1 150px;
+    }
+}

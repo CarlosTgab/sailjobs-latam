@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
+import EntityEventInvitations from "../components/EntityEventInvitations";
+
 import staticClubs from "../data/clubs";
 import {
     getAllClubs,
@@ -46,6 +48,7 @@ function ClubDashboard() {
 
     const clubs = getAllClubs(staticClubs);
     const [jobs, setJobs] = useState(() => getAllJobs(staticJobs));
+    const [, setEventsRevision] = useState(0);
 
     useEffect(() => {
         let isMounted = true;
@@ -68,12 +71,18 @@ function ClubDashboard() {
             setJobs(getAllJobs(staticJobs));
         }
 
+        function refreshEventsFromLocalCache() {
+            setEventsRevision(currentRevision => currentRevision + 1);
+        }
+
         loadJobs();
         window.addEventListener("jobsChanged", refreshFromLocalCache);
+        window.addEventListener("eventsChanged", refreshEventsFromLocalCache);
 
         return () => {
             isMounted = false;
             window.removeEventListener("jobsChanged", refreshFromLocalCache);
+            window.removeEventListener("eventsChanged", refreshEventsFromLocalCache);
         };
     }, []);
     const events = getAllEvents(staticEvents);
@@ -425,6 +434,8 @@ function ClubDashboard() {
                     <p>Eventos vinculados</p>
                 </div>
             </div>
+
+            <EntityEventInvitations entityId={clubId} />
 
             <div className="detail-card">
                 <div className="section-header">

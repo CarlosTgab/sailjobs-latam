@@ -1,7 +1,8 @@
 import { useState } from "react";
 import {
     useParams,
-    useNavigate
+    useNavigate,
+    useSearchParams
 } from "react-router-dom";
 
 import {
@@ -96,6 +97,7 @@ function CreateJob() {
     const { clubId } = useParams();
 
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
 
     const clubs = getAllClubs(staticClubs);
 
@@ -181,8 +183,13 @@ function CreateJob() {
         setApplicationDeadline
     ] = useState("");
 
-    const [eventId, setEventId] =
-        useState("");
+    const requestedEventId = searchParams.get("eventId") || "";
+
+    const [eventId, setEventId] = useState(() =>
+        clubEvents.some(event => sameId(event.id, requestedEventId))
+            ? requestedEventId
+            : ""
+    );
 
     const [
         eligibleProfiles,

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import EntityEventInvitations from "../components/EntityEventInvitations";
+
 import { getCurrentUser } from "../utils/authStorage";
 import {
     canReviewEvent,
@@ -657,6 +659,10 @@ function OrganizationAdminDashboard() {
                     <p>Clases administradas</p>
                 </div>
             </div>
+
+            {organizationId && (
+                <EntityEventInvitations entityId={organizationId} />
+            )}
 
             <div className="dashboard-main-grid">
                 <div

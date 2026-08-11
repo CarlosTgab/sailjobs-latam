@@ -169,10 +169,27 @@ export function eventBelongsToEntity(event, entityId) {
         return true;
     }
 
-    return [
-        ...(Array.isArray(event.organizerEntities) ? event.organizerEntities : []),
-        ...(Array.isArray(event.invitedEntities) ? event.invitedEntities : [])
-    ].some(entity => sameId(entity.entityId, entityId));
+    const acceptedOrganizer = (
+        Array.isArray(event.organizerEntities)
+            ? event.organizerEntities
+            : []
+    ).some(entity =>
+        sameId(entity.entityId, entityId) &&
+        entity.status === "accepted"
+    );
+
+    if (acceptedOrganizer) {
+        return true;
+    }
+
+    return (
+        Array.isArray(event.invitedEntities)
+            ? event.invitedEntities
+            : []
+    ).some(entity =>
+        sameId(entity.entityId, entityId) &&
+        entity.status === "accepted"
+    );
 }
 
 export function isPublishedEvent(event) {
