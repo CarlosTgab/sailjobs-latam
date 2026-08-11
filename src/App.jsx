@@ -63,6 +63,7 @@ import AdminRankingProfiles from "./pages/AdminRankingProfiles";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Profile from "./pages/Profile";
+import Notifications from "./pages/Notifications";
 
 import Ranking from "./pages/Ranking";
 
@@ -113,6 +114,15 @@ function App() {
           element={
             <RequireAuth>
               <Profile />
+            </RequireAuth>
+          }
+        />
+
+        <Route
+          path="/notifications"
+          element={
+            <RequireAuth>
+              <Notifications />
             </RequireAuth>
           }
         />

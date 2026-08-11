@@ -3090,6 +3090,139 @@ body {
     cursor: pointer;
 }
 
+.notifications-nav-link{
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.notifications-badge{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.35rem;
+    height: 1.35rem;
+    padding: 0 0.35rem;
+    border-radius: 999px;
+    background: #ff8a00;
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.notifications-page{
+    max-width: 980px;
+}
+
+.notifications-page-header{
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.notifications-page-header h1,
+.notifications-page-header p{
+    margin: 0;
+}
+
+.notifications-page-header p{
+    margin-top: 0.35rem;
+    color: #5c6675;
+}
+
+.notification-message{
+    display: block;
+    margin: 1rem 0;
+}
+
+.notifications-list{
+    display: grid;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+}
+
+.notification-item{
+    width: 100%;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 1rem;
+    border: 1px solid #dce2ea;
+    border-radius: 14px;
+    background: #fff;
+    color: #172033;
+    text-align: left;
+    cursor: pointer;
+}
+
+.notification-item:hover{
+    border-color: #0d315b;
+    box-shadow: 0 8px 22px rgba(13, 49, 91, 0.08);
+}
+
+.notification-item.is-unread{
+    background: #f4f8fd;
+    border-color: #a9c2df;
+}
+
+.notification-status-dot{
+    width: 0.65rem;
+    height: 0.65rem;
+    border-radius: 50%;
+    background: #c5ccd5;
+}
+
+.notification-item.is-unread .notification-status-dot{
+    background: #ff8a00;
+}
+
+.notification-copy{
+    display: grid;
+    gap: 0.25rem;
+    min-width: 0;
+}
+
+.notification-copy span,
+.notification-copy small{
+    color: #5c6675;
+}
+
+.notification-action{
+    color: #0d315b;
+    font-weight: 800;
+}
+
+.empty-notifications{
+    padding: 3rem 1rem;
+    text-align: center;
+}
+
+.empty-notifications h2,
+.empty-notifications p{
+    margin: 0;
+}
+
+.empty-notifications p{
+    margin-top: 0.4rem;
+    color: #5c6675;
+}
+
+@media (max-width: 640px){
+    .notifications-page-header{
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .notification-item{
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .notification-action{
+        display: none;
+    }
+}
+
 @media (max-width: 768px){
     .entity-event-invitation{
         align-items: flex-start;

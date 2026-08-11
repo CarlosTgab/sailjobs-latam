@@ -21,6 +21,8 @@ import {
     getNavbarLinksForUser
 } from "../config/roleExperience";
 
+import NotificationsNavLink from "./NotificationsNavLink";
+
 function Navbar() {
 
     const navigate = useNavigate();
@@ -90,6 +92,11 @@ function Navbar() {
                         {link.label}
                     </Link>
                 ))}
+
+                <NotificationsNavLink
+                    currentUser={currentUser}
+                    onNavigate={closeMenu}
+                />
 
                 {!currentUser && (
                     <>
