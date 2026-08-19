@@ -9,6 +9,7 @@ import LocationSelects, {
 } from "../components/LocationSelects";
 
 import {
+    getAuthErrorMessage,
     registerWithSupabase
 } from "../utils/supabaseAuth";
 
@@ -234,7 +235,7 @@ function Signup() {
                     clubState
                 );
 
-            const user =
+            const registration =
                 await registerWithSupabase({
                     accountType,
                     name,
@@ -256,13 +257,22 @@ function Signup() {
                             : "club"
                 });
 
+            if (registration.confirmationRequired) {
+                navigate(
+                    `/confirm-email?email=${encodeURIComponent(registration.email)}`
+                );
+                return;
+            }
+
             navigate(
-                getRedirectPath(user)
+                getRedirectPath(registration)
             );
         } catch (error) {
             setFormMessage(
-                error.message ||
-                "No se pudo crear la cuenta."
+                getAuthErrorMessage(
+                    error,
+                    "No se pudo crear la cuenta."
+                )
             );
         } finally {
             setLoading(false);

@@ -2752,6 +2752,82 @@ body {
     margin-top: -4px;
 }
 
+.auth-inline-link {
+    align-self: flex-end;
+    color: #0b3d70;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.auth-inline-link:hover,
+.auth-secondary-link:hover {
+    text-decoration: underline;
+}
+
+.auth-message {
+    margin: 8px 0 0;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: rgba(11, 61, 112, 0.08);
+    color: #0b3d70 !important;
+    line-height: 1.45;
+}
+
+.auth-message.success {
+    background: #ecfdf3;
+    color: #067647 !important;
+}
+
+.auth-message.error {
+    background: #fef3f2;
+    color: #b42318 !important;
+}
+
+.auth-status-card {
+    text-align: center;
+}
+
+.auth-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    margin-top: 18px;
+}
+
+.auth-button-link {
+    display: inline-block;
+    box-sizing: border-box;
+    text-align: center;
+    text-decoration: none;
+}
+
+.auth-secondary-link {
+    color: #0b3d70;
+    font-weight: 700;
+}
+
+.account-security-page {
+    max-width: 1280px;
+    margin: 0 auto;
+}
+
+.account-security-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+}
+
+.account-security-grid .detail-card {
+    margin-top: 0;
+}
+
+@media (max-width: 800px) {
+    .account-security-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* Modal de postulación */
 .modal-overlay {
     position: fixed;

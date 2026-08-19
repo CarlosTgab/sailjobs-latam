@@ -38,16 +38,18 @@ function AuthSync() {
         const {
             data: { subscription }
         } = supabase.auth.onAuthStateChange(
-            async (_event, session) => {
-                try {
-                    if (session?.user) {
-                        await syncSupabaseSession();
-                    } else {
+            (_event, session) => {
+                window.setTimeout(async () => {
+                    try {
+                        if (session?.user) {
+                            await syncSupabaseSession();
+                        } else {
+                            clearLocalSession();
+                        }
+                    } catch {
                         clearLocalSession();
                     }
-                } catch {
-                    clearLocalSession();
-                }
+                }, 0);
             }
         );
 
