@@ -4,7 +4,10 @@ function Footer() {
     return (
         <footer className="footer">
 
-            <h3>SailJobs LATAM</h3>
+            <Link className="footer-brand" to="/">
+                <img src="/sailjobs-mark.svg" alt="" aria-hidden="true" />
+                <span>SailJobs LATAM</span>
+            </Link>
 
             <p>
                 La plataforma náutica de Sudamérica.

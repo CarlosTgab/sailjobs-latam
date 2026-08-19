@@ -103,7 +103,7 @@ function AdminMessages() {
         if (type === "general") return "Consulta general";
         if (type === "club") return "Sumar club / organización";
         if (type === "job") return "Publicar oportunidad";
-        if (type === "event") return "Proponer evento";
+        if (type === "event") return "Sugerencia de evento";
         if (type === "classified") return "Clasificados";
         if (type === "partnership") return "Alianza / sponsor";
 
@@ -149,7 +149,7 @@ function AdminMessages() {
 
                     <p>
                         Revisá consultas generales, clubes interesados,
-                        propuestas de eventos, oportunidades y alianzas.
+                        sugerencias de eventos, oportunidades y alianzas.
                     </p>
                 </div>
 

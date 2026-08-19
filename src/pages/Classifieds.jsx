@@ -81,7 +81,7 @@ function Classifieds() {
         }
 
         if (currentUserIsInstitutional) {
-            alert("Los clasificados son una sección comunitaria para usuarios y profesionales. Las cuentas institucionales gestionan oportunidades, eventos y postulaciones desde su panel.");
+            alert("Los clasificados son una sección comunitaria para usuarios y profesionales. Las cuentas institucionales gestionan oportunidades y postulaciones desde su panel.");
             navigate(getPrimaryDashboardPath(currentUser));
             return;
         }

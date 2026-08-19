@@ -242,12 +242,6 @@ function ClubDetail() {
                             Publicar oportunidad
                         </button>
 
-                        <button
-                            className="apply-button"
-                            onClick={() => navigate(`/club-dashboard/${club.id}/new-event`)}
-                        >
-                            Proponer evento
-                        </button>
                     </div>
                 )}
             </div>
@@ -337,14 +331,6 @@ function ClubDetail() {
                 <div className="section-header">
                     <h2>Eventos</h2>
 
-                    {userCanManageClub && (
-                        <button
-                            className="small-action-button"
-                            onClick={() => navigate(`/club-dashboard/${club.id}/new-event`)}
-                        >
-                            Proponer evento
-                        </button>
-                    )}
                 </div>
 
                 {clubEvents.length > 0 ? (

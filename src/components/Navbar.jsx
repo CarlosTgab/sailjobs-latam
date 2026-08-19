@@ -63,15 +63,15 @@ function Navbar() {
     return (
         <nav className="navbar">
 
-            <h2
-                onClick={() => {
-                    closeMenu();
-                    navigate("/");
-                }}
-                style={{ cursor: "pointer" }}
-            >
-                SailJobs LATAM
-            </h2>
+            <Link className="navbar-brand" to="/" onClick={closeMenu}>
+                <img
+                    className="navbar-logo"
+                    src="/sailjobs-mark.svg"
+                    alt=""
+                    aria-hidden="true"
+                />
+                <span className="navbar-brand-text">SailJobs LATAM</span>
+            </Link>
 
             <button
                 className="menu-toggle"

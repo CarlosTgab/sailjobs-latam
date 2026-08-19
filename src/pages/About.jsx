@@ -123,7 +123,7 @@ function About() {
                         <h3>Clubes y organizaciones</h3>
 
                         <p>
-                            Para publicar oportunidades, convocatorias, eventos
+                            Para publicar oportunidades, buscar profesionales
                             y revisar postulaciones.
                         </p>
                     </div>

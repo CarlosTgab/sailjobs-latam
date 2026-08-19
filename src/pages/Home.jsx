@@ -218,6 +218,10 @@ function Home() {
     const latestOpportunities = sortByNewest(jobs)
         .slice(0, 3);
 
+    const latestClassifieds = sortByNewest(
+        classifieds.filter(item => item.status !== "deleted")
+    ).slice(0, 3);
+
     const upcomingEvents = [...events]
         .filter(isPublishedEvent)
         .sort((a, b) => new Date(a.startDate) - new Date(b.startDate))
@@ -227,6 +231,10 @@ function Home() {
         return clubs.find(
             club => sameId(club.id, clubId)
         );
+    }
+
+    function getClassifiedImage(classified) {
+        return classified.images?.[0] || classified.image || null;
     }
 
     function getOpportunityTypeLabel(type) {
@@ -298,7 +306,8 @@ function Home() {
                             </div>
 
                             <div className="dashboard-actions">
-                                <button className="apply-button" onClick={() => navigate("/admin/events")}>Moderar eventos</button>
+                                <button className="apply-button" onClick={() => navigate("/admin/events")}>Gestionar calendario</button>
+                                <button className="apply-button" onClick={() => navigate("/admin/events/new")}>Publicar evento oficial</button>
                                 <button className="apply-button" onClick={() => navigate("/admin/jobs")}>Moderar oportunidades</button>
                                 <button className="apply-button" onClick={() => navigate("/admin/classifieds")}>Moderar clasificados</button>
                                 <button className="apply-button" onClick={() => navigate("/admin/import-fay")}>Importar FAY</button>
@@ -307,7 +316,7 @@ function Home() {
 
                         <section className="detail-card">
                             <div className="section-header">
-                                <h2>Eventos pendientes</h2>
+                                <h2>Registros históricos pendientes</h2>
 
                                 <button className="small-action-button" onClick={() => navigate("/admin/events")}>Ver todos</button>
                             </div>
@@ -356,10 +365,6 @@ function Home() {
             hasId(entityJobIds, application.jobId)
         );
 
-        const pendingRequests = isOrganization
-            ? entityEvents.filter(isPendingReviewEvent)
-            : [];
-
         const publishedEntityEvents = entityEvents
             .filter(isPublishedEvent)
             .sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
@@ -367,13 +372,6 @@ function Home() {
         return (
             <>
                 <div className="dashboard-stats">
-                    {isOrganization && (
-                        <div className="dashboard-stat-card">
-                            <h2>{pendingRequests.length}</h2>
-                            <p>Solicitudes pendientes</p>
-                        </div>
-                    )}
-
                     <div className="dashboard-stat-card">
                         <h2>{publishedEntityEvents.length}</h2>
                         <p>Eventos publicados</p>
@@ -401,9 +399,7 @@ function Home() {
                         </div>
 
                         <p>
-                            {isOrganization
-                                ? "Gestioná eventos, solicitudes de clubes y convocatorias publicadas por tu organización."
-                                : "Gestioná oportunidades, postulaciones recibidas y propuestas de eventos de tu club."}
+                            Gestioná oportunidades, postulaciones recibidas y búsquedas de profesionales.
                         </p>
 
                         <div className="dashboard-actions">
@@ -412,13 +408,6 @@ function Home() {
                                 onClick={() => navigate(isOrganization ? "/organization-admin" : `/club-dashboard/${entityId}`)}
                             >
                                 {isOrganization ? "Mi organización" : "Mi club"}
-                            </button>
-
-                            <button
-                                className="apply-button"
-                                onClick={() => navigate(isOrganization ? "/organization-admin/new-event" : `/club-dashboard/${entityId}/new-event`)}
-                            >
-                                {isOrganization ? "Publicar evento" : "Proponer evento"}
                             </button>
 
                             {entityId && (
@@ -440,45 +429,6 @@ function Home() {
                             )}
                         </div>
                     </section>
-
-                    {isOrganization && (
-                        <section className="detail-card">
-                            <div className="section-header">
-                                <h2>Solicitudes de eventos</h2>
-
-                                <button
-                                    className="small-action-button"
-                                    onClick={() => navigate("/organization-admin")}
-                                >
-                                    Revisar
-                                </button>
-                            </div>
-
-                            {pendingRequests.length > 0 ? (
-                                <div className="dashboard-list">
-                                    {pendingRequests.slice(0, 4).map(event => (
-                                        <div
-                                            key={event.id}
-                                            className="dashboard-list-item"
-                                            onClick={() => navigate(`/calendar/${event.id}`)}
-                                        >
-                                            <div>
-                                                <h4>{event.title}</h4>
-                                                <p>{getEventClassLabel(event)} · {getLocationLabel(event)}</p>
-                                                {event.proposedByName && (
-                                                    <p>Propuesto por: {event.proposedByName}</p>
-                                                )}
-                                            </div>
-
-                                            <span>Ver</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <p>No hay solicitudes pendientes para tu organización.</p>
-                            )}
-                        </section>
-                    )}
 
                     <section className="detail-card">
                         <div className="section-header">
@@ -654,6 +604,59 @@ function Home() {
                                 </div>
                             ) : (
                                 <p>Todavía no hay oportunidades publicadas.</p>
+                            )}
+                        </section>
+
+                        <section className="detail-card">
+                            <div className="section-header">
+                                <h2>Clasificados recientes</h2>
+
+                                <button
+                                    className="small-action-button"
+                                    onClick={() => navigate("/classifieds")}
+                                >
+                                    Ver todos
+                                </button>
+                            </div>
+
+                            {latestClassifieds.length > 0 ? (
+                                <div className="dashboard-grid">
+                                    {latestClassifieds.map(item => {
+                                        const mainImage = getClassifiedImage(item);
+
+                                        return (
+                                            <div key={item.id} className="dashboard-card home-classified-card">
+                                                {mainImage ? (
+                                                    <img
+                                                        src={mainImage}
+                                                        alt={item.title}
+                                                        className="classified-image"
+                                                    />
+                                                ) : (
+                                                    <div className="classified-placeholder">Sin imagen</div>
+                                                )}
+
+                                                <div className="event-card-top">
+                                                    <span className="sidebar-tag">{item.category}</span>
+                                                    <span className="status-pill approved">{item.price}</span>
+                                                </div>
+
+                                                <h3>{item.title}</h3>
+                                                <p><strong>Ubicación:</strong> {[item.city, item.country].filter(Boolean).join(", ") || "No informada"}</p>
+                                                {item.modelYear && <p><strong>Año:</strong> {item.modelYear}</p>}
+
+                                                <button
+                                                    className="apply-button"
+                                                    onClick={() => navigate(`/classifieds/${item.id}`)}
+                                                >
+                                                    Ver clasificado
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <p>Todavía no hay clasificados publicados.</p>
                             )}
                         </section>
 
