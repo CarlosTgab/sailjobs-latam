@@ -217,16 +217,16 @@ export function getHomeExperienceCopy(user) {
     if (experienceType === EXPERIENCE_TYPES.ORGANIZATION) {
         return {
             tag: "Modo organización",
-            title: "Administrá calendario, eventos y actividad institucional.",
-            description: "Revisá propuestas de clubes, publicá eventos oficiales y gestioná convocatorias vinculadas a tu organización náutica."
+            title: "Publicá oportunidades y encontrá profesionales náuticos.",
+            description: "Gestioná convocatorias, revisá postulaciones y vinculá tus búsquedas con campeonatos del calendario oficial."
         };
     }
 
     if (experienceType === EXPERIENCE_TYPES.CLUB) {
         return {
             tag: "Modo club náutico",
-            title: "Gestioná oportunidades, postulaciones y eventos de tu club.",
-            description: "Publicá búsquedas, revisá postulaciones recibidas y proponé eventos para que una organización los valide."
+            title: "Gestioná oportunidades y postulaciones de tu club.",
+            description: "Publicá búsquedas, encontrá profesionales y vinculá convocatorias con eventos del calendario oficial."
         };
     }
 
@@ -241,15 +241,15 @@ export function getHomeExperienceCopy(user) {
     if (experienceType === EXPERIENCE_TYPES.USER) {
         return {
             tag: "Tu espacio náutico",
-            title: "Explorá oportunidades, eventos y clasificados de la comunidad.",
-            description: "Podés activar tu perfil profesional cuando quieras y empezar a postularte a oportunidades."
+            title: "Explorá oportunidades y clasificados de la comunidad náutica.",
+            description: "Podés activar tu perfil profesional, postularte a búsquedas y consultar el calendario oficial cuando lo necesites."
         };
     }
 
     return {
         tag: "Comunidad náutica latinoamericana",
-        title: "Oportunidades, convocatorias y profesionales náuticos en un solo lugar.",
-        description: "SailJobs LATAM conecta clubes, organizaciones, profesionales, voluntarios y eventos de la comunidad náutica regional."
+        title: "Trabajo y compraventa para la comunidad náutica.",
+        description: "Encontrá oportunidades, profesionales y clasificados náuticos de toda Latinoamérica en un solo lugar."
     };
 }
 
@@ -259,7 +259,7 @@ export function getHomeActionsForUser(user) {
     if (experienceType === EXPERIENCE_TYPES.SUPERADMIN) {
         return [
             { to: "/superadmin", label: "Ir al panel admin" },
-            { to: "/admin/events", label: "Moderar eventos" },
+            { to: "/admin/events/new", label: "Publicar evento" },
             { to: "/admin/jobs", label: "Moderar oportunidades" }
         ];
     }
@@ -267,8 +267,8 @@ export function getHomeActionsForUser(user) {
     if (experienceType === EXPERIENCE_TYPES.ORGANIZATION) {
         return [
             { to: "/organization-admin", label: "Panel de organización" },
-            { to: "/organization-admin/new-event", label: "Publicar evento" },
-            { to: "/calendar", label: "Ver calendario" }
+            { to: "/jobs", label: "Ver oportunidades" },
+            { to: "/professionals", label: "Buscar profesionales" }
         ];
     }
 
@@ -285,12 +285,7 @@ export function getHomeActionsForUser(user) {
                     : clubPath,
                 label: "Publicar oportunidad"
             },
-            {
-                to: user?.clubId
-                    ? `/club-dashboard/${user.clubId}/new-event`
-                    : clubPath,
-                label: "Proponer evento"
-            }
+            { to: "/professionals", label: "Buscar profesionales" }
         ];
     }
 
@@ -313,6 +308,6 @@ export function getHomeActionsForUser(user) {
     return [
         { to: "/jobs", label: "Ver oportunidades" },
         { to: "/signup", label: "Crear cuenta" },
-        { to: "/calendar", label: "Ver calendario" }
+        { to: "/classifieds", label: "Ver clasificados" }
     ];
 }

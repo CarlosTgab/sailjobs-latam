@@ -83,7 +83,7 @@ function Contact() {
                             </option>
 
                             <option value="event">
-                                Quiero proponer un evento
+                                Quiero informar un evento o una corrección
                             </option>
 
                             <option value="classified">
@@ -144,7 +144,7 @@ function Contact() {
 
                         <p>✅ Publicar oportunidades náuticas.</p>
 
-                        <p>✅ Proponer eventos para el calendario.</p>
+                        <p>✅ Informar eventos o correcciones para el calendario oficial.</p>
 
                         <p>✅ Corregir datos de rankings, clubes o regatas.</p>
 

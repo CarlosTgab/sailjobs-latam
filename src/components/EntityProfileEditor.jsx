@@ -39,9 +39,6 @@ function EntityProfileEditor({ currentUser, onUpdated }) {
     const dashboardPath = isOrganization
         ? "/organization-admin"
         : `/club-dashboard/${entityId}`;
-    const eventPath = isOrganization
-        ? "/organization-admin/new-event"
-        : `/club-dashboard/${entityId}/new-event`;
 
     function handleLogoChange(event) {
         const file = event.target.files?.[0];
@@ -245,8 +242,8 @@ function EntityProfileEditor({ currentUser, onUpdated }) {
                     >
                         Publicar oportunidad
                     </button>
-                    <button className="apply-button" onClick={() => navigate(eventPath)}>
-                        {isOrganization ? "Publicar evento" : "Proponer evento"}
+                    <button className="apply-button" onClick={() => navigate("/professionals")}>
+                        Buscar profesionales
                     </button>
                 </div>
             </div>

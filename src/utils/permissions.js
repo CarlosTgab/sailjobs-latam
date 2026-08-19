@@ -1,11 +1,5 @@
 import { sameId } from "./idUtils";
 
-function normalizeName(value) {
-    return String(value || "")
-        .trim()
-        .toLowerCase();
-}
-
 export function normalizeUserRole(userOrRole) {
     const role =
         typeof userOrRole === "string"
@@ -151,104 +145,10 @@ export function canManageOrganization(user, organizationId) {
     return false;
 }
 
-export function getUserOrganizationName(user) {
-    return (
-        user?.organizationName ||
-        user?.entityName ||
-        user?.name ||
-        ""
-    );
-}
-
 export function canReviewEvent(user, event) {
-    if (!user || !event) {
-        return false;
-    }
-
-    if (isSuperadmin(user)) {
-        return true;
-    }
-
-    if (!isOrganizationAdmin(user)) {
-        return false;
-    }
-
-    const organizationId =
-        user.organizationId ||
-        user.entityId ||
-        null;
-
-    const organizationName =
-        normalizeName(getUserOrganizationName(user));
-
-    if (
-        organizationId &&
-        (
-            sameId(event.reviewingOrganizationId, organizationId) ||
-            sameId(event.organizationId, organizationId) ||
-            sameId(event.ownerId, organizationId)
-        )
-    ) {
-        return true;
-    }
-
-    if (
-        organizationName &&
-        (
-            normalizeName(event.reviewingOrganizationName) === organizationName ||
-            normalizeName(event.organizationName) === organizationName ||
-            normalizeName(event.ownerName) === organizationName ||
-            normalizeName(event.source) === organizationName
-        )
-    ) {
-        return true;
-    }
-
-    return false;
+    return Boolean(user && event && isSuperadmin(user));
 }
 
 export function canManageEvent(user, event) {
-    if (!user || !event) {
-        return false;
-    }
-
-    if (isSuperadmin(user)) {
-        return true;
-    }
-
-    if (canReviewEvent(user, event)) {
-        return true;
-    }
-
-    const managedEntityIds = [
-        user.entityId,
-        user.organizationId,
-        user.clubId,
-        ...(Array.isArray(user.organizationMemberships)
-            ? user.organizationMemberships.flatMap(membership => [
-                membership.organizationId,
-                membership.clubId
-            ])
-            : [])
-    ].filter(Boolean);
-
-    const managesOrganizerEntity =
-        Array.isArray(event.organizerEntities) &&
-        event.organizerEntities.some(entity =>
-            entity.status === "accepted" &&
-            managedEntityIds.some(entityId => sameId(entity.entityId, entityId))
-        );
-
-    if (
-        (isClubAdmin(user) || isOrganizationAdmin(user)) &&
-        (
-            managedEntityIds.some(entityId => sameId(event.proposedById, entityId)) ||
-            managedEntityIds.some(entityId => sameId(event.clubId, entityId)) ||
-            managesOrganizerEntity
-        )
-    ) {
-        return true;
-    }
-
-    return false;
+    return Boolean(user && event && isSuperadmin(user));
 }

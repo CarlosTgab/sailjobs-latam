@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import EntityEventInvitations from "../components/EntityEventInvitations";
-
 import staticClubs from "../data/clubs";
 import {
     getAllClubs,
@@ -263,8 +261,8 @@ function ClubDashboard() {
 
                         <p>
                             {entityIsOrganization
-                                ? "Panel de gestión de organización para publicar oportunidades, proponer eventos y revisar postulaciones."
-                                : "Panel de gestión del club para publicar oportunidades, convocatorias, eventos y revisar postulaciones."}
+                                ? "Panel de gestión de organización para publicar oportunidades, buscar profesionales y revisar postulaciones."
+                                : "Panel de gestión del club para publicar oportunidades, buscar profesionales y revisar postulaciones."}
                         </p>
 
                         <p>
@@ -301,7 +299,7 @@ function ClubDashboard() {
                         <h2>Centro de gestión del club</h2>
                         <p>
                             Accesos principales para administrar oportunidades, postulaciones,
-                            propuestas de eventos y canales de soporte.
+                            profesionales y canales de soporte.
                         </p>
                     </div>
                 </div>
@@ -323,17 +321,17 @@ function ClubDashboard() {
                     </div>
 
                     <div className="dashboard-card">
-                        <span className="sidebar-tag">Calendario</span>
-                        <h3>Proponer evento</h3>
+                        <span className="sidebar-tag">Directorio</span>
+                        <h3>Buscar profesionales</h3>
                         <p>
-                            Enviá una propuesta de evento para que una organización revisora
-                            la apruebe antes de publicarla.
+                            Encontrá coaches, instructores, oficiales, jurados y otros
+                            perfiles disponibles para tu club.
                         </p>
                         <button
                             className="apply-button"
-                            onClick={() => navigate(`/club-dashboard/${clubId}/new-event`)}
+                            onClick={() => navigate("/professionals")}
                         >
-                            Proponer evento
+                            Ver profesionales
                         </button>
                     </div>
 
@@ -371,8 +369,8 @@ function ClubDashboard() {
                         <span className="sidebar-tag">Agenda</span>
                         <h3>Calendario</h3>
                         <p>
-                            Revisá eventos publicados, eventos pendientes y actividad
-                            vinculada al calendario náutico.
+                            Consultá eventos oficiales y vinculá tus oportunidades
+                            con el campeonato correspondiente.
                         </p>
                         <button
                             className="apply-button"
@@ -434,8 +432,6 @@ function ClubDashboard() {
                     <p>Eventos vinculados</p>
                 </div>
             </div>
-
-            <EntityEventInvitations entityId={clubId} />
 
             <div className="detail-card">
                 <div className="section-header">
@@ -573,16 +569,7 @@ function ClubDashboard() {
 
             <div className="detail-card">
                 <div className="section-header">
-                    <h2>Eventos de la organización</h2>
-
-                    <button
-                        className="small-action-button"
-                        onClick={() =>
-                            navigate(`/club-dashboard/${clubId}/new-event`)
-                        }
-                    >
-                        Proponer evento
-                    </button>
+                    <h2>Eventos oficiales vinculados</h2>
                 </div>
 
                 {upcomingEvents.length > 0 ? (

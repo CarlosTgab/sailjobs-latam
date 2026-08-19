@@ -16,6 +16,7 @@ import { getAllJobs } from "../utils/jobsStorage";
 import { sameId } from "../utils/idUtils";
 import { getCurrentUser } from "../utils/authStorage";
 import {
+    canManageClub,
     canManageEvent
 } from "../utils/permissions";
 
@@ -23,8 +24,6 @@ import {
     OPPORTUNITY_TYPE_LABELS,
     COMPENSATION_TYPE_LABELS
 } from "../config/appConfig";
-
-import EventRegistrationPanel from "../components/EventRegistrationPanel";
 
 function getEventCityName(event) {
     if (event?.cityName) {
@@ -182,8 +181,16 @@ function EventDetail() {
         );
     }
 
+    const acceptedOrganizerId = event.organizerEntities
+        ?.find(entity => entity.status === "accepted")
+        ?.entityId;
+    const eventEntityId =
+        event.clubId ||
+        event.organizationId ||
+        event.ownerId ||
+        acceptedOrganizerId;
     const club = clubs.find(
-        item => sameId(item.id, event.clubId)
+        item => sameId(item.id, eventEntityId)
     );
 
     const organizerName = getEventOrganizerName(event, club);
@@ -260,12 +267,6 @@ function EventDetail() {
                 </div>
             </div>
 
-            <EventRegistrationPanel
-                event={event}
-                currentUser={currentUser}
-                canManage={userCanEditEvent}
-            />
-
             <div className="detail-card">
                 <div className="section-header">
                     <h2>Información del evento</h2>
@@ -290,16 +291,6 @@ function EventDetail() {
                         <strong>Entidades organizadoras:</strong>{" "}
                         {event.organizerEntities
                             .filter(entity => entity.status === "accepted")
-                            .map(entity => entity.entityName)
-                            .join(", ")}
-                    </p>
-                )}
-
-                {event.invitedEntities?.some(entity => entity.status === "pending") && (
-                    <p>
-                        <strong>Entidades invitadas:</strong>{" "}
-                        {event.invitedEntities
-                            .filter(entity => entity.status === "pending")
                             .map(entity => entity.entityName)
                             .join(", ")}
                     </p>
@@ -399,11 +390,11 @@ function EventDetail() {
                 <div className="section-header">
                     <h2>Convocatorias del campeonato</h2>
 
-                    {club && (
+                    {club && canManageClub(currentUser, club.id) && (
                         <button
                             className="small-action-button"
                             onClick={() =>
-                                navigate(`/club-dashboard/${club.id}/new-job`)
+                                navigate(`/club-dashboard/${club.id}/new-job?eventId=${event.id}`)
                             }
                         >
                             Publicar convocatoria

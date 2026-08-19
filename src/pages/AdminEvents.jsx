@@ -373,15 +373,22 @@ function AdminEvents() {
             <div className="dashboard-hero">
 
                 <div>
-                    <h1>Revisión de eventos</h1>
+                    <h1>Gestión del calendario</h1>
 
                     <p>
-                        Aprobá o rechazá eventos propuestos por clubes y organizaciones.
-                        También podés controlar eventos oficiales importados desde FAY.
+                        Publicá eventos oficiales, administrá los existentes e importá
+                        información autorizada desde el calendario de la FAY.
                     </p>
                 </div>
 
                 <div className="dashboard-actions">
+                    <button
+                        className="apply-button"
+                        onClick={() => navigate("/admin/events/new")}
+                    >
+                        Nuevo evento oficial
+                    </button>
+
                     <button
                         className="apply-button"
                         onClick={() => navigate("/admin/import-fay")}
@@ -446,7 +453,7 @@ function AdminEvents() {
             <div className="detail-card">
 
                 <div className="section-header">
-                    <h2>Eventos pendientes</h2>
+                    <h2>Registros pendientes históricos</h2>
                 </div>
 
                 {pendingEvents.length > 0 ? (
@@ -458,7 +465,7 @@ function AdminEvents() {
                 ) : (
 
                     <p>
-                        No hay eventos pendientes de revisión.
+                        No hay registros pendientes.
                     </p>
 
                 )}
@@ -468,7 +475,7 @@ function AdminEvents() {
             <div className="detail-card">
 
                 <div className="section-header">
-                    <h2>Eventos revisados e importados</h2>
+                    <h2>Eventos publicados e importados</h2>
                 </div>
 
                 {reviewedEvents.length > 0 ? (

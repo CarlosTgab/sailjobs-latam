@@ -282,7 +282,7 @@ function AdminDashboard() {
                         className="apply-button"
                         onClick={() => navigate("/admin/events")}
                     >
-                        Moderar eventos
+                        Gestionar calendario
                     </button>
 
                     <button

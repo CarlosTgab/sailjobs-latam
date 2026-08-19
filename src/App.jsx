@@ -8,7 +8,6 @@ import {
 import ScrollToTop from "./components/ScrollToTop";
 import RoleRedirect from "./components/RoleRedirect";
 
-import BetaBanner from "./components/BetaBanner";
 import AuthSync from "./components/AuthSync";
 import EventsSync from "./components/EventsSync";
 import JobsSync from "./components/JobsSync";
@@ -82,7 +81,6 @@ function App() {
 
       <PageBackground />
       <Navbar />
-      <BetaBanner />
 
       <Routes>
         <Route
@@ -233,11 +231,7 @@ function App() {
 
         <Route
           path="/club-dashboard/:clubId/new-event"
-          element={
-            <RequireClubAccess>
-              <CreateEvent />
-            </RequireClubAccess>
-          }
+          element={<Navigate to="/calendar" replace />}
         />
 
         <Route
@@ -270,11 +264,7 @@ function App() {
 
         <Route
           path="/organization-admin/new-event"
-          element={
-            <RequireRole roles="organization_admin">
-              <CreateEvent />
-            </RequireRole>
-          }
+          element={<Navigate to="/calendar" replace />}
         />
 
         <Route
@@ -296,6 +286,15 @@ function App() {
           element={
             <RequireRole roles={["superadmin", "admin"]}>
               <AdminEvents />
+            </RequireRole>
+          }
+        />
+
+        <Route
+          path="/admin/events/new"
+          element={
+            <RequireRole roles={["superadmin", "admin"]}>
+              <CreateEvent />
             </RequireRole>
           }
         />
