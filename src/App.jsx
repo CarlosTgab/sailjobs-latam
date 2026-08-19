@@ -61,6 +61,11 @@ import AdminRankingProfiles from "./pages/AdminRankingProfiles";
 
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import ConfirmEmail from "./pages/ConfirmEmail";
+import AuthCallback from "./pages/AuthCallback";
+import AccountSecurity from "./pages/AccountSecurity";
 import Profile from "./pages/Profile";
 import Notifications from "./pages/Notifications";
 
@@ -361,6 +366,35 @@ function App() {
         <Route
           path="/signup"
           element={<Signup />}
+        />
+
+        <Route
+          path="/forgot-password"
+          element={<ForgotPassword />}
+        />
+
+        <Route
+          path="/reset-password"
+          element={<ResetPassword />}
+        />
+
+        <Route
+          path="/confirm-email"
+          element={<ConfirmEmail />}
+        />
+
+        <Route
+          path="/auth/callback"
+          element={<AuthCallback />}
+        />
+
+        <Route
+          path="/account"
+          element={
+            <RequireAuth>
+              <AccountSecurity />
+            </RequireAuth>
+          }
         />
 
         <Route

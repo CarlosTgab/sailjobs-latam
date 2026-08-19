@@ -112,12 +112,14 @@ function Navbar() {
 
                 {currentUser && (
                     <>
-                        <span
+                        <Link
                             className="navbar-user"
                             title={experienceLabel}
+                            to="/account"
+                            onClick={closeMenu}
                         >
                             {currentUser.name || experienceLabel}
-                        </span>
+                        </Link>
 
                         <button
                             className="nav-button"

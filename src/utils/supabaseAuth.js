@@ -27,6 +27,17 @@ function normalizeEmail(email) {
         .toLowerCase();
 }
 
+function getAppUrl(path = "/") {
+    const configuredUrl = String(
+        import.meta.env.VITE_PUBLIC_SITE_URL || ""
+    ).replace(/\/$/, "");
+
+    const baseUrl = configuredUrl || window.location.origin;
+    const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+
+    return `${baseUrl}${normalizedPath}`;
+}
+
 function validatePassword(password) {
     const hasMinimumLength =
         String(password || "").length >= 8;
@@ -38,6 +49,50 @@ function validatePassword(password) {
         /\d/.test(password || "");
 
     return hasMinimumLength && hasLetter && hasNumber;
+}
+
+function getPendingAccountData(userData) {
+    return {
+        accountType: userData.accountType || "user",
+        name: userData.name?.trim() || "",
+        phone: userData.phone?.trim() || "",
+        city: userData.city?.trim() || "",
+        country: userData.country || "",
+        professionalTitle: userData.professionalTitle?.trim() || "",
+        professionalSummary: userData.professionalSummary?.trim() || "",
+        clubName: userData.clubName?.trim() || "",
+        clubCity: userData.clubCity?.trim() || "",
+        clubCountry: userData.clubCountry || "",
+        clubDescription: userData.clubDescription?.trim() || "",
+        clubWebsite: userData.clubWebsite?.trim() || "",
+        organizationType: userData.organizationType || ""
+    };
+}
+
+export function getAuthErrorMessage(error, fallbackMessage) {
+    const message = String(error?.message || "").toLowerCase();
+
+    if (message.includes("invalid login credentials")) {
+        return "Email o contraseña incorrectos.";
+    }
+
+    if (message.includes("email not confirmed")) {
+        return "Todavía tenés que confirmar tu email antes de ingresar.";
+    }
+
+    if (message.includes("user already registered")) {
+        return "Ya existe una cuenta con ese email.";
+    }
+
+    if (message.includes("rate limit") || error?.status === 429) {
+        return "Se enviaron demasiados correos en poco tiempo. Esperá unos minutos e intentá nuevamente.";
+    }
+
+    if (message.includes("same password")) {
+        return "La contraseña nueva debe ser diferente de la actual.";
+    }
+
+    return error?.message || fallbackMessage;
 }
 
 function normalizeEntityType(value, fallbackRole) {
@@ -217,10 +272,19 @@ export async function fetchSupabaseCurrentUser(userId) {
             .from("profiles")
             .select("*")
             .eq("id", userId)
-            .single();
+            .maybeSingle();
 
     if (profileError) {
         throw profileError;
+    }
+
+    if (!profile) {
+        const error = new Error(
+            "La cuenta está autenticada, pero su perfil todavía no fue creado."
+        );
+
+        error.code = "PROFILE_NOT_READY";
+        throw error;
     }
 
     const { data: professionalProfile } =
@@ -249,6 +313,35 @@ export async function fetchSupabaseCurrentUser(userId) {
         professionalProfile,
         entity
     );
+}
+
+async function ensureSupabaseAccount(authUser) {
+    try {
+        return await fetchSupabaseCurrentUser(authUser.id);
+    } catch (error) {
+        if (error?.code !== "PROFILE_NOT_READY") {
+            throw error;
+        }
+    }
+
+    const pendingAccount =
+        authUser.user_metadata?.pending_account;
+
+    if (!pendingAccount) {
+        throw new Error(
+            "Confirmamos tu acceso, pero no encontramos los datos necesarios para terminar el perfil. Contactanos para completar el alta."
+        );
+    }
+
+    await setupAccountInSupabase({
+        ...pendingAccount,
+        name:
+            pendingAccount.name ||
+            authUser.user_metadata?.name ||
+            "Usuario SailJobs"
+    });
+
+    return fetchSupabaseCurrentUser(authUser.id);
 }
 
 async function setupAccountInSupabase(userData) {
@@ -340,8 +433,12 @@ export async function registerWithSupabase(userData) {
             email,
             password,
             options: {
+                emailRedirectTo:
+                    getAppUrl("/auth/callback"),
                 data: {
-                    name: userData.name?.trim() || ""
+                    name: userData.name?.trim() || "",
+                    pending_account:
+                        getPendingAccountData(userData)
                 }
             }
         });
@@ -356,27 +453,86 @@ export async function registerWithSupabase(userData) {
         );
     }
 
-    const { data: sessionData } =
-        await supabase.auth.getSession();
-
-    if (!sessionData.session) {
-        throw new Error(
-            "La cuenta fue creada, pero falta confirmar el email o iniciar sesión. Para la beta, desactivá Confirm email en Supabase Authentication → Providers → Email."
-        );
+    if (!data.session) {
+        return {
+            confirmationRequired: true,
+            email
+        };
     }
 
-    await setupAccountInSupabase(
-        userData
-    );
-
-    const appUser =
-        await fetchSupabaseCurrentUser(
-            data.user.id
-        );
+    const appUser = await ensureSupabaseAccount(data.user);
 
     setCurrentUser(appUser);
 
     return appUser;
+}
+
+export async function resendSignupConfirmation(email) {
+    const normalizedEmail = normalizeEmail(email);
+
+    if (!normalizedEmail) {
+        throw new Error("Ingresá el email de la cuenta.");
+    }
+
+    const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: normalizedEmail,
+        options: {
+            emailRedirectTo: getAppUrl("/auth/callback")
+        }
+    });
+
+    if (error) throw error;
+}
+
+export async function requestPasswordReset(email) {
+    const normalizedEmail = normalizeEmail(email);
+
+    if (!normalizedEmail) {
+        throw new Error("Ingresá el email de la cuenta.");
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(
+        normalizedEmail,
+        {
+            redirectTo: getAppUrl("/reset-password")
+        }
+    );
+
+    if (error) throw error;
+}
+
+export async function updateAccountPassword(password) {
+    if (!validatePassword(password)) {
+        throw new Error(
+            "La contraseña debe tener al menos 8 caracteres, una letra y un número."
+        );
+    }
+
+    const { error } = await supabase.auth.updateUser({
+        password
+    });
+
+    if (error) throw error;
+}
+
+export async function requestAccountEmailChange(email) {
+    const normalizedEmail = normalizeEmail(email);
+
+    if (!normalizedEmail) {
+        throw new Error("Ingresá el nuevo email.");
+    }
+
+    const { error } = await supabase.auth.updateUser(
+        {
+            email: normalizedEmail
+        },
+        {
+            emailRedirectTo: getAppUrl("/auth/callback?email=updated")
+        }
+    );
+
+    if (error) throw error;
 }
 
 export async function saveProfessionalProfileWithSupabase(
@@ -520,10 +676,7 @@ export async function loginWithSupabase(email, password) {
         );
     }
 
-    const appUser =
-        await fetchSupabaseCurrentUser(
-            data.user.id
-        );
+    const appUser = await ensureSupabaseAccount(data.user);
 
     setCurrentUser(appUser);
 
@@ -542,10 +695,7 @@ export async function syncSupabaseSession() {
         return null;
     }
 
-    const appUser =
-        await fetchSupabaseCurrentUser(
-            data.session.user.id
-        );
+    const appUser = await ensureSupabaseAccount(data.session.user);
 
     setCurrentUser(appUser);
 

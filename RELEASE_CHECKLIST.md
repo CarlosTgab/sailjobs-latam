@@ -2,6 +2,9 @@
 
 ## Accesos y permisos
 
+- Confirmar un registro nuevo desde el enlace recibido por email.
+- Recuperar una contraseña y establecer una nueva.
+- Reenviar una confirmación y cambiar email desde `Tu cuenta`.
 - Verificar inicio y cierre de sesión para usuario, profesional, club, organización y superadmin.
 - Confirmar que cada entidad sólo puede modificar sus eventos, oportunidades y postulaciones.
 - Confirmar que una invitación pendiente no otorga permisos y una aceptada sí.
@@ -17,6 +20,7 @@
 
 - Publicar una oportunidad general y otra vinculada a un evento.
 - Enviar una postulación y cambiarla entre pendiente, aceptada y rechazada.
+- Verificar los emails de postulación enviada, recibida y cambio de estado.
 - Confirmar privacidad del teléfono y CV fuera de una postulación autorizada.
 
 ## Ranking y perfiles

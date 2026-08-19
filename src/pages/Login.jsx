@@ -1,10 +1,12 @@
 import { useState } from "react";
 import {
     Link,
-    useNavigate
+    useNavigate,
+    useSearchParams
 } from "react-router-dom";
 
 import {
+    getAuthErrorMessage,
     loginWithSupabase
 } from "../utils/supabaseAuth";
 
@@ -15,6 +17,14 @@ import {
 function Login() {
     const navigate =
         useNavigate();
+
+    const [searchParams] = useSearchParams();
+
+    const passwordWasUpdated =
+        searchParams.get("password") === "updated";
+
+    const emailWasConfirmed =
+        searchParams.get("email") === "confirmed";
 
     const [
         email,
@@ -54,8 +64,10 @@ function Login() {
             );
         } catch (error) {
             setFormMessage(
-                error.message ||
-                "No se pudo iniciar sesión."
+                getAuthErrorMessage(
+                    error,
+                    "No se pudo iniciar sesión."
+                )
             );
         } finally {
             setLoading(false);
@@ -72,6 +84,14 @@ function Login() {
                 <p>
                     Entrá a SailJobs LATAM con tu cuenta.
                 </p>
+
+                {(passwordWasUpdated || emailWasConfirmed) && (
+                    <p className="auth-message success" role="status">
+                        {passwordWasUpdated
+                            ? "Tu contraseña fue actualizada. Ya podés ingresar."
+                            : "Tu email fue confirmado. Ya podés ingresar."}
+                    </p>
+                )}
 
                 <form onSubmit={handleSubmit}>
 
@@ -101,12 +121,15 @@ function Login() {
                         placeholder="Tu contraseña"
                     />
 
+                    <Link
+                        className="auth-inline-link"
+                        to="/forgot-password"
+                    >
+                        ¿Olvidaste tu contraseña?
+                    </Link>
+
                     {formMessage && (
-                        <p
-                            style={{
-                                color: "#b42318"
-                            }}
-                        >
+                        <p className="auth-message error" role="alert">
                             {formMessage}
                         </p>
                     )}
